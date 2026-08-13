@@ -97,12 +97,16 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.109**. Bước 1 trả kết quả dần ngay lập tức, chạy nguồn chậm ở nền,
+Đây là **v0.2.110**. Bước 1 trả kết quả dần ngay lập tức, chạy nguồn chậm ở nền,
 hiển thị rõ lý do thiếu dữ liệu và cho thử lại riêng từng nguồn. Bước 3 vẫn có
 Camp Doctor chỉ đọc: tự chẩn đoán CTR, chi phí/ref
 thật, từ khóa, cụm từ tìm kiếm, thiết bị, vị trí, nhân khẩu học và quy tắc thay đổi
 20%/24 giờ. Hệ thống chỉ cảnh báo và đề xuất theo thứ tự; không sửa, dừng hoặc loại
 campaign.
+
+Mô phỏng hoàn vốn và `$/ref` dùng duy nhất tỷ giá quy ước
+`PAYBACK_FX_VND_PER_USD = 26000` trong `src/afi_os/config.py`. Sổ FX ở Trang 4
+chỉ dùng để đối soát số tiền thật; không làm thay đổi hai phép tính vận hành này.
 
 Bước 1 gọi Claude một lần để vừa trích Terms/Pricing/Commission có nguồn vừa tạo
 bản dịch và tóm tắt tiếng Việt. Việc chống bịa luôn kiểm tra câu nguyên văn, không

@@ -1,4 +1,12 @@
-# TEST REPORT — AFI-OS 0.2.109
+# TEST REPORT — AFI-OS 0.2.110
+
+## 0.2.110 — Fixed modeled FX boundary
+
+- Full application regression: 442 passed, 1 skipped (443 tests collected).
+- VND `$/ref` uses the fixed 26,000 planning rate even when Page 4 stores a
+  conflicting accepted normalization.
+- Unsupported spend currencies cannot silently borrow an actual-cash ledger rate.
+- Step 1 payback regression still proves the fixed rate remains manually editable.
 
 ## 0.2.109 — Progressive appraisal + truthful empty states
 

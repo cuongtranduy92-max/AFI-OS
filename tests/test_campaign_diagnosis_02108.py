@@ -17,6 +17,7 @@ from afi_os.models import (
     Spend,
     SyncRun,
 )
+from afi_os.services.campaign_diagnosis import _cost_usd
 from afi_os.services.google_ads_api import build_campaign_detail_queries
 
 client = TestClient(app)
@@ -151,6 +152,43 @@ def test_confirmed_empty_affiliate_feed_is_zero_but_not_a_stop_signal() -> None:
     codes = {item["code"] for item in body["findings"]}
     assert "TOO_EARLY" in codes
     assert "NO_REF_AFTER_CLICKS" not in codes
+
+
+def test_cost_per_ref_uses_fixed_payback_fx_and_ignores_finance_ledger() -> None:
+    campaign_id = _seed_campaign()
+    with SessionLocal() as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        spend = campaign.spends[0]
+        spend.amount = Decimal("260000")
+        spend.currency = "VND"
+        # Deliberately conflicting Page 4 normalization must not affect $/ref.
+        spend.normalized_amount = Decimal("999")
+        spend.normalized_currency = "USD"
+        db.commit()
+
+        value, status = _cost_usd(campaign)
+
+    assert value == 10.0
+    assert status == "FIXED_PAYBACK_FX:26000 VND/USD"
+
+
+def test_cost_per_ref_does_not_use_ledger_for_other_currencies() -> None:
+    campaign_id = _seed_campaign()
+    with SessionLocal() as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        spend = campaign.spends[0]
+        spend.amount = Decimal("10")
+        spend.currency = "EUR"
+        spend.normalized_amount = Decimal("11")
+        spend.normalized_currency = "USD"
+        db.commit()
+
+        value, status = _cost_usd(campaign)
+
+    assert value is None
+    assert status == "UNSUPPORTED_COST_CURRENCY:EUR"
 
 
 def test_ui_exposes_page_three_without_google_ads_write_controls() -> None:

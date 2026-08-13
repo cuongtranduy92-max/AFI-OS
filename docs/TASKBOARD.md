@@ -1,5 +1,12 @@
 # TASKBOARD
 
+## 0.2.110 — Fixed modeled FX boundary
+
+- [x] Hoàn vốn và `$/ref` chỉ dùng `PAYBACK_FX_VND_PER_USD = 26000`.
+- [x] Không đọc normalized FX/ledger trong Camp Doctor.
+- [x] FX ledger giữ nguyên cho đối soát tiền thật ở Trang 4.
+- [x] Thêm regression test với ledger cố tình mâu thuẫn.
+
 ## 0.2.109 — Progressive appraisal
 
 - [x] Fast path và cache-first response có `job_id`.

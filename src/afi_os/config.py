@@ -4,8 +4,9 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Tỷ giá quy đổi bid VND→USD cho công thức hoàn vốn.
+# Tỷ giá quy ước VND→USD cho mô phỏng hoàn vốn và chi phí/ref.
 # Người vận hành chỉnh tay giá trị này khi tỷ giá quy ước thay đổi.
+# Không lấy giá trị này từ FX ledger: ledger chỉ đối soát tiền thật ở Trang 4.
 PAYBACK_FX_VND_PER_USD = Decimal("26000")
 LLM_MODEL = "claude-haiku-4-5"
 

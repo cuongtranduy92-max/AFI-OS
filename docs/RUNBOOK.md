@@ -1,11 +1,25 @@
 # RUNBOOK
 
+## Update 0.2.110 — Tỷ giá mô phỏng cố định
+
+1. Chạy `UPDATE-AFI-OS-0.2.110.command` một lần.
+2. Updater tự kiểm checksum, backup SQLite/code và hậu kiểm.
+3. Hoàn vốn và `$/ref` dùng hằng `PAYBACK_FX_VND_PER_USD = 26000` trong
+   `src/afi_os/config.py`; thay đổi quy ước thì sửa tay hằng này.
+4. FX ledger chỉ dùng đối soát tiền thật ở Trang 4 và không tham gia hai phép tính trên.
+
+Rollback bằng `ROLLBACK-AFI-OS-0.2.110.command` trong thư mục AFI-OS.
+
 ## Update 0.2.109 — Check nhanh và minh bạch
 
 1. Chạy `UPDATE-AFI-OS-0.2.109.command` một lần.
 2. Updater tự kiểm checksum, backup SQLite/code, migrate rồi chạy test và health check.
 3. Vào **Tìm dự án**, nhập một domain; kết quả hiện dần và tự cập nhật mỗi giây.
 4. Ô đỏ/vàng có thể bấm **Thử lại nguồn này**; nút **Làm mới dữ liệu** bỏ cache.
+
+Hoàn vốn mô phỏng và `$/ref` dùng tỷ giá quy ước `26.000 VND/USD` trong
+`src/afi_os/config.py`. Chỉ sửa hằng `PAYBACK_FX_VND_PER_USD` khi đổi quy ước.
+Không cần nhập FX ledger cho hai số này; FX ledger chỉ đối soát tiền thật ở Trang 4.
 
 Rollback bằng `ROLLBACK-AFI-OS-0.2.109.command` trong thư mục AFI-OS.
 

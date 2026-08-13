@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.2.110 — Fixed modeled FX boundary
+
+- Convert modeled payback and operational `$/ref` with the single editable
+  `PAYBACK_FX_VND_PER_USD = 26000` constant.
+- Prevent Camp Doctor from consuming Page 4 normalized amounts or FX ledger rows.
+- Keep the Finance FX ledger unchanged and exclusive to actual cash reconciliation.
+- Reject unsupported spend currencies transparently instead of borrowing a ledger rate.
+
 ## 0.2.109 — Progressive appraisal and truthful empty states
 
 - `POST /api/appraise` trả cache và kết quả nhanh ngay, kèm job nền cho traffic,

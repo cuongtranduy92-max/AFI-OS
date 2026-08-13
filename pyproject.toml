@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "afi-os"
-version = "0.2.109"
+version = "0.2.110"
 description = "Local-first affiliate operations platform for Google Ads and affiliate program governance"
 readme = "README.md"
 requires-python = ">=3.11"

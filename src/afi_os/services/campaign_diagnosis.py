@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from afi_os.config import PAYBACK_FX_VND_PER_USD
 from afi_os.models import (
     Campaign,
     CampaignChangeEvent,
@@ -282,15 +283,29 @@ def _selected_spends(campaign: Campaign) -> list:
 
 
 def _cost_usd(campaign: Campaign) -> tuple[float | None, str]:
+    """Convert operational spend for $/ref without consulting the FX ledger.
+
+    The operator intentionally uses one editable planning rate for modeled
+    economics. Accepted FX ledger rows remain exclusive to cash reconciliation
+    on Page 4 and must not make Camp Doctor appear ready or change its history.
+    """
     total = Decimal("0")
+    used_fixed_vnd_rate = False
     for item in _selected_spends(campaign):
-        if item.currency.upper() == "USD":
+        currency = item.currency.upper()
+        if currency == "USD":
             total += Decimal(item.amount)
-        elif item.normalized_currency == "USD" and item.normalized_amount is not None:
-            total += Decimal(item.normalized_amount)
+        elif currency == "VND":
+            total += Decimal(item.amount) / PAYBACK_FX_VND_PER_USD
+            used_fixed_vnd_rate = True
         else:
-            return None, "MISSING_USD_FX"
-    return float(total), "OBSERVED_USD"
+            return None, f"UNSUPPORTED_COST_CURRENCY:{currency}"
+    status = (
+        f"FIXED_PAYBACK_FX:{PAYBACK_FX_VND_PER_USD} VND/USD"
+        if used_fixed_vnd_rate
+        else "OBSERVED_USD"
+    )
+    return float(total), status
 
 
 def _commission_feed_for_program(db: Session, program_id: int | None) -> bool:

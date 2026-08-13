@@ -104,6 +104,10 @@ Actual payback uses attributed approved/paid commission rather than modeled comm
 If a required commercial fact is unresolved, AFI-OS shows a range and the missing-input
 warning; it does not silently choose a source.
 
+Modeled payback and operational `$/ref` convert VND with the single operator-edited
+`PAYBACK_FX_VND_PER_USD` constant (default 26,000). They never consume accepted FX
+ledger rows. The FX ledger is reserved for actual cash reconciliation on Page 4.
+
 ### 5. Google Ads launch pack
 
 Before launch, AFI-OS prepares one editable, validated asset pack per project:
