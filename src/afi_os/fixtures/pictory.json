@@ -1,0 +1,67 @@
+{
+  "fixture_version": "pictory-2026-08-10-v1",
+  "domain": "pictory.ai",
+  "merchant_name": "Pictory",
+  "merchant_country": "US",
+  "program_name": "Pictory Affiliate Program",
+  "signup_url": "https://partners.pictory.ai/signup/40690",
+  "checked_at": "2026-08-10T12:00:00+00:00",
+  "discovery_confidence": 0.85,
+  "source_urls": [
+    "https://partners.pictory.ai/signup/40690",
+    "https://pictory.ai/partnernow",
+    "https://pictory.ai/partner-with-pictory",
+    "https://pictory.ai/terms-of-service"
+  ],
+  "permission_proposals": [
+    {
+      "scope": "PAID_SEARCH",
+      "decision": "NOT_CHECKED",
+      "confidence": 0,
+      "reason": "No public affiliate-specific paid-search permission was found."
+    },
+    {
+      "scope": "BRAND_KEYWORD",
+      "decision": "NOT_CHECKED",
+      "confidence": 0,
+      "reason": "No public affiliate-specific brand-bidding permission was found."
+    },
+    {
+      "scope": "NON_BRAND",
+      "decision": "NOT_CHECKED",
+      "confidence": 0,
+      "reason": "No public affiliate-specific non-brand paid-search permission was found."
+    },
+    {
+      "scope": "DIRECT_LINK",
+      "decision": "NOT_CHECKED",
+      "confidence": 0,
+      "reason": "No public affiliate-specific direct-link permission was found."
+    }
+  ],
+  "commission_facts": [
+    {
+      "source_url": "https://partners.pictory.ai/signup/40690",
+      "source_authority": "OFFICIAL",
+      "excerpt": "earn a 40% one-time commission on your referrals' first payment",
+      "confidence": 0.99,
+      "commission_type": "ONE_TIME",
+      "commission_rate": "0.40",
+      "rate_is_maximum": false,
+      "applies_to": "FIRST_PAYMENT",
+      "notes": "Public official affiliate signup statement. Proposal only."
+    },
+    {
+      "source_url": "https://pictory.ai/partnernow",
+      "source_authority": "OFFICIAL",
+      "excerpt": "Earn recurring commissions of up to 50%",
+      "confidence": 0.99,
+      "commission_type": "RECURRING_UNSPECIFIED",
+      "commission_rate": "0.50",
+      "rate_is_maximum": true,
+      "applies_to": "UNSPECIFIED",
+      "notes": "Public official marketing claim; 'up to' is not a guaranteed rate. Proposal only."
+    }
+  ],
+  "summary": "Official Pictory pages conflict on commission. Public affiliate PPC, brand-bidding, non-brand and direct-link permissions remain unverified; the PPC gate stays blocked."
+}

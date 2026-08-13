@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFI-OS · Affiliate Operations</title>
+  <link rel="stylesheet" href="/styles.css?v=02102">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div>
+          <div class="brand-name">AFI-OS</div>
+          <div class="brand-sub">Internal Production Replatform</div>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-item active" data-view="portfolio">
+          <span class="nav-index">01</span><span>Tìm dự án</span>
+        </button>
+        <button class="nav-item" data-view="command">
+          <span class="nav-index">02</span><span>Chuẩn bị campaign</span>
+        </button>
+        <button class="nav-item" data-view="intelligence">
+          <span class="nav-index">03</span><span>Nhà quảng cáo &amp; dự án</span>
+        </button>
+        <button class="nav-item" data-view="compliance">
+          <span class="nav-index">04</span><span>Terms Warning</span>
+        </button>
+        <button class="nav-item" data-view="economics">
+          <span class="nav-index">05</span><span>Economics Lab</span>
+        </button>
+        <button class="nav-item" data-view="exposure">
+          <span class="nav-index">06</span><span>Risk &amp; Exposure</span>
+        </button>
+        <button class="nav-item" data-view="programs">
+          <span class="nav-index">07</span><span>Terms Evidence</span>
+        </button>
+        <button class="nav-item" data-view="finance">
+          <span class="nav-index">08</span><span>Finance &amp; Reconciliation</span>
+        </button>
+        <button class="nav-item" data-view="system">
+          <span class="nav-index">09</span><span>Backup & Restore</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="status-line"><span id="apiDot" class="status-dot"></span><span id="apiStatus">Đang kết nối</span></div>
+        <div class="small">Local-first · Single user · SQLite</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Tìm dự án</h1>
+          <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
+        </div>
+        <div class="top-actions">
+          <span class="badge badge-demo">DOT1.1 APPRAISAL · v0.2.102</span>
+          <button id="refreshAll" class="button secondary">Làm mới</button>
+        </div>
+      </header>
+
+      <section id="view-command" class="view">
+        <article class="panel step-two-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Bước 2 · Dự án đã lưu để chuẩn bị campaign</h2>
+              <p>Chỉ xuất hiện sau khi Bước 1 đủ đầu vào hoàn vốn và anh bấm “Lưu và chuyển Bước 2”. Toàn bộ nguồn Bước 1 vẫn mở lại được.</p>
+            </div>
+            <span id="stepTwoProjectSummary" class="badge">Đang tải…</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Dự án</th><th>Giai đoạn</th><th>Việc tiếp theo</th><th>Cảnh báo đi kèm</th><th></th></tr></thead>
+            <tbody id="stepTwoProjectRows"><tr><td colspan="5" class="empty">Đang tải dự án Bước 2…</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <div id="summaryCards" class="metrics-grid"></div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Bắt đầu từ đây</h2>
+              <p>AFI-OS đi theo một vòng lặp cố định; anh chỉ xử lý ngoại lệ, hệ thống giữ lại mọi dự án và tự bổ sung dữ liệu.</p>
+            </div>
+            <span class="badge">6 BƯỚC</span>
+          </div>
+          <div class="rule-grid">
+            <div class="rule"><strong>1 · Nhập dự án</strong><span>Vào Quản lý dự án, lưu tên/domain và trạng thái đăng ký.</span></div>
+            <div class="rule"><strong>2 · Rà điều khoản</strong><span>Terms Evidence thu thập URL, đoạn trích, commission và các hạn chế PPC.</span></div>
+            <div class="rule"><strong>3 · Xử lý ngoại lệ</strong><span>Operations Inbox chỉ đưa ra việc cần anh quyết định; cảnh báo không tự loại dự án.</span></div>
+            <div class="rule"><strong>4 · Đo thị trường</strong><span>Truy vết quảng cáo đếm advertiser độc lập và dự án liên quan.</span></div>
+            <div class="rule"><strong>5 · Chấm cơ hội</strong><span>Economics Lab và Risk &amp; Exposure tính hoàn vốn, độ tin cậy và rủi ro.</span></div>
+            <div class="rule"><strong>6 · Chạy và đối soát</strong><span>Google Ads cùng Finance theo dõi cost, CTR, conversion, commission và tiền rút.</span></div>
+          </div>
+        </article>
+
+        <article class="panel runtime-panel">
+          <div class="panel-head">
+            <div>
+              <h2>AFI-OS 24/7</h2>
+              <p>Tự chạy server, backup và kiểm tra dữ liệu; không cần mở Terminal để theo dõi.</p>
+            </div>
+            <span id="runtimeBadge" class="badge">Đang kiểm tra…</span>
+          </div>
+          <div id="runtimeCards" class="runtime-grid">
+            <div class="runtime-item"><span>Dịch vụ</span><strong>Đang tải…</strong></div>
+            <div class="runtime-item"><span>Bảo trì gần nhất</span><strong>—</strong></div>
+            <div class="runtime-item"><span>Backup gần nhất</span><strong>—</strong></div>
+            <div class="runtime-item"><span>Terms còn mới</span><strong>—</strong></div>
+            <div class="runtime-item"><span>Google Ads tự nhập</span><strong>—</strong></div>
+          </div>
+          <div id="runtimeMessage" class="runtime-message">Đang đọc trạng thái vận hành…</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Operations Inbox</h2>
+              <p>Chỉ hiện việc cần quyết định, dữ liệu còn thiếu và cảnh báo đang theo dõi.</p>
+            </div>
+            <span id="operationsSummary" class="badge">Đang kiểm tra…</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Mức độ</th><th>Việc cần xử lý</th><th>Chương trình</th><th>Lý do</th><th>Nguồn</th><th>Mở</th></tr></thead>
+            <tbody id="operationsRows"><tr><td colspan="6" class="empty">Đang tải hàng đợi…</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Hàng đợi tự động</h2>
+              <p>Công việc nền được lưu bền vững, có lease, retry tăng dần và dead-letter; đóng trình duyệt không làm mất việc.</p>
+            </div>
+            <span id="automationQueueSummary" class="badge">Đang kiểm tra…</span>
+          </div>
+          <div class="notice">Worker chỉ thu thập và bổ sung dữ liệu. Không tự mở quyền PPC, không loại dự án và không ghi vào Google Ads.</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Công việc</th><th>State</th><th>Lần thử</th><th>Chạy / hoàn tất</th><th>Kết quả gần nhất</th><th>Xử lý</th></tr></thead>
+            <tbody id="automationQueueRows"><tr><td colspan="6" class="empty">Chưa có công việc nền.</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <div class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Project Radar</h2>
+                <p>Ưu tiên số advertiser độc lập, không nhầm với số mẫu quảng cáo.</p>
+              </div>
+              <span class="badge">Independent Advertiser Score</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Dự án</th><th>Advertiser</th><th>Active 30d</th><th>Top share</th><th>Điểm</th></tr></thead>
+                <tbody id="radarRows"><tr><td colspan="5" class="empty">Chưa có dữ liệu.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Advertiser Graph</h2>
+                <p>Advertiser ↔ Project, xây từ snapshot do người dùng chủ động lưu.</p>
+              </div>
+            </div>
+            <div id="graphCanvas" class="graph-canvas">
+              <div class="empty">Chưa có graph.</div>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Nguyên tắc vận hành đang khóa cứng</h2>
+              <p>Không để giao diện đẹp che lấp sai lệch dữ liệu.</p>
+            </div>
+          </div>
+          <div class="rule-grid">
+            <div class="rule"><strong>Pending ≠ doanh thu thật</strong><span>Chỉ dùng pending cho forecast có xác suất duyệt.</span></div>
+            <div class="rule"><strong>Không phân bổ revenue theo spend</strong><span>Không truy được click thì hiển thị UNATTRIBUTED.</span></div>
+            <div class="rule"><strong>Không thấy cấm ≠ được phép</strong><span>Giữ dự án trong phân tích và gắn cảnh báo cho tới khi có bằng chứng.</span></div>
+            <div class="rule"><strong>Advertiser count ≠ ad count</strong><span>Phải đo số advertiser độc lập và mức phân tán.</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-portfolio" class="view active">
+        <article class="panel project-trace-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Bước 1 · Check dự án</h2>
+              <p>Chỉ nhập domain. AFI-OS thu thập 10 nhóm dữ liệu, hiện rõ nguồn đang chờ và chuẩn bị contract cho engine chấm điểm.</p>
+            </div>
+            <span class="badge">DOMAIN → PROJECT</span>
+          </div>
+          <form id="projectTraceForm" class="project-trace-form">
+            <label>Domain cần check<input name="domain" placeholder="ví dụ: bitget.com" autocomplete="off" required></label>
+            <button class="button primary" type="submit">Check</button>
+            <button id="appraisalBatchToggle" class="button secondary" type="button">Dán danh sách</button>
+          </form>
+          <div id="appraisalBatchPanel" class="appraisal-batch" hidden>
+            <label>Mỗi dòng một domain<textarea id="appraisalBatchInput" rows="5" placeholder="snov.io&#10;fliki.ai&#10;example.com"></textarea></label>
+            <div class="form-actions"><button id="appraisalBatchRun" class="button primary" type="button">Check danh sách</button><span>Tối đa 25 domain/lượt để bảo vệ quota API.</span></div>
+            <div id="appraisalBatchResults" class="batch-results"></div>
+          </div>
+          <div id="projectTraceMessage" class="portfolio-summary">Dữ liệu chưa có nguồn sẽ hiện “Đang chờ”, không để ô trống và không biến thành 0.</div>
+        </article>
+
+        <section id="appraisalResult" class="appraisal-result" hidden></section>
+
+        <article class="panel portfolio-intro">
+          <div class="panel-head">
+            <div>
+              <h2>Project Portfolio</h2>
+              <p>Một hồ sơ cho mỗi dự án: đăng ký, terms, commission, advertiser, campaign, dữ liệu và việc tiếp theo.</p>
+            </div>
+            <span class="badge">WARNING-ONLY · KHÔNG LOẠI DỰ ÁN</span>
+          </div>
+          <form id="portfolioFilters" class="portfolio-filters">
+            <label>Lọc hồ sơ đã lưu<input name="query" placeholder="Tên hoặc domain đã lưu"></label>
+            <label>Giai đoạn<select name="stage"><option value="">Tất cả</option><option value="INTAKE">Tiếp nhận</option><option value="RESEARCH">Kiểm chứng</option><option value="EVALUATION">Chấm điểm</option><option value="PREP">Chuẩn bị</option><option value="LIVE">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="CLOSED">Đã đóng</option></select></label>
+            <label>Đăng ký<select name="registration_status"><option value="">Tất cả</option><option value="NOT_STARTED">Chưa đăng ký</option><option value="APPLYING">Đang đăng ký</option><option value="PENDING_APPROVAL">Chờ duyệt</option><option value="APPROVED">Đã duyệt</option><option value="BLOCKED_REGISTRATION">Không đăng ký được</option><option value="REJECTED">Bị từ chối</option><option value="CLOSED">Đã đóng</option></select></label>
+            <label>Cảnh báo<select name="risk"><option value="">Tất cả</option><option value="REGISTRATION_BLOCKED">Không đăng ký được</option><option value="PPC_NOT_CHECKED">PPC chưa rõ</option><option value="PPC_CONFLICT">PPC mâu thuẫn</option><option value="COMMISSION_CONFLICT">Commission mâu thuẫn</option><option value="COMMISSION_REVIEW_REQUIRED">Commission chờ duyệt</option><option value="ADVERTISER_DATA_MISSING">Thiếu advertiser</option><option value="CAMPAIGN_DATA_MISSING">Thiếu campaign</option><option value="CTR_BELOW_40">CTR dưới 40%</option></select></label>
+            <label>Sắp xếp<select name="sort"><option value="updated">Mới cập nhật</option><option value="confidence">Độ tin cậy</option><option value="advertisers">Số advertiser</option><option value="ctr">CTR</option><option value="brand">Tên dự án</option></select></label>
+            <label>Chiều<select name="direction"><option value="desc">Cao → thấp</option><option value="asc">Thấp → cao</option></select></label>
+            <button class="button primary" type="submit">Lọc danh sách</button>
+          </form>
+          <div id="portfolioSummary" class="portfolio-summary">Đang tải danh mục dự án…</div>
+        </article>
+
+        <article class="panel portfolio-table-panel">
+          <div class="table-wrap"><table class="portfolio-table">
+            <thead><tr><th>Dự án</th><th>Đang làm</th><th>Đăng ký</th><th>Terms / Commission</th><th>Advertiser</th><th>Campaign</th><th>Tiềm năng / tin cậy</th><th>Cảnh báo</th><th></th></tr></thead>
+            <tbody id="portfolioRows"><tr><td colspan="9" class="empty">Đang tải dự án…</td></tr></tbody>
+          </table></div>
+        </article>
+      </section>
+
+      <section id="view-intelligence" class="view">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Nhập danh sách advertiser từ một kết quả có nguồn</h2>
+              <p>Mỗi dòng là một advertiser, không phải một quảng cáo. Hệ thống lưu URL, thời gian kiểm tra và bằng chứng; không thay đổi PPC hoặc Google Ads.</p>
+            </div>
+            <span class="badge">BATCH · CÓ AUDIT</span>
+          </div>
+          <form id="advertiserSnapshotForm" class="form-grid">
+            <label>Domain dự án<input name="target_domain" required placeholder="snov.io"></label>
+            <label>Tên nguồn<input name="source_name" required placeholder="Nguồn advertiser"></label>
+            <label class="span-2">URL kết quả<input name="source_url" type="url" required placeholder="https://example.com/result"></label>
+            <label>Thời gian kiểm tra<input name="checked_at" type="datetime-local" required></label>
+            <label>Phạm vi địa lý<input name="geography" placeholder="Anywhere / Global"></label>
+            <label class="span-2">Bằng chứng nhìn thấy<textarea name="evidence_excerpt" rows="3" required placeholder="Ví dụ: Danh sách nhà quảng cáo cho snov.io; tổng 18 advertiser..."></textarea></label>
+            <label class="span-2">Danh sách advertiser<textarea name="advertisers" rows="8" required placeholder="Mỗi dòng: ID advertiser | Tên advertiser | Số quảng cáo&#10;AR123 | Example Ltd | 5"></textarea></label>
+            <label class="checkbox span-2"><input name="result_set_complete" type="checkbox"> Tôi đã lấy toàn bộ danh sách đang hiển thị trong kết quả này</label>
+            <div class="span-2 form-actions">
+              <button class="button primary" type="submit">Nhập snapshot advertiser</button>
+              <span id="advertiserSnapshotMessage" class="form-message" role="status" aria-live="polite">Chưa nhập; Portfolio phải hiển thị “Chưa thu thập”, không phải 0.</span>
+            </div>
+          </form>
+        </article>
+
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Lưu một dấu vết quảng cáo</h2>
+                <p>Nhập đủ advertiser + domain để cập nhật graph. Nếu chưa biết một trong hai, snapshot chỉ vào hàng đợi để bạn duyệt sau.</p>
+              </div>
+            </div>
+            <form id="captureForm" class="form-grid">
+              <label class="span-2">URL nguồn<input name="source_url" required placeholder="https://adstransparency.google.com/..."></label>
+              <label>Tên advertiser (không bắt buộc)<input name="advertiser_name" placeholder="Verified advertiser name"></label>
+              <label>Vị trí advertiser<input name="advertiser_location" placeholder="US / Singapore / ..."></label>
+              <label>Domain dự án (không bắt buộc)<input name="project_domain" placeholder="pictory.ai"></label>
+              <label>Tên thương hiệu<input name="brand_name" placeholder="Pictory"></label>
+              <label>Ngách<input name="category" placeholder="AI video / Travel / Education"></label>
+              <label>Quốc gia hiển thị<input name="country" maxlength="2" placeholder="VN"></label>
+              <label class="span-2">Headline<input name="headline" placeholder="Nội dung quảng cáo đang thấy"></label>
+              <label class="span-2">Landing domain<input name="landing_domain" placeholder="review-site.com"></label>
+              <label class="span-2">Đoạn text đã chọn<textarea name="selected_text" rows="4" placeholder="Dán phần thông tin nhìn thấy trên trang"></textarea></label>
+              <div class="span-2 form-actions">
+                <button class="button primary" id="captureSubmit" type="submit">Lưu để duyệt sau</button>
+                <span id="captureMessage" class="form-message" role="status" aria-live="polite">Chưa đủ advertiser + domain: chưa tạo graph.</span>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Capture Helper</h2>
+                <p>Extension MVP lấy URL, text được chọn và các trường bạn nhập, rồi gửi về máy local.</p>
+              </div>
+            </div>
+            <ol class="steps">
+              <li>Chạy AFI-OS tại <code>127.0.0.1:8765</code>.</li>
+              <li>Nạp extension trong <code>tools/ads-transparency-capture</code>.</li>
+              <li>Mở Ads Transparency Center, chọn đoạn text cần lưu.</li>
+              <li>Bấm extension, điền advertiser + domain, rồi Capture.</li>
+            </ol>
+            <div class="notice warning">Module này cố ý không tự vượt CAPTCHA, không tự cuộn/crawl, không chạy nền.</div>
+          </article>
+        </div>
+
+        <article class="panel" id="captureReviewPanel" tabindex="-1" aria-labelledby="captureReviewTitle">
+          <div class="panel-head">
+            <div>
+              <h2 id="captureReviewTitle">Hàng đợi duyệt snapshot</h2>
+              <p>Snapshot thiếu cấu trúc chưa được đưa vào graph. Xem đủ evidence, bổ sung advertiser + domain rồi chấp nhận, hoặc loại kèm lý do.</p>
+            </div>
+            <span id="captureReviewSummary" class="badge">Đang kiểm tra…</span>
+          </div>
+          <div id="captureReviewMessage" class="review-queue-message" role="status" aria-live="polite"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Snapshot</th><th>Evidence</th><th>Advertiser</th><th>Domain dự án</th><th>Xử lý</th></tr></thead>
+              <tbody id="captureReviewRows"><tr><td colspan="5" class="empty">Đang tải hàng đợi…</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Snapshot gần nhất</h2><p>Bản ghi thô được giữ để kiểm toán lại.</p></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Thời gian</th><th>Trạng thái</th><th>Nguồn</th><th>Advertiser / Project</th></tr></thead>
+              <tbody id="captureRows"><tr><td colspan="4" class="empty">Chưa có snapshot.</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-compliance" class="view">
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Cảnh báo terms theo evidence</h2><p>Đánh giá chỉ đọc permission và evidence đã lưu, đã xác nhận của chương trình.</p></div></div>
+            <form id="complianceForm" class="form-grid">
+              <label class="span-2">Chương trình<select name="program_id" id="complianceProgram" required><option value="">Chọn chương trình đã lưu</option></select></label>
+              <label class="check"><input type="checkbox" name="wants_brand_keywords"><span>Muốn chạy brand keyword</span></label>
+              <label class="check"><input type="checkbox" name="wants_direct_link"><span>Muốn direct link</span></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Đánh giá cảnh báo</button></div>
+            </form>
+            <div class="notice warning">Kết quả không loại dự án. Evidence phải có URL, đúng scope, nguồn có thẩm quyền, confidence ≥ 0,8, còn hạn và ở trạng thái ACCEPTED mới được hiển thị TERMS_OK.</div>
+          </article>
+          <article class="panel result-panel" id="complianceResult">
+            <div class="result-icon neutral">?</div>
+            <h2>Chưa đánh giá</h2>
+            <p>Thiết lập quyền và bằng chứng ở bên trái.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-economics" class="view">
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Economics Calculator</h2><p>Mặc định theo giáo trình AFI: 150 click/đơn. Khi có dữ liệu thật, chuyển sang mô hình funnel.</p></div></div>
+            <form id="economicsForm" class="form-grid">
+              <label>Giá gói<input name="price" type="number" min="0" step="0.01" value="49"></label>
+              <label>Loại hoa hồng<select name="commission_type"><option>ONE_TIME</option><option>RECURRING_LIMITED</option><option>RECURRING_LIFETIME</option></select></label>
+              <label>Tỷ lệ hoa hồng<input name="commission_rate" type="number" min="0" max="1" step="0.01" value="0.30"></label>
+              <label>Flat commission<input name="commission_flat" type="number" min="0" step="0.01" placeholder="Để trống nếu dùng %"></label>
+              <label>Số tháng giới hạn<input name="recurring_months" type="number" min="1" max="120" value="12"></label>
+              <label>Horizon lifetime<input name="forecast_horizon_months" type="number" min="1" max="120" value="24"></label>
+              <label>Cách tính chuyển đổi<select name="conversion_basis"><option value="CLICKS_PER_SALE">Theo số click / đơn</option><option value="FUNNEL_RATES">Theo funnel CTR × CVR</option></select></label>
+              <label>Số click để ra 1 đơn<input name="clicks_per_sale" type="number" min="1" step="1" value="150"></label>
+              <label data-funnel-field>Outbound CTR<input name="outbound_click_rate" type="number" min="0" max="1" step="0.01" value="1"></label>
+              <label data-funnel-field>Merchant CVR<input name="merchant_conversion_rate" type="number" min="0" max="1" step="0.001" value="0.03"></label>
+              <label>Approval rate<input name="approval_rate" type="number" min="0" max="1" step="0.01" value="0.85"></label>
+              <label>Refund rate<input name="refund_rate" type="number" min="0" max="1" step="0.01" value="0.05"></label>
+              <label>Monthly churn<input name="monthly_churn_rate" type="number" min="0" max="1" step="0.01" value="0.08"></label>
+              <label>Target margin<input name="target_margin" type="number" min="0" max="1" step="0.01" value="0.30"></label>
+              <label>Confidence discount<input name="confidence_discount" type="number" min="0" max="1" step="0.01" value="0.80"></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Tính economics</button></div>
+            </form>
+          </article>
+          <article class="panel" id="economicsResult">
+            <div class="panel-head"><div><h2>Kết quả</h2><p>Forecast có giả định; không phải doanh thu đã xác nhận.</p></div></div>
+            <div class="result-metrics">
+              <div><span>Commission / kỳ</span><strong id="resultCommission">—</strong></div>
+              <div><span>Expected LTV</span><strong id="resultLtv">—</strong></div>
+              <div><span>Total CVR</span><strong id="resultCvr">—</strong></div>
+              <div><span>Click / đơn</span><strong id="resultClicks">—</strong></div>
+              <div><span>Break-even CPC</span><strong id="resultBreakEven">—</strong></div>
+              <div><span>Safe CPC</span><strong id="resultSafe">—</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-exposure" class="view">
+        <div id="exposureCards" class="metrics-grid"></div>
+
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Nhập báo cáo campaign Google Ads</h2>
+                <p>Xem trước trước khi ghi. Nhập lại cùng campaign/ngày sẽ cập nhật, không tạo spend trùng.</p>
+              </div>
+              <span class="badge">READ-ONLY IMPORT</span>
+            </div>
+            <form id="campaignImportForm" class="form-grid">
+              <label class="span-2">File CSV<input name="file" type="file" accept=".csv,text/csv" required></label>
+              <label>Customer ID mặc định<input name="account_external_id" value="CSV-IMPORT" placeholder="123-456-7890"></label>
+              <label>Tên tài khoản mặc định<input name="account_name" value="Google Ads CSV" placeholder="Main Google Ads"></label>
+              <label>Nguồn<input name="source" value="GOOGLE_ADS_CSV"></label>
+              <label>Gắn mặc định vào chương trình<select name="default_program_id" id="exposureProgram"><option value="">Chưa xác định</option></select></label>
+              <div class="span-2 form-actions">
+                <button id="previewCampaignImport" class="button secondary" type="button">Xem trước</button>
+                <button id="commitCampaignImport" class="button primary" type="button" disabled>Nhập dữ liệu</button>
+                <span id="campaignImportMessage" class="form-message"></span>
+              </div>
+            </form>
+            <div class="notice">Đọc trực tiếp báo cáo Google Ads tiếng Việt hoặc tiếng Anh. Hệ thống tự bỏ phần tiêu đề phụ và các dòng “Tổng số” để không cộng trùng chi phí.</div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head"><div><h2>Kết quả preview</h2><p>Chưa ghi vào database cho đến khi bấm “Nhập dữ liệu”.</p></div></div>
+            <div id="campaignImportPreview" class="empty">Chưa chọn file.</div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div><h2>Campaign exposure</h2><p>Mọi campaign vẫn được giữ lại. Terms risk và hiệu quả kinh tế được hiển thị riêng.</p></div>
+            <span class="badge">WARNING-ONLY</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Campaign</th><th>Chương trình</th><th>Status</th><th>Terms risk</th><th>Spend</th><th>Traffic</th><th>CPC</th><th>Xác nhận</th></tr></thead>
+            <tbody id="exposureRows"><tr><td colspan="8" class="empty">Chưa có campaign.</td></tr></tbody>
+          </table></div>
+        </article>
+      </section>
+
+      <section id="view-programs" class="view">
+        <article class="panel research-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Thu thập đề xuất từ domain</h2>
+              <p>Nhập domain để nạp bằng chứng có nguồn. Kết quả luôn là proposal; automation không tự mở quyền quảng cáo.</p>
+            </div>
+            <span class="badge">SAFE-BY-DEFAULT</span>
+          </div>
+          <form id="researchForm" class="domain-research-form">
+            <input name="domain" required placeholder="pictory.ai" aria-label="Domain cần kiểm tra">
+            <button class="button primary" type="submit">Thu thập proposal</button>
+            <span id="researchMessage" class="form-message"></span>
+          </form>
+          <div id="researchResult" class="research-result empty">Chưa chạy thu thập.</div>
+        </article>
+
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Thêm chương trình affiliate</h2><p>Chương trình mới luôn bắt đầu ở NOT_CHECKED và có cảnh báo terms.</p></div></div>
+            <form id="programForm" class="form-grid">
+              <label>Tên merchant<input name="merchant_name" required placeholder="Pictory"></label>
+              <label>Domain<input name="website_domain" required placeholder="pictory.ai"></label>
+              <label>Quốc gia merchant<input name="merchant_country" maxlength="2" placeholder="US"></label>
+              <label>Tên chương trình<input name="program_name" required placeholder="Pictory Affiliate Program"></label>
+              <label>Affiliate network<input name="network_name" placeholder="FirstPromoter / Impact / ..."></label>
+              <label>Link đăng ký<input name="signup_url" type="url" placeholder="https://..."></label>
+              <label class="span-2">Ghi chú<textarea name="notes" rows="2" placeholder="Điều kiện duyệt, geo, AM..."></textarea></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Lưu chương trình</button><span id="programMessage" class="form-message"></span></div>
+            </form>
+            <div class="notice warning">Paid search, brand keyword, non-brand và direct link đều được lưu là <strong>NOT_CHECKED</strong> cho tới khi evidence được xét duyệt.</div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head"><div><h2>Nhập proposal điều khoản</h2><p>Mỗi proposal phải có URL, đoạn trích, ngày kiểm tra, confidence và scope.</p></div></div>
+            <form id="evidenceForm" class="form-grid">
+              <label class="span-2">Chương trình<select name="program_id" id="evidenceProgram" required><option value="">Chọn chương trình</option></select></label>
+              <label>Scope<select name="scope">
+                <option value="PAID_SEARCH">Paid search tổng quát</option>
+                <option value="BRAND_KEYWORD">Brand keyword</option>
+                <option value="NON_BRAND">Non-brand keyword</option>
+                <option value="DIRECT_LINK">Direct linking</option>
+                <option value="TRADEMARK_AD_COPY">Trademark trong ad copy</option>
+              </select></label>
+              <label>Quyết định<select name="decision" data-permission></select></label>
+              <label class="span-2">Loại nguồn<select name="source_authority">
+                <option value="UNKNOWN">Chưa xác minh nguồn</option>
+                <option value="OFFICIAL">Website chính thức của merchant</option>
+                <option value="PARTNER_PORTAL">Partner portal / network</option>
+                <option value="WRITTEN_CONFIRMATION">Xác nhận bằng văn bản</option>
+                <option value="THIRD_PARTY">Nguồn bên thứ ba</option>
+              </select></label>
+              <label class="span-2">URL nguồn<input name="source_url" type="url" required placeholder="https://merchant.com/affiliate-terms"></label>
+              <label class="span-2">Đoạn trích nguyên văn<textarea name="excerpt" rows="4" required placeholder="Dán đúng đoạn điều khoản liên quan PPC/trademark"></textarea></label>
+              <label>Ngày kiểm tra<input name="checked_at" type="datetime-local" required></label>
+              <label>Hết hiệu lực<input name="expires_at" type="datetime-local"></label>
+              <label>Người kiểm tra<input name="reviewer" value="Tran"></label>
+              <label>Confidence<input name="confidence" type="number" min="0" max="1" step="0.05" value="0"></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Lưu proposal</button><span id="evidenceMessage" class="form-message"></span></div>
+            </form>
+            <div class="notice">Lưu proposal không thay đổi permission. Chỉ evidence chính thức, confidence ≥ 0,8 và được xác nhận riêng mới có thể cập nhật trạng thái terms.</div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Program Registry</h2><p>Commission và PPC được phân giải độc lập. CONFLICT tạo cảnh báo đỏ nhưng không loại dự án.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Merchant / Program</th><th>Network</th><th>Paid search</th><th>Brand</th><th>Non-brand</th><th>Commission</th><th>Lần rà / evidence</th><th>Gate</th></tr></thead>
+            <tbody id="programRows"><tr><td colspan="8" class="empty">Chưa có chương trình.</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Lịch sử rà Terms tự động</h2><p>Hiện nguồn đã thử và lỗi gần nhất. Mỗi lần chạy đều có dấu vết; không tự thay đổi quyền PPC.</p></div><div class="review-actions"><button id="exportEvidencePack" class="button secondary" type="button" disabled>Xuất evidence pack</button><span class="badge">AUDIT TRAIL</span></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Lần thử</th><th>State</th><th>Nguồn</th><th>Kết quả / lỗi</th><th>An toàn</th></tr></thead>
+            <tbody id="researchAttemptRows"><tr><td colspan="5" class="empty">Chọn một chương trình.</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Permission proposals</h2><p>Proposal chưa được xác nhận không thể mở permission.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Ngày</th><th>Scope</th><th>Decision</th><th>Nguồn / confidence</th><th>State</th><th>Đoạn trích</th><th>Review</th></tr></thead>
+            <tbody id="evidenceRows"><tr><td colspan="7" class="empty">Chọn một chương trình.</td></tr></tbody>
+          </table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Commission facts</h2><p>Bằng chứng hoa hồng nằm riêng; không bao giờ được dùng để suy ra quyền PPC.</p></div><span id="commissionFactMessage" class="form-message"></span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Ngày</th><th>Model</th><th>Rate</th><th>Applies to</th><th>State</th><th>Nguồn / đoạn trích</th><th>Xử lý</th></tr></thead>
+            <tbody id="commissionFactRows"><tr><td colspan="7" class="empty">Chọn một chương trình.</td></tr></tbody>
+          </table></div>
+        </article>
+      </section>
+
+      <section id="view-finance" class="view">
+        <div id="financeCards" class="metrics-grid"></div>
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Đồng tiền báo cáo</h2><p>Giữ nguyên số gốc và quy đổi sang một đồng tiền chung để tính dòng tiền.</p></div><span class="badge">FX LEDGER</span></div>
+            <form id="financeSettingsForm" class="form-grid">
+              <label>Đồng tiền chung<input name="base_currency" value="VND" maxlength="3"></label>
+              <label>Tỷ giá cũ tối đa (ngày)<input name="max_rate_age_days" type="number" min="0" max="31" value="7"></label>
+              <div class="span-2 form-actions"><button class="button secondary" type="submit">Lưu thiết lập</button><span id="financeSettingsMessage" class="form-message"></span></div>
+            </form>
+            <div id="normalizationCoverage" class="notice">Đang kiểm tra độ phủ tỷ giá…</div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Thêm tỷ giá có nguồn</h2><p>Lưu ở trạng thái đề xuất; chưa được dùng cho tới khi xác nhận.</p></div><span class="badge">PROPOSAL</span></div>
+            <form id="fxRateForm" class="form-grid">
+              <label>Ngày tỷ giá<input name="rate_date" type="date" required></label>
+              <label>Tỷ giá<input name="rate" type="number" min="0" step="any" placeholder="Ví dụ 26000" required></label>
+              <label>Từ tiền tệ<input name="from_currency" value="USD" maxlength="3" required></label>
+              <label>Sang tiền tệ<input name="to_currency" value="VND" maxlength="3" required></label>
+              <label>Tên nguồn<input name="source_name" placeholder="Ngân hàng / nguồn chính thức" required></label>
+              <label>Confidence<input name="confidence" type="number" min="0" max="1" step="0.05" value="0"></label>
+              <label class="span-2">URL nguồn<input name="source_url" type="url" placeholder="https://..." required></label>
+              <label class="span-2">Thời điểm kiểm tra<input name="checked_at" type="datetime-local" required></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Lưu đề xuất</button><span id="fxRateMessage" class="form-message"></span></div>
+            </form>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Sổ tỷ giá</h2><p>Chỉ tỷ giá ACCEPTED mới được áp dụng; nguồn khác nhau cùng ngày không được tự ghi đè.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Ngày</th><th>Cặp tiền</th><th>Tỷ giá</th><th>Nguồn</th><th>Confidence</th><th>State</th><th>Xử lý</th></tr></thead>
+            <tbody id="fxRateRows"><tr><td colspan="7" class="empty">Chưa có tỷ giá.</td></tr></tbody>
+          </table></div>
+        </article>
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Nhập commission CSV</h2><p>Preview trước, import sau. Nhập lại cùng file không tạo giao dịch trùng; trạng thái cũ được cập nhật.</p></div></div>
+            <form id="commissionImportForm" class="form-grid">
+              <label class="span-2">File CSV<input name="file" type="file" accept=".csv,text/csv" required></label>
+              <label>Nguồn / network<input name="source" value="CSV" placeholder="Impact / PartnerStack / ..."></label>
+              <label>Gắn vào chương trình<select name="program_id" id="financeProgram"><option value="">Chưa xác định</option></select></label>
+              <div class="span-2 form-actions">
+                <button id="previewImport" class="button secondary" type="button">Xem trước</button>
+                <button id="commitImport" class="button primary" type="button" disabled>Nhập dữ liệu</button>
+                <span id="importMessage" class="form-message"></span>
+              </div>
+            </form>
+            <div class="notice">Cột tối thiểu: <code>transaction_id</code> hoặc <code>external_id</code>, và <code>amount</code>. Hỗ trợ thêm: currency, status, date, subid hoặc gclid, order_value.</div>
+          </article>
+          <article class="panel" id="importPreviewPanel">
+            <div class="panel-head"><div><h2>Kết quả preview</h2><p>Chưa ghi vào database cho đến khi bấm “Nhập dữ liệu”.</p></div></div>
+            <div id="importPreview" class="empty">Chưa chọn file.</div>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Commission gần nhất</h2><p>Pending chỉ là forecast; Approved/Locked/Paid mới là recognized revenue.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Ngày</th><th>ID</th><th>Nguồn</th><th>State</th><th>Số tiền</th><th>Attribution</th></tr></thead>
+            <tbody id="commissionRows"><tr><td colspan="6" class="empty">Chưa có commission.</td></tr></tbody>
+          </table></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Hàng đợi đối soát</h2><p>ATTRIBUTED là hoàn chỉnh; PARTIAL/UNATTRIBUTED cần thêm mapping; DUPLICATE/CONFLICT cần kiểm tra.</p></div><span class="badge">RECONCILIATION</span></div>
+          <div id="reconciliationSummary" class="notice">Chưa có dữ liệu đối soát.</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>State</th><th>Đối tượng</th><th>Lý do</th><th>Cập nhật</th><th>Xử lý</th></tr></thead>
+            <tbody id="reconciliationRows"><tr><td colspan="5" class="empty">Chưa có mục đối soát.</td></tr></tbody>
+          </table></div>
+        </article>
+      </section>
+
+      <section id="view-system" class="view">
+        <div class="grid two uneven">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Backup database</h2><p>Tạo bản sao SQLite nhất quán, có SHA-256, kiểm tra toàn vẹn, khóa liên kết và phiên bản schema.</p></div></div>
+            <button id="createBackup" class="button primary">Tạo backup ngay</button>
+            <span id="backupMessage" class="form-message"></span>
+            <div class="notice">File backup nằm trong <code>AFI-OS/backups/</code>. Update không được ghi đè thư mục <code>data/</code>.</div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Khôi phục</h2><p>Khôi phục cần dừng server nên được làm bằng file command, không làm âm thầm trong trình duyệt.</p></div></div>
+            <ol class="steps">
+              <li>Đóng AFI-OS hoặc để script tự dừng.</li>
+              <li>Mở <code>RESTORE-LATEST-BACKUP.command</code> trong thư mục AFI-OS.</li>
+              <li>Gõ <code>RESTORE</code> khi được hỏi. Hệ thống bỏ qua backup hỏng/sai schema và tự tạo backup khẩn cấp trước.</li>
+            </ol>
+            <div class="notice warning">Chỉ dùng Restore khi dữ liệu lỗi hoặc update thất bại. Bình thường không cần mở file này.</div>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Danh sách backup</h2><p>Mới nhất ở trên.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Thời gian</th><th>Tên</th><th>Dung lượng</th><th>Schema DB</th><th>Trạng thái</th><th>SHA-256</th></tr></thead>
+            <tbody id="backupRows"><tr><td colspan="6" class="empty">Chưa có backup.</td></tr></tbody>
+          </table></div>
+        </article>
+      </section>
+
+    </main>
+  </div>
+  <div id="truthBackdrop" class="truth-backdrop" hidden></div>
+  <aside id="truthDrawer" class="truth-drawer" aria-hidden="true" aria-labelledby="truthDrawerTitle">
+    <div class="truth-drawer-head">
+      <div><span class="eyebrow">WHY THIS NUMBER?</span><h2 id="truthDrawerTitle">Chi tiết dữ liệu</h2></div>
+      <button id="truthDrawerClose" class="button secondary" type="button" aria-label="Đóng">Đóng</button>
+    </div>
+    <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
+  </aside>
+  <script src="/app.js?v=02102"></script>
+</body>
+</html>

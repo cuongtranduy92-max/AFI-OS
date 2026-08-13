@@ -1,0 +1,4 @@
+transaction_id,amount,currency,status,date,subid,order_value
+TX-1001,14.70,USD,pending,2026-08-10,example-subid-001,49.00
+TX-1002,29.40,USD,approved,2026-08-10,,98.00
+TX-1003,14.70,USD,paid,2026-08-09,,49.00

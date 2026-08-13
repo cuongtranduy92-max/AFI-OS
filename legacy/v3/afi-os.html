@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFI-OS · Hệ điều hành affiliate</title>
+<style>
+.viz-root{color-scheme:light;
+ --surface-0:#f4f4f1;--surface-1:#fcfcfb;--surface-2:#eeeeea;--surface-3:#e4e4df;
+ --line:#dcdcd6;--grid:#e8e8e3;
+ --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#78776f;
+ --series-1:#2a78d6;--series-2:#eb6834;--pos:#2a78d6;--neg:#e34948;
+ --good:#0ca30c;--warning:#fab219;--serious:#ec835a;--critical:#d03b3b;}
+:root[data-theme="dark"] .viz-root{color-scheme:dark;
+ --surface-0:#111110;--surface-1:#1a1a19;--surface-2:#232322;--surface-3:#2d2d2b;
+ --line:#3a3a37;--grid:#2b2b29;
+ --text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#8f8e85;
+ --series-1:#3987e5;--series-2:#d95926;--pos:#3987e5;--neg:#e66767;}
+@media(prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .viz-root{color-scheme:dark;
+ --surface-0:#111110;--surface-1:#1a1a19;--surface-2:#232322;--surface-3:#2d2d2b;
+ --line:#3a3a37;--grid:#2b2b29;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#8f8e85;
+ --series-1:#3987e5;--series-2:#d95926;--pos:#3987e5;--neg:#e66767;}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--surface-0);color:var(--text-primary);font-size:13.5px;line-height:1.5;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px 12px 60px}
+.wrap{max-width:1260px;margin:0 auto}
+h1{font-size:19px;font-weight:650;letter-spacing:-.02em}
+.sub{color:var(--text-secondary);font-size:12px;margin-top:2px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.card{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:12px}
+.card h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-muted);
+ font-weight:650;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+button,select,input,textarea{font-family:inherit;font-size:12.5px;color:var(--text-primary);
+ background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:6px 9px}
+button{cursor:pointer}button:hover{border-color:var(--text-muted)}
+button.pri{background:var(--series-1);border-color:var(--series-1);color:#fff;font-weight:600}
+textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.6;resize:vertical}
+.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+/* tabs */
+.tabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:9px 15px;border-radius:9px;border:1px solid var(--line);background:var(--surface-1);
+ cursor:pointer;font-weight:600;font-size:13px;display:flex;gap:7px;align-items:center}
+.tab.on{background:var(--series-1);border-color:var(--series-1);color:#fff}
+.tab .b{font-size:10.5px;background:rgba(128,128,128,.22);padding:1px 7px;border-radius:20px;font-weight:700}
+.tab.on .b{background:rgba(255,255,255,.25)}
+.pane{display:none}.pane.on{display:block}
+/* form */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
+.f label{display:block;font-size:11px;color:var(--text-muted);margin-bottom:3px}
+.f input,.f select{width:100%}
+.f .th{font-size:10px;color:var(--text-muted);margin-top:2px}
+/* verdict */
+.vbig{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.hnum{font-size:42px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.hlab{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-top:5px}
+.vbadge{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-weight:700;font-size:15px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+.kpi .k{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi .v{font-size:17px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .n{font-size:10.5px;color:var(--text-secondary);margin-top:1px}
+/* meter */
+.meter{height:10px;background:var(--surface-3);border-radius:6px;overflow:hidden;margin-top:8px;display:flex}
+.meter i{display:block;height:100%}
+.mrow{display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-top:5px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:650;
+ cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--text-primary)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+.scroll{max-height:440px;overflow:auto}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:650;white-space:nowrap}
+/* charts */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.lg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.sw{width:10px;height:10px;border-radius:3px;flex:none}
+svg{display:block;width:100%;overflow:visible}
+.gl{stroke:var(--grid);stroke-width:1}.ax{fill:var(--text-muted);font-size:10px}
+.dlab{fill:var(--text-secondary);font-size:10.5px;font-weight:600}
+.tip{position:fixed;pointer-events:none;background:var(--surface-1);border:1px solid var(--line);border-radius:8px;
+ padding:8px 10px;font-size:11.5px;box-shadow:0 4px 18px rgba(0,0,0,.18);opacity:0;transition:opacity .1s;z-index:60;min-width:130px}
+.tip b{display:block;margin-bottom:4px}.tip .tr{display:flex;justify-content:space-between;gap:14px;margin-top:2px}
+/* drop */
+.drop{border:2px dashed var(--line);border-radius:11px;padding:20px;text-align:center;color:var(--text-secondary);
+ cursor:pointer;background:var(--surface-2);transition:.15s}
+.drop.on{border-color:var(--series-1);background:color-mix(in srgb,var(--series-1) 8%,var(--surface-2))}
+.hint{font-size:11px;color:var(--text-muted);line-height:1.65;margin-top:7px}
+.stages{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+@media(max-width:900px){.stages{grid-template-columns:repeat(4,1fr)}}
+.stage{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center}
+.stage .n{font-size:19px;font-weight:700}.stage .l{font-size:9.5px;color:var(--text-muted);margin-top:2px;line-height:1.3}
+.empty{color:var(--text-muted);font-size:12px;padding:14px 0;text-align:center}
+details summary{cursor:pointer;font-size:12px;color:var(--text-secondary);padding:3px 0}
+footer{text-align:center;color:var(--text-muted);font-size:10.5px;line-height:1.7;margin-top:20px}
+.warn{background:color-mix(in srgb,var(--warning) 12%,transparent);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
+ border-radius:9px;padding:10px 12px;font-size:12px;color:var(--text-secondary);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="viz-root wrap">
+
+<div class="head">
+  <div><h1>AFI-OS · Hệ điều hành affiliate</h1>
+    <div class="sub">Thẩm định → Quan hệ → Điều hành · công thức hoàn vốn lấy từ bảng gốc của thầy</div></div>
+  <div class="row">
+    <select id="cur"><option value="USD">$</option><option value="VND">đ</option></select>
+    <select id="theme"><option value="auto">Tự động</option><option value="light">Sáng</option><option value="dark">Tối</option></select>
+    <span id="saved" style="font-size:11px;color:var(--text-muted)"></span>
+    <button id="exp">↓ Lưu</button><button id="impB">↑ Mở</button>
+    <input type="file" id="fJson" accept=".json" style="display:none">
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab on" data-t="1">① Thẩm định <span class="b" id="b1">0</span></div>
+  <div class="tab" data-t="2">② Quan hệ <span class="b" id="b2">0</span></div>
+  <div class="tab" data-t="4">④ Triển khai</div>
+  <div class="tab" data-t="3">⑤ Điều hành <span class="b" id="b3">0</span></div>
+</div>
+
+<!-- ============ TẦNG 1 : THẨM ĐỊNH ============ -->
+<div class="pane on" id="p1">
+  <div class="card">
+    <h2>Ném dự án vào đây <span><button id="demo1">Nạp 15 dự án mẫu của anh</button> <button id="clr1">Xóa</button></span></h2>
+    <div class="grid">
+      <div class="f"><label>Tên dự án / domain</label><input id="i_name" placeholder="pictory.ai"></div>
+      <div class="f"><label>Ngách</label><input id="i_niche" placeholder="AI"></div>
+      <div class="f"><label>Traffic SimilarWeb / tháng</label><input id="i_simi" inputmode="numeric" placeholder="980000"><div class="th">≥ 20.000 · tốt ≥ 50.000</div></div>
+      <div class="f"><label>Traffic Google (Keyword Planner)</label><input id="i_gg" inputmode="numeric" placeholder="100000"><div class="th">≥ 3.000 · tốt ≥ 10.000</div></div>
+      <div class="f"><label>Giá thầu đầu trang THẤP ($)</label><input id="i_low" inputmode="decimal" placeholder="0.06"></div>
+      <div class="f"><label>Giá thầu đầu trang CAO ($)</label><input id="i_high" inputmode="decimal" placeholder="1.00"><div class="th">≤ $15</div></div>
+      <div class="f"><label>Nước top traffic</label><input id="i_geo" placeholder="US, India"></div>
+      <div class="f"><label>Phân loại PPC</label><select id="i_ppc">
+        <option value="c">(c) Cho phép chạy ads</option><option value="b" selected>(b) Cấm brand keyword</option>
+        <option value="d">(d) T&amp;C không nhắc</option><option value="a">(a) Cấm mọi paid ads</option></select></div>
+      <div class="f"><label>Giá các gói ($) — cách nhau dấu phẩy</label><input id="i_pk" placeholder="29, 59, 199"></div>
+      <div class="f"><label>% hoa hồng</label><input id="i_com" inputmode="decimal" placeholder="50"></div>
+      <div class="f"><label>Loại hoa hồng</label><select id="i_type">
+        <option>Một lần</option><option selected>Recurring</option><option>Vĩnh viễn</option></select></div>
+      <div class="f"><label>Cổng thanh toán</label><input id="i_pay" placeholder="paypal, stripe"></div>
+      <div class="f"><label>Min payment ($)</label><input id="i_min" inputmode="decimal" placeholder="5"><div class="th">≤ $300</div></div>
+      <div class="f"><label>Thời gian payment (ngày)</label><input id="i_days" inputmode="numeric" placeholder="30"><div class="th">≤ 60 ngày</div></div>
+      <div class="f"><label>Ngách tài chính? cần giấy phép</label><select id="i_lic"><option value="0">Không</option><option value="1">Có — đã kiểm license</option><option value="2">Có — CHƯA có license</option></select></div>
+      <div class="f" style="display:flex;align-items:flex-end"><button class="pri" id="add1" style="width:100%;padding:8px">Thẩm định &amp; thêm vào bảng</button></div>
+    </div>
+    <details style="margin-top:10px"><summary>▸ Hoặc dán hàng loạt nhiều dự án</summary>
+      <textarea id="bulk" rows="5" style="margin-top:8px" placeholder="Tên | Ngách | TrafficSimi | TrafficGG | BidThấp | BidCao | Nước | PPC(a/b/c/d) | Gói(29;59;199) | %HH | MinPay | NgàyPay
+pictory.ai | AI | 980000 | 100000 | 0.06 | 1.00 | US, India | b | 29;59;199 | 50 | 5 | 30"></textarea>
+      <button class="pri" id="doBulk" style="margin-top:7px">Nạp hàng loạt</button>
+    </details>
+  </div>
+
+  <div class="card" id="cardV" style="display:none">
+    <h2>Kết luận dự án vừa thẩm định</h2>
+    <div class="vbig">
+      <div style="min-width:130px"><div class="hnum" id="vDays">–</div><div class="hlab">ngày hoàn vốn</div></div>
+      <div class="vbadge" id="vB"><span id="vI">•</span><span id="vT">–</span></div>
+      <div style="flex:1;min-width:250px;color:var(--text-secondary)" id="vWhy"></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Giá gói TB</div><div class="v" id="vAvg">–</div></div>
+      <div class="kpi"><div class="k">Hoa hồng / đơn</div><div class="v" id="vRev">–</div><div class="n">≥ $10</div></div>
+      <div class="kpi"><div class="k">Chi phí / đơn (bid thấp)</div><div class="v" id="vC1">–</div><div class="n">150 click × bid</div></div>
+      <div class="kpi"><div class="k">Chi phí / đơn (bid cao)</div><div class="v" id="vC2">–</div></div>
+      <div class="kpi"><div class="k">Giá thầu đề xuất</div><div class="v" id="vBid">–</div><div class="n" id="vBidN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Hoàn vốn ở bid cao</div><div class="v" id="vD2">–</div><div class="n">≤ 120 ngày</div></div>
+    </div>
+    <table style="margin-top:14px"><thead><tr><th style="width:180px">Tiêu chí</th><th class="num" style="width:120px">Thực tế</th>
+      <th style="width:130px">Ngưỡng</th><th style="width:120px">Đánh giá</th><th>Ghi chú</th></tr></thead>
+      <tbody id="vRows"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Bảng dự án đã thẩm định <span id="n1" style="font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+    <div class="scroll"><table><thead><tr>
+      <th data-s1="name">Dự án</th><th data-s1="niche">Ngách</th><th data-s1="ppc">PPC</th>
+      <th data-s1="simi" class="num">Simi</th><th data-s1="gg" class="num">Google</th>
+      <th data-s1="rev" class="num">HH/đơn</th><th data-s1="d1" class="num">Hoàn vốn thấp</th>
+      <th data-s1="d2" class="num">Hoàn vốn cao</th><th data-s1="bid" class="num">Bid đề xuất</th>
+      <th data-s1="score" class="num">Điểm</th><th data-s1="rank">Kết luận</th><th style="width:26px"></th>
+    </tr></thead><tbody id="t1"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ============ TẦNG 2 : QUAN HỆ ============ -->
+<div class="pane" id="p2">
+  <div class="card">
+    <h2>Phễu đăng ký dự án</h2>
+    <div class="stages" id="fun"></div>
+  </div>
+  <div class="card">
+    <h2>Dự án — trạng thái đăng ký &amp; dòng tiền <span><button id="addP">+ Thêm dự án</button></span></h2>
+    <div class="scroll"><table><thead><tr>
+      <th style="width:132px">Dự án</th><th style="width:112px">Nét</th><th style="width:120px">Giai đoạn</th>
+      <th style="width:96px">Ngày nộp</th><th style="width:150px">Link reff</th>
+      <th style="width:92px">Chờ duyệt</th><th style="width:92px">Đã duyệt</th><th style="width:88px">Từ chối</th>
+      <th style="width:88px">Đã rút</th><th style="width:80px">Kỳ rút</th><th style="width:24px"></th>
+    </tr></thead><tbody id="t2"></tbody></table></div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:11px">
+      <div class="kpi"><div class="k">Chờ duyệt</div><div class="v" id="fPend">–</div><div class="n">chưa chắc ăn</div></div>
+      <div class="kpi"><div class="k">Đã duyệt chưa rút</div><div class="v" id="fAppr">–</div><div class="n">tiền chắc chắn</div></div>
+      <div class="kpi"><div class="k">Bị từ chối</div><div class="v" id="fRej">–</div><div class="n" id="fRejN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Đã rút</div><div class="v" id="fPaid">–</div><div class="n">đã về tay</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Hồ sơ support &amp; đàm phán <span><button id="addS">+ Thêm liên hệ</button></span></h2>
+    <div class="scroll"><table><thead><tr>
+      <th style="width:120px">Tên / bộ phận</th><th style="width:112px">Dự án</th><th style="width:110px">Kênh</th>
+      <th style="width:96px">Dễ làm việc</th><th style="width:104px">Liên hệ lần cuối</th>
+      <th style="width:80px">HH hiện tại</th><th style="width:110px">Đang đàm phán</th><th>Ghi chú</th><th style="width:24px"></th>
+    </tr></thead><tbody id="t3"></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Nhắc việc tự sinh</h2>
+    <div id="rem"></div>
+  </div>
+</div>
+
+<!-- ============ TẦNG 4 : TRIỂN KHAI ============ -->
+<div class="pane" id="p4">
+  <div class="card">
+    <h2>A · Trình tạo link theo dõi — làm TRƯỚC khi bật camp đầu tiên</h2>
+    <div class="warn">Không có bước này thì anh chỉ biết dự án nào lãi, <b>không biết TỪ KHÓA nào ra tiền</b>.
+      Với vốn 60 triệu/tháng thì chạy mù là quá đắt (nguyên tắc #29 #69).</div>
+    <div class="grid" style="margin-top:11px">
+      <div class="f"><label>Dự án</label><select id="k_proj"></select></div>
+      <div class="f" style="grid-column:span 2"><label>Link affiliate gốc (lấy từ nét)</label>
+        <input id="k_link" placeholder="https://pictory.ai/?via=duy-cuong"></div>
+      <div class="f"><label>Tên tham số SubID của nét</label><select id="k_sub">
+        <option value="subid">subid — FirstPromoter, Rewardful, GoAffPro</option>
+        <option value="sub_id">sub_id — Impact, một số nét</option>
+        <option value="s1">s1 — ShareASale</option>
+        <option value="clickref">clickref — Awin</option>
+        <option value="u1">u1 — Rakuten</option>
+        <option value="aff_sub">aff_sub — nét khác</option>
+        <option value="custom">tự nhập…</option></select></div>
+      <div class="f" id="k_cw" style="display:none"><label>Tên tham số tự nhập</label><input id="k_custom" placeholder="subid"></div>
+    </div>
+    <div class="card" style="background:var(--surface-2);margin-top:12px">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">URL cuối cùng — dán vào ô "URL cuối cùng" của quảng cáo</div>
+      <div id="k_out" style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all;color:var(--series-1)">–</div>
+      <button id="k_copy" style="margin-top:9px">Sao chép</button>
+      <div class="hint" id="k_note"></div>
+    </div>
+    <details style="margin-top:10px"><summary>▸ Ba việc phải làm trong Google Ads để link này chạy</summary>
+      <div class="hint" style="font-size:12px;color:var(--text-secondary)">
+      <b>1. Bật tự động gắn thẻ.</b> Google Ads → Quản trị → Cài đặt tài khoản → Tự động gắn thẻ → BẬT.
+      Không bật thì không có gclid, link trên vô nghĩa.<br><br>
+      <b>2. Kiểm tra nét có nhận SubID không.</b> Bấm thử link trên trình duyệt, vào dashboard nét xem
+      mục Clicks/Referrals có cột SubID và có giá trị không. Nét nào không nhận thì phải hỏi support.<br><br>
+      <b>3. Tạo hành động chuyển đổi loại Nhập.</b> Google Ads → Mục tiêu → Lượt chuyển đổi → + Hành động mới
+      → <b>Nhập</b> → Nhập chuyển đổi khác → Theo dõi <b>Lượt nhấp</b>. Đặt tên trùng tên dự án.
+      Sau đó dùng mục C bên dưới để tạo file tải lên.</div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>B · Trình sinh bộ nội dung quảng cáo <span><button id="ag_go" class="pri">Sinh bộ nội dung</button></span></h2>
+    <div class="grid">
+      <div class="f"><label>Dự án</label><select id="ag_proj"></select></div>
+      <div class="f"><label>Ngách hiển thị trong quảng cáo</label><input id="ag_niche" placeholder="AI video"></div>
+      <div class="f" style="grid-column:span 2"><label>Link ref đã gắn tracking — dán từ mục A</label>
+        <input id="ag_ref" placeholder="https://...&subid={gclid}"></div>
+      <div class="f" style="grid-column:span 2"><label>Website của anh (để trống nếu chưa có) — sitelink sẽ trỏ vào đây</label>
+        <input id="ag_site" placeholder="https://example.com/best-ai-video-generators.html"></div>
+    </div>
+    <div id="ag_warn"></div>
+    <div id="ag_out" style="display:none">
+      <div class="g2" style="margin-top:14px">
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">15 từ khóa <span id="ag_kn"></span></div>
+          <textarea id="ag_kw" rows="8"></textarea></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">15 tiêu đề · ≤30 ký tự <span id="ag_hn"></span></div>
+          <textarea id="ag_h" rows="8"></textarea></div>
+      </div>
+      <div class="g2" style="margin-top:11px">
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">4 mô tả · ≤90 ký tự <span id="ag_dn"></span></div>
+          <textarea id="ag_d" rows="5"></textarea></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">4 chú thích · ≤25 ký tự <span id="ag_cn"></span></div>
+          <textarea id="ag_c" rows="5"></textarea></div>
+      </div>
+      <div style="margin-top:11px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">4 liên kết mở rộng — tiêu đề ≤25 · mỗi dòng mô tả ≤35 · đã gắn link ref</div>
+        <div class="scroll" style="max-height:none"><table><thead><tr><th style="width:150px">Tiêu đề</th>
+          <th style="width:180px">Dòng mô tả 1</th><th style="width:180px">Dòng mô tả 2</th><th>URL</th></tr></thead>
+          <tbody id="ag_sl"></tbody></table></div></div>
+      <div id="ag_score" style="margin-top:12px"></div>
+      <div class="row" style="margin-top:11px">
+        <button class="pri" id="ag_send">Đưa bộ này sang trình sinh camp ↓</button>
+        <button id="ag_csv">↓ Tải bảng dán tay (CSV)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>C · Sinh camp hàng loạt — 4 file CSV chuẩn Google</h2>
+    <div class="grid">
+      <div class="f"><label>Dự án</label><select id="g_proj"></select></div>
+      <div class="f"><label>Số camp</label><input id="g_n" type="number" value="10" min="1" max="200"></div>
+      <div class="f"><label>Ngân sách/ngày ($)</label><input id="g_bud" type="number" value="50" step="1"></div>
+      <div class="f"><label>Giá thầu tối đa ($)</label><input id="g_bid" type="number" step="0.001" value="0.1"></div>
+      <div class="f" style="grid-column:span 2"><label>URL cuối cùng — dán từ mục A</label><input id="g_url" placeholder="https://..."></div>
+      <div class="f" style="grid-column:span 2"><label>Từ khóa — mỗi dòng một từ, tự thêm [exact] và "phrase"</label>
+        <input id="g_kw" placeholder="ai video generator, text to video tool"></div>
+      <div class="f" style="grid-column:span 2"><label>15 tiêu đề — cách nhau dấu | (≤30 ký tự mỗi cái)</label>
+        <input id="g_h" placeholder="Tiêu đề 1 | Tiêu đề 2 | ..."></div>
+      <div class="f" style="grid-column:span 2"><label>4 mô tả — cách nhau dấu | (≤90 ký tự)</label>
+        <input id="g_d" placeholder="Mô tả 1 | Mô tả 2 | ..."></div>
+    </div>
+    <div id="g_warn"></div>
+    <div class="row" style="margin-top:11px">
+      <button class="pri" id="g_go">Sinh 4 file CSV</button>
+      <button id="g_fill">Điền mẫu từ dự án đã chọn</button>
+    </div>
+    <div class="hint">Mọi camp sinh ra đều để <b>Tạm dừng</b>. Mạng hiển thị và đối tác tìm kiếm đã tắt sẵn.
+      Thứ tự nhập vào Google Ads: 1 Chiến dịch → 2 Nhóm quảng cáo → 3 Từ khóa → 4 Quảng cáo,
+      và phải bấm <b>Áp dụng</b> sau mỗi file chứ không chỉ Xem trước.</div>
+    <div id="g_out" class="hint"></div>
+  </div>
+
+  <div class="card">
+    <h2>D · Tạo file nhập chuyển đổi ngoại tuyến</h2>
+    <div class="hint" style="margin-top:0">Xuất báo cáo đơn hàng từ nét, lấy 3 cột: <b>SubID (chính là gclid)</b>,
+      <b>ngày giờ chuyển đổi</b>, <b>hoa hồng</b>. Dán vào đây, mỗi dòng một đơn.</div>
+    <div class="grid" style="margin-top:9px">
+      <div class="f"><label>Tên hành động chuyển đổi (đúng như đặt trong Google Ads)</label>
+        <input id="v_name" placeholder="Đơn affiliate - Pictory"></div>
+      <div class="f"><label>Múi giờ tài khoản Ads</label><select id="v_tz">
+        <option>+0700</option><option>+0000</option><option>-0700</option><option>-0500</option></select></div>
+      <div class="f"><label>Đơn vị tiền</label><select id="v_cur"><option>USD</option><option>VND</option></select></div>
+    </div>
+    <textarea id="v_in" rows="5" style="margin-top:9px" placeholder="gclid, ngày, giá trị — cách nhau dấu phẩy hoặc TAB
+Cj0KCQjw...abc, 2026-08-20 14:32, 48
+Cj0KCQjw...def, 2026-08-21 09:10, 48"></textarea>
+    <div class="row" style="margin-top:9px"><button class="pri" id="v_go">Tạo file tải lên</button></div>
+    <div class="hint" id="v_out"></div>
+    <details style="margin-top:8px"><summary>▸ Cách tải file lên Google Ads</summary>
+      <div class="hint" style="font-size:12px;color:var(--text-secondary)">
+      Google Ads → Mục tiêu → Lượt chuyển đổi → <b>Tải lên</b> → + → Chọn nguồn: Tải tệp lên →
+      chọn file vừa tạo → <b>Xem trước</b> → sạch lỗi rồi mới <b>Áp dụng</b>.<br>
+      Google chỉ nhận gclid trong vòng <b>90 ngày</b> kể từ lúc phát sinh click. Nên tải lên hàng tuần,
+      đừng để dồn.</div>
+    </details>
+  </div>
+</div>
+
+<!-- ============ TẦNG 5 : ĐIỀU HÀNH ============ -->
+<div class="pane" id="p3">
+
+  <div class="card">
+    <h2>Bảng lệnh sáng nay <span id="ordN" class="hint" style="font-weight:400"></span></h2>
+    <div class="scroll" style="max-height:340px"><table><thead><tr>
+      <th style="width:34px">#</th><th style="width:150px">Việc</th><th>Làm gì — cụ thể</th>
+      <th style="width:130px" class="num">Tiền mỗi ngày</th><th style="width:150px">Ở đâu</th>
+    </tr></thead><tbody id="ord"></tbody></table></div>
+    <div class="hint">Danh sách này <b>tự sinh</b> từ số liệu — xếp theo số tiền đang chảy mỗi ngày.
+      Làm từ trên xuống rồi đóng máy. Không có việc nào nghĩa là đang ổn.</div>
+  </div>
+
+  <div class="card">
+    <h2>Nguồn tự động <span><button id="srcNow">↻ Cập nhật ngay</button></span></h2>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <input id="srcUrl" placeholder="afi-data.json  hoặc  http://localhost:8765/afi-data.json"
+        style="flex:1;min-width:260px;padding:6px 8px;font-size:12px">
+      <select id="srcIv" style="padding:6px">
+        <option value="0">Không tự làm mới</option><option value="5">5 phút</option>
+        <option value="15" selected>15 phút</option><option value="60">1 giờ</option>
+        <option value="180">3 giờ</option>
+      </select>
+    </div>
+    <div class="hint" id="srcMsg">Chưa bật. Chạy <code>python3 afi_sync.py --serve</code> rồi mở
+      <code>http://localhost:8765/afi-os.html</code> — ô này điền sẵn <code>afi-data.json</code> là xong,
+      từ đó không phải đụng tay nữa.</div>
+  </div>
+
+  <div class="card">
+    <h2>Nạp báo cáo Google Ads <span><button id="demo3">Dữ liệu mẫu</button> <button id="clr3">Xóa</button></span></h2>
+    <div class="drop" id="drop"><b>Kéo thả file CSV xuất từ Google Ads</b><br>
+      <span style="font-size:12px">thả nhiều file cùng lúc, mỗi tài khoản một file</span></div>
+    <input type="file" id="fCsv" accept=".csv,.tsv,.txt" multiple style="display:none">
+    <div class="hint" id="loaded">Tự nhận cột tiếng Việt hoặc tiếng Anh. Doanh thu lấy từ bảng Dòng tiền ở tầng ②.</div>
+  </div>
+  <div class="card">
+    <h2>Sổ nạp tiền — vốn đã bơm vào tài khoản <span><button id="dp_add">+ Thêm lần nạp</button></span></h2>
+    <div class="scroll" style="max-height:230px"><table><thead><tr>
+      <th style="width:130px">Ngày</th><th style="width:190px">Tài khoản</th>
+      <th style="width:130px">Số tiền nạp</th><th>Ghi chú</th><th style="width:24px"></th>
+    </tr></thead><tbody id="dp_t"></tbody></table></div>
+    <div class="hint">Đây là tiền anh <b>bơm vào</b> tài khoản Ads, khác với tiền <b>đã tiêu</b>.
+      Chênh lệch giữa hai con số là tiền còn nằm trong tài khoản Google.</div>
+  </div>
+
+  <div class="card">
+    <h2>Dòng tiền — vào và ra</h2>
+    <svg id="c4" viewBox="0 0 1180 190"></svg>
+    <div class="kpis" style="grid-template-columns:repeat(5,1fr);margin-top:12px">
+      <div class="kpi"><div class="k">Vốn đã nạp</div><div class="v" id="fIn">–</div><div class="n" id="fInN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Đã tiêu</div><div class="v" id="fSp">–</div><div class="n" id="fSpN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Còn trong tài khoản</div><div class="v" id="fLeft">–</div><div class="n" id="fLeftN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Hoa hồng về</div><div class="v" id="fBack">–</div><div class="n" id="fBackN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Lãi ròng thật</div><div class="v" id="fPro">–</div><div class="n" id="fProN">&nbsp;</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tổng quan</h2>
+    <div class="vbig">
+      <div style="min-width:140px"><div class="hnum" id="hNet">–</div><div class="hlab">Lãi ròng danh mục</div></div>
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:11.5px;color:var(--text-secondary)">Ngân sách tháng
+          <input id="cap" type="number" value="60" style="width:70px;padding:3px 6px;margin-left:5px"> triệu đ</div>
+        <div class="meter"><i id="mUsed"></i><i id="mRest"></i></div>
+        <div class="mrow"><span id="mL">–</span><span id="mR">–</span></div>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Chi phí</div><div class="v" id="kCost">–</div><div class="n" id="kCostN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Hoa hồng</div><div class="v" id="kRev">–</div><div class="n" id="kRevN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">ROE</div><div class="v" id="kRoe">–</div><div class="n">lãi trên vốn</div></div>
+      <div class="kpi"><div class="k">EPC / CPC</div><div class="v" id="kRatio">–</div><div class="n" id="kRatioN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Camp</div><div class="v" id="kCamp">–</div><div class="n" id="kCampN">&nbsp;</div></div>
+      <div class="kpi"><div class="k">Tài khoản</div><div class="v" id="kAcc">–</div><div class="n" id="kAccN">&nbsp;</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><h2>Chi phí và hoa hồng theo ngày</h2>
+      <div class="legend"><span class="lg"><span class="sw" style="background:var(--series-1)"></span>Chi phí</span>
+        <span class="lg"><span class="sw" style="background:var(--series-2)"></span>Hoa hồng</span></div>
+      <svg id="c1" viewBox="0 0 560 220"></svg></div>
+    <div class="card"><h2>Lãi ròng mỗi ngày</h2><svg id="c2" viewBox="0 0 560 220"></svg></div>
+  </div>
+  <div class="card"><h2>Tiền đang chảy vào đâu</h2><svg id="c3" viewBox="0 0 1180 300"></svg>
+    <div class="legend" style="margin-top:7px">
+      <span class="lg"><span class="sw" style="background:var(--critical)"></span>✕ Cắt</span>
+      <span class="lg"><span class="sw" style="background:var(--serious)"></span>↓ Giảm giá thầu</span>
+      <span class="lg"><span class="sw" style="background:var(--warning)"></span>● Giữ &amp; tối ưu</span>
+      <span class="lg"><span class="sw" style="background:var(--good)"></span>✓ Scale</span>
+      <span class="lg"><span class="sw" style="background:var(--text-muted)"></span>○ Chờ dữ liệu</span></div>
+  </div>
+  <div class="card">
+    <h2>Việc cần xử lý — xếp theo tiền đang rò rỉ <span id="triN" style="font-weight:400;text-transform:none;letter-spacing:0"></span></h2>
+    <div class="scroll"><table><thead><tr>
+      <th data-s3="camp">Camp</th><th data-s3="proj">Dự án</th><th data-s3="acc">Tài khoản</th>
+      <th data-s3="cost" class="num">Đã tiêu</th><th style="width:112px">Hoa hồng về ✎</th>
+      <th data-s3="net" class="num">Lãi ròng</th><th data-s3="roi" class="num">ROI</th>
+      <th data-s3="clk" class="num">Click</th>
+      <th data-s3="ratio" class="num">EPC/CPC</th><th data-s3="rank">Trạng thái</th><th>Việc nên làm</th>
+    </tr></thead><tbody id="tri"></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Sức khỏe tài khoản Ads</h2>
+    <div class="scroll"><table><thead><tr><th>Tài khoản</th><th>Dự án</th><th class="num">Camp</th>
+      <th class="num">Chi phí</th><th class="num">Tuổi</th><th>Nuôi trust 21 ngày</th><th>Trạng thái</th><th>Cảnh báo</th>
+    </tr></thead><tbody id="acct"></tbody></table></div>
+  </div>
+</div>
+
+<footer>AFI-OS · ① thẩm định A2 · ② quan hệ A7 · ③ điều hành A3+A6 · dữ liệu chỉ nằm trong trình duyệt, nhớ bấm Lưu</footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const $=i=>document.getElementById(i);
+let PROJ=[],META={},SUPP=[],ROWS=[],ACCM={},DEPOSITS=[],CAMPREV={};
+const STAGES=['Thẩm định','Đăng ký nét','Chờ duyệt','Có link','Dựng landing','Lên camp','Ra đơn','Scale'];
+const CUR=()=>$('cur').value, RATE=26000;
+function toD(v){return CUR()==='USD'?v:v*RATE}
+function fmt(v){if(v==null||isNaN(v))return '–';v=toD(v);
+  if(CUR()==='VND'){const a=Math.abs(v);
+    if(a>=1e9)return (v/1e9).toFixed(2)+' tỷ';if(a>=1e6)return (v/1e6).toFixed(a>=1e7?0:1)+'tr';
+    if(a>=1000)return Math.round(v/1000)+'k';return Math.round(v)+'';}
+  return Math.abs(v)>=100?v.toFixed(0):v.toFixed(2);}
+const money=v=>v==null||isNaN(v)?'–':(CUR()==='VND'?fmt(v)+'đ':'$'+fmt(v));
+const per=v=>v==null||isNaN(v)?'–':(CUR()==='VND'?Math.round(toD(v)).toLocaleString('vi-VN')+'đ':'$'+v.toFixed(3));
+const N=v=>v==null||isNaN(v)?'–':Math.round(v).toLocaleString('vi-VN');
+const S={good:['good','✓','Đạt'],warning:['warning','●','Cân nhắc'],serious:['serious','↓','Yếu'],
+  critical:['critical','✕','Trượt'],muted:['text-muted','○','Thiếu số']};
+function stat(k){const [c,i,l]=S[k];return `<span class="st" style="color:var(--${c})"><span class="dot" style="background:var(--${c})"></span>${i} ${l}</span>`;}
+
+/* ================= TẦNG 1 : THẨM ĐỊNH ================= */
+/* Công thức GỐC của thầy (kiểm chứng khớp 11/11 dòng trong file Excel):
+   Ngày hoàn vốn = 30 × (150 click × giá thầu) / (giá gói TB × % hoa hồng)   ·  ngưỡng ≤ 120 */
+const CLICKS_PER_SALE=150;
+function payback(bid,avg,com){ if(!avg||!com||!bid)return null;
+  const rev=avg*com/100; if(rev<=0)return null; return 30*(CLICKS_PER_SALE*bid)/rev; }
+const STRONG=/\b(us|usa|hoa k|m[ỹy]|uk|anh|canada|úc|uc|australia|germany|đức|duc|france|ph[áa]p|japan|nh[ậa]t|korea|h[àa]n|eu|europe|ch[âa]u [âa]u|netherlands|spain|t[âa]y ban nha|singapore|switzerland)\b/i;
+const WEAK=/\b(india|[ấa]n [đd]|indonesia|philippines|bangladesh|pakistan|vietnam|vi[ệe]t nam|nigeria|brazil)\b/i;
+
+function vet(p){
+  const pk=(p.pk||[]).filter(x=>x>0);
+  const avg=pk.length?pk.reduce((a,b)=>a+b,0)/pk.length:0;
+  const rev=avg*(p.com||0)/100;
+  const c1=CLICKS_PER_SALE*(p.low||0), c2=CLICKS_PER_SALE*(p.high||0);
+  const d1=payback(p.low,avg,p.com), d2=payback(p.high,avg,p.com);
+  // giá thầu đề xuất: min(5× bid thấp, 50% bid cao, EPC×0,3)
+  const epc=rev/CLICKS_PER_SALE;
+  const cands=[]; if(p.low)cands.push(5*p.low); if(p.high)cands.push(.5*p.high); if(epc)cands.push(epc*.3);
+  const bid=cands.length?Math.min(...cands):null;
+  const dBid=payback(bid,avg,p.com);
+  const geoS=STRONG.test(p.geo||'')?'good':WEAK.test(p.geo||'')?'serious':'warning';
+  const R=[];
+  const add=(n,act,thr,k,note)=>R.push({n,act,thr,k,note});
+  add('Traffic SimilarWeb',N(p.simi),'≥ 20.000',!p.simi?'muted':p.simi>=50000?'good':p.simi>=20000?'warning':'critical','Lọc thô. Traffic khủng ≠ dự án tốt (#8)');
+  add('Traffic Google',N(p.gg),'≥ 3.000',!p.gg?'muted':p.gg>=10000?'good':p.gg>=3000?'warning':'critical','⭐ Chỉ số quyết định chính');
+  add('Giá thầu đầu trang cao','$'+(p.high||0).toFixed(2),'≤ $15',!p.high?'muted':p.high<=1?'good':p.high<=15?'warning':'critical','Càng thấp càng dễ hoàn vốn');
+  add('Nước top traffic',p.geo||'–','Kinh tế mạnh',p.geo?geoS:'muted',geoS==='serious'?'Nước chuyển đổi kém — tùy dự án':'');
+  add('Hoa hồng mỗi đơn','$'+rev.toFixed(2),'≥ $10',!rev?'muted':rev>=10?'good':rev>=5?'warning':'critical','giá gói TB × % hoa hồng');
+  add('Hoàn vốn (bid thấp)',d1==null?'–':Math.round(d1)+' ngày','≤ 120 ngày',d1==null?'muted':d1<=60?'good':d1<=120?'warning':'critical','30 × 150 click × bid ÷ hoa hồng');
+  add('Hoàn vốn (bid cao)',d2==null?'–':Math.round(d2)+' ngày','≤ 120 ngày',d2==null?'muted':d2<=120?'good':d2<=250?'warning':'critical','Kịch bản xấu nhất');
+  add('Min payment','$'+(p.min??0),'≤ $300',p.min==null?'muted':p.min<=50?'good':p.min<=300?'warning':'critical','Càng thấp càng tốt');
+  add('Thời gian payment',(p.days??'–')+' ngày','≤ 60 ngày',p.days==null?'muted':p.days<=30?'good':p.days<=60?'warning':'critical','Càng ngắn càng ít rủi ro bị quỵt');
+  add('Phân loại PPC','('+p.ppc+')','(b) hoặc (c)',p.ppc==='c'?'good':p.ppc==='b'?'warning':p.ppc==='d'?'serious':'critical',
+    p.ppc==='c'?'Chạy được brand keyword':p.ppc==='b'?'Chỉ non-brand + phải có trang so sánh (#75)':p.ppc==='d'?'Phải xin văn bản cho phép':'CẤM mọi paid ads');
+  add('Giấy phép ngách tài chính',p.lic==2?'CHƯA có':p.lic==1?'Đã kiểm':'Không cần','bắt buộc nếu tài chính',p.lic==2?'critical':'good','');
+  const w=R.filter(r=>r.k!=='muted');
+  const score=w.length?Math.round(w.reduce((s,r)=>s+({good:100,warning:60,serious:30,critical:0})[r.k],0)/w.length):0;
+  let v;
+  if(p.ppc==='a')v='cut';
+  else if(p.lic==2)v='cut';
+  else if(d2!=null&&d2>250&&(d1==null||d1>120))v='cut';
+  else if(score>=78&&(d1==null||d1<=120))v='go';
+  else if(score>=55)v='maybe';
+  else v='cut';
+  return {...p,avg,rev,c1,c2,d1,d2,bid,dBid,epc,rows:R,score,v};
+}
+const VD={go:['good','✓','NÊN CHẠY',0],maybe:['warning','●','CÂN NHẮC',1],cut:['critical','✕','BỎ',2]};
+function whyV(o){
+  if(o.ppc==='a')return 'Điều khoản cấm mọi hình thức quảng cáo trả phí. Chỉ hợp hướng content/SEO.';
+  if(o.lic==2)return 'Ngách tài chính mà chưa có giấy phép — Google sẽ từ chối quảng cáo.';
+  if(o.v==='cut')return `Hoàn vốn ${o.d1==null?'không tính được':Math.round(o.d1)+'–'+Math.round(o.d2)+' ngày'}, vượt ngưỡng 120. Muốn cứu thì phải đàm phán nâng hoa hồng hoặc tìm từ khóa giá thầu thấp hơn.`;
+  if(o.v==='go')return `Hoàn vốn ${Math.round(o.d1)} ngày ở giá thầu thấp, ${Math.round(o.d2)} ngày ở giá thầu cao. Đặt giá thầu khởi điểm ${per(o.bid)} thì hoàn vốn khoảng ${o.dBid==null?'–':Math.round(o.dBid)} ngày.`
+    +(o.ppc==='b'?' Dự án loại (b) nên chỉ chạy từ khóa non-brand và bắt buộc có trang so sánh.':'');
+  return `Đạt ${o.score}/100. Một số tiêu chí chưa đạt — xem bảng bên dưới. Nên để vào danh sách chờ, ưu tiên dự án đạt đủ trước.`;
+}
+function readForm(){
+  const gv=i=>$(i).value.trim();
+  const nm=v=>{const x=parseFloat(String(v).replace(/[^\d.\-]/g,''));return isNaN(x)?null:x;};
+  return {name:gv('i_name')||'(chưa đặt tên)',niche:gv('i_niche'),simi:nm(gv('i_simi')),gg:nm(gv('i_gg')),
+    low:nm(gv('i_low')),high:nm(gv('i_high')),geo:gv('i_geo'),ppc:$('i_ppc').value,
+    pk:gv('i_pk').split(/[,;]/).map(x=>parseFloat(x.replace(/[^\d.]/g,''))).filter(x=>!isNaN(x)),
+    com:nm(gv('i_com')),ctype:$('i_type').value,pay:gv('i_pay'),min:nm(gv('i_min')),
+    days:nm(gv('i_days')),lic:+$('i_lic').value};
+}
+function showVerdict(o){
+  $('cardV').style.display='';
+  $('vDays').textContent=o.d1==null?'–':Math.round(o.d1);
+  $('vDays').style.color=o.d1==null?'var(--text-muted)':o.d1<=120?'var(--good)':'var(--critical)';
+  const [c,i,t]=VD[o.v];
+  $('vB').style.background=`color-mix(in srgb,var(--${c}) 14%,transparent)`;
+  $('vB').style.color=`var(--${c})`;$('vB').style.border=`1px solid color-mix(in srgb,var(--${c}) 40%,transparent)`;
+  $('vI').textContent=i;$('vT').textContent=t;$('vWhy').textContent=whyV(o);
+  $('vAvg').textContent=money(o.avg);$('vRev').textContent=money(o.rev);
+  $('vC1').textContent=money(o.c1);$('vC2').textContent=money(o.c2);
+  $('vBid').textContent=per(o.bid);
+  $('vBidN').textContent='min(5×thấp, 50%cao, EPC×0,3)';
+  $('vD2').textContent=o.d2==null?'–':Math.round(o.d2)+' ngày';
+  $('vRows').innerHTML=o.rows.map(r=>`<tr><td><b>${r.n}</b></td><td class="num">${r.act}</td>
+    <td style="color:var(--text-secondary)">${r.thr}</td><td>${stat(r.k)}</td>
+    <td style="color:var(--text-secondary)">${r.note||''}</td></tr>`).join('');
+}
+let s1k='rank',s1d=1;
+function render1(){
+  $('b1').textContent=PROJ.length;
+  const L=PROJ.map(vet).map(o=>({...o,rank:VD[o.v][3]}));
+  L.sort((a,b)=>{const k=s1k;
+    if(k==='rank')return (a.rank-b.rank||(a.d1??9e9)-(b.d1??9e9))*s1d;
+    const x=a[k],y=b[k];
+    if(typeof x==='string')return (x||'').localeCompare(y||'')*s1d;
+    return ((y??-9e9)-(x??-9e9))*s1d;});
+  $('n1').textContent=L.length?`${L.length} dự án · ${L.filter(o=>o.v==='go').length} nên chạy`:'';
+  $('t1').innerHTML=L.map((o,ix)=>{const [c,i,t]=VD[o.v];
+    return `<tr><td><b>${o.name}</b></td><td>${o.niche||'–'}</td>
+      <td><span class="pill" style="background:var(--surface-3)">(${o.ppc})</span></td>
+      <td class="num">${N(o.simi)}</td><td class="num">${N(o.gg)}</td>
+      <td class="num">${money(o.rev)}</td>
+      <td class="num" style="color:${o.d1!=null&&o.d1<=120?'var(--good)':'var(--critical)'}">${o.d1==null?'–':Math.round(o.d1)}</td>
+      <td class="num">${o.d2==null?'–':Math.round(o.d2)}</td>
+      <td class="num">${per(o.bid)}</td><td class="num"><b>${o.score}</b></td>
+      <td><span class="st" style="color:var(--${c})"><span class="dot" style="background:var(--${c})"></span>${i} ${t}</span></td>
+      <td><button class="d1" data-i="${PROJ.indexOf(PROJ.find(p=>p.name===o.name))}" style="background:none;border:0;color:var(--text-muted);cursor:pointer">×</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="12" class="empty">Chưa có dự án — điền form phía trên hoặc bấm nạp dữ liệu mẫu</td></tr>';
+  document.querySelectorAll('.d1').forEach(b=>b.onclick=e=>{PROJ.splice(+e.target.dataset.i,1);render1();render2();});
+}
+$('add1').onclick=()=>{const p=readForm();PROJ.push(p);const o=vet(p);showVerdict(o);render1();render2();
+  if(!META[p.name])META[p.name]={stage:STAGES[0]};};
+$('doBulk').onclick=()=>{
+  let n=0;$('bulk').value.trim().split('\n').forEach(l=>{
+    const c=l.split('|').map(s=>s.trim());if(c.length<10||/^t[êe]n/i.test(c[0]))return;
+    const nm=v=>{const x=parseFloat(String(v||'').replace(/[^\d.\-]/g,''));return isNaN(x)?null:x;};
+    PROJ.push({name:c[0],niche:c[1],simi:nm(c[2]),gg:nm(c[3]),low:nm(c[4]),high:nm(c[5]),geo:c[6],
+      ppc:(c[7]||'b').toLowerCase(),pk:(c[8]||'').split(/[;,]/).map(x=>parseFloat(x.replace(/[^\d.]/g,''))).filter(x=>!isNaN(x)),
+      com:nm(c[9]),min:nm(c[10]),days:nm(c[11]),lic:0,ctype:'Recurring',pay:''});
+    if(!META[c[0]])META[c[0]]={stage:STAGES[0]};n++;});
+  if(n){$('bulk').value='';render1();render2();}else alert('Không đọc được dòng nào');
+};
+$('clr1').onclick=()=>{if(confirm('Xóa hết dự án đã thẩm định?')){PROJ=[];$('cardV').style.display='none';render1();render2();}};
+document.querySelectorAll('th[data-s1]').forEach(t=>t.onclick=()=>{const k=t.dataset.s1;
+  if(s1k===k)s1d*=-1;else{s1k=k;s1d=1;}render1();});
+
+/* ================= TẦNG 2 : QUAN HỆ ================= */
+function names2(){return [...new Set([...PROJ.map(p=>p.name),...Object.keys(META),...ROWS.map(r=>r.proj)])].filter(Boolean);}
+function render2(){
+  const nm=names2();$('b2').textContent=nm.length;
+  const cnt=STAGES.map(s=>nm.filter(p=>((META[p]||{}).stage||STAGES[0])===s).length);
+  $('fun').innerHTML=STAGES.map((s,i)=>`<div class="stage" style="${cnt[i]?'border-color:var(--series-1)':''}">
+    <div class="n" style="color:${cnt[i]?'var(--series-1)':'var(--text-muted)'}">${cnt[i]}</div>
+    <div class="l">${i+1}. ${s}</div></div>`).join('');
+  $('t2').innerHTML=nm.map(p=>{const m=META[p]||{};
+    const f=(k,ph,w)=>`<input data-p="${p}" data-k="${k}" value="${(m[k]??'').toString().replace(/"/g,'&quot;')}" placeholder="${ph}" style="width:100%;padding:4px 6px;font-size:11.5px">`;
+    return `<tr><td><b>${p}</b></td><td>${f('net','tên nét')}</td>
+      <td><select data-p="${p}" data-k="stage" style="width:100%;padding:3px 5px;font-size:11.5px">
+        ${STAGES.map(s=>`<option ${s===(m.stage||STAGES[0])?'selected':''}>${s}</option>`).join('')}</select></td>
+      <td>${f('sent','dd/mm')}</td><td>${f('ref','link reff')}</td>
+      <td>${f('pend','0')}</td><td>${f('appr','0')}</td><td>${f('rej','0')}</td><td>${f('paid','0')}</td>
+      <td>${f('next','dd/mm')}</td>
+      <td><button class="dp" data-p="${p}" style="background:none;border:0;color:var(--text-muted);cursor:pointer">×</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="11" class="empty">Chưa có dự án</td></tr>';
+  document.querySelectorAll('#t2 input,#t2 select').forEach(inp=>{
+    inp.addEventListener(inp.tagName==='SELECT'?'change':'input',e=>{
+      const p=e.target.dataset.p,k=e.target.dataset.k;META[p]=META[p]||{};META[p][k]=e.target.value;
+      clearTimeout(window.__a);window.__a=setTimeout(()=>{render2();render3();},500);});});
+  document.querySelectorAll('.dp').forEach(b=>b.onclick=e=>{delete META[e.target.dataset.p];render2();render3();});
+  const sum=k=>nm.reduce((s,p)=>s+(+((META[p]||{})[k])||0),0);
+  const pd=sum('pend'),ap=sum('appr'),rj=sum('rej'),pa=sum('paid'),tt=pd+ap+rj+pa;
+  $('fPend').textContent=money(pd);$('fAppr').textContent=money(ap);
+  $('fRej').textContent=money(rj);$('fRej').style.color=rj>0?'var(--critical)':'inherit';
+  $('fRejN').textContent=tt>0?((rj/tt*100).toFixed(1)+'% tổng hoa hồng'):' ';
+  $('fPaid').textContent=money(pa);
+  // support
+  $('t3').innerHTML=SUPP.map((s,i)=>{
+    const f=(k,ph)=>`<input data-i="${i}" data-k="${k}" value="${(s[k]??'').toString().replace(/"/g,'&quot;')}" placeholder="${ph}" style="width:100%;padding:4px 6px;font-size:11.5px">`;
+    return `<tr><td>${f('name','tên')}</td><td>${f('proj','dự án')}</td><td>${f('chan','email/telegram')}</td>
+      <td><select data-i="${i}" data-k="ease" style="width:100%;padding:3px 5px;font-size:11.5px">
+        ${['Dễ','Bình thường','Khó'].map(o=>`<option ${o===(s.ease||'Bình thường')?'selected':''}>${o}</option>`).join('')}</select></td>
+      <td><input type="date" data-i="${i}" data-k="last" value="${s.last||''}" style="width:100%;padding:3px 5px;font-size:11.5px"></td>
+      <td>${f('com','%')}</td><td>${f('neg','đang xin %')}</td><td>${f('note','ghi chú')}</td>
+      <td><button class="ds" data-i="${i}" style="background:none;border:0;color:var(--text-muted);cursor:pointer">×</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="9" class="empty">Chưa có liên hệ nào. Nguyên tắc #34: email sàn NGAY khi bắt đầu mỗi dự án.</td></tr>';
+  document.querySelectorAll('#t3 input,#t3 select').forEach(inp=>{
+    inp.addEventListener(inp.tagName==='SELECT'||inp.type==='date'?'change':'input',e=>{
+      SUPP[+e.target.dataset.i][e.target.dataset.k]=e.target.value;
+      clearTimeout(window.__s);window.__s=setTimeout(render2,500);});});
+  document.querySelectorAll('.ds').forEach(b=>b.onclick=e=>{SUPP.splice(+e.target.dataset.i,1);render2();});
+  // nhắc việc
+  const R=[],today=new Date();
+  SUPP.forEach(s=>{if(!s.last)return;
+    const d=Math.round((today-new Date(s.last))/864e5);
+    if(d>=7)R.push(['warning',`Đã ${d} ngày chưa liên hệ <b>${s.name||'(chưa tên)'}</b> ở dự án ${s.proj||'?'} — nhắn một câu hỏi thăm (#34)`]);});
+  names2().forEach(p=>{const m=META[p]||{};
+    const pend=+m.pend||0;
+    if(pend>0&&m.stage==='Ra đơn')R.push(['warning',`<b>${p}</b> đang treo ${money(pend)} chờ duyệt — hỏi support tình trạng`]);
+    if((m.stage||'')==='Chờ duyệt'&&m.sent)R.push(['muted',`<b>${p}</b> nộp hồ sơ ngày ${m.sent}, vẫn chờ duyệt — cân nhắc gửi email nhắc`]);
+    if((m.stage||'')==='Có link'&&!m.ref)R.push(['muted',`<b>${p}</b> ghi đã có link nhưng chưa điền link reff`]);
+    const P=PROJ.find(x=>x.name===p);
+    if(P&&P.ppc==='b'&&['Lên camp','Ra đơn','Scale'].includes(m.stage||''))
+      R.push(['serious',`<b>${p}</b> là loại (b) — kiểm tra camp KHÔNG chạy brand keyword và đã có trang so sánh (#51 #75)`]);
+    if(P&&P.ppc==='d')R.push(['serious',`<b>${p}</b> loại (d) — phải xin email cho phép chạy ads TRƯỚC khi tiêu tiền`]);});
+  $('rem').innerHTML=R.length?R.map(([c,t])=>{const k=c==='muted'?'text-muted':c;
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px">
+      <span class="dot" style="background:var(--${k});display:inline-block;margin-right:7px"></span>${t}</div>`;}).join('')
+    :'<div class="empty">Không có việc nào cần nhắc</div>';
+}
+$('addP').onclick=()=>{const n=prompt('Tên dự án:');if(n){META[n]=META[n]||{stage:STAGES[0]};render2();}};
+$('addS').onclick=()=>{SUPP.push({ease:'Bình thường'});render2();};
+$('dp_add').onclick=()=>{const accs=[...new Set(ROWS.map(r=>r.acc))];
+  DEPOSITS.push({date:new Date().toISOString().slice(0,10),acc:accs[0]||'',amt:'',note:''});render3();};
+
+/* ================= TẦNG 3 : ĐIỀU HÀNH ================= */
+const MAP=[['date',/^(ngày|ngay|date|day)$/i],['camp',/^(chiến dịch|chien dich|campaign)$/i],
+ ['imp',/^(lượt hiển thị|hiển thị|impr|impressions)$/i],['clk',/^(lượt nhấp|lần nhấp|nhấp|clicks?)$/i],
+ ['cost',/^(chi phí|chi phi|cost|spend)$/i]];
+function parseCSV(t){const o=[];let r=[],c='',q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true;else if(ch===','||ch==='\t'||ch===';'){r.push(c);c=''}
+    else if(ch==='\n'){r.push(c);o.push(r);r=[];c=''}else if(ch!=='\r')c+=ch;}
+  if(c||r.length){r.push(c);o.push(r)}return o.filter(x=>x.some(y=>y.trim()!==''));}
+function toNum(s){if(s==null)return 0;s=String(s).replace(/[^\d,.\-]/g,'').trim();if(!s)return 0;
+  if(/,\d{1,2}$/.test(s)&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');
+  else if(/,\d{3}(\D|$)/.test(s))s=s.replace(/,/g,'');else s=s.replace(',','.');
+  const v=parseFloat(s);return isNaN(v)?0:v;}
+function normDate(s){s=(s||'').trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return null;}
+function guessProj(c){let s=c.replace(/^\([a-d]\)\s*/i,'').split('|')[0];
+  const p=s.split(/\s+-\s+/);s=p.length>1?p[p.length-1]:p[0];return s.trim().slice(0,32)||c.slice(0,32);}
+function ingest(t,f){const g=parseCSV(t);let hi=-1,cl=null;
+  for(let i=0;i<Math.min(g.length,12);i++){const c={};
+    g[i].forEach((h,j)=>{const k=h.trim();MAP.forEach(([fd,re])=>{if(re.test(k)&&c[fd]===undefined)c[fd]=j})});
+    if(c.camp!==undefined&&(c.clk!==undefined||c.cost!==undefined)){hi=i;cl=c;break}}
+  if(hi<0)return 0;const acc=f.replace(/\.(csv|tsv|txt)$/i,'').slice(0,42);let n=0;
+  for(let i=hi+1;i<g.length;i++){const r=g[i],camp=(r[cl.camp]||'').trim();
+    if(!camp||/^(tổng|total|--)/i.test(camp))continue;
+    ROWS.push({date:(cl.date!==undefined?normDate(r[cl.date]):null)||'(không ngày)',acc,proj:guessProj(camp),camp,
+      imp:cl.imp!==undefined?toNum(r[cl.imp]):0,clk:cl.clk!==undefined?toNum(r[cl.clk]):0,
+      cost:cl.cost!==undefined?toNum(r[cl.cost]):0});n++;}
+  return n;}
+function aggr(l,f){const m=new Map();
+  l.forEach(r=>{const k=f(r);const o=m.get(k)||{key:k,imp:0,clk:0,cost:0,days:new Set(),camps:new Set(),projs:new Set(),accs:new Set()};
+    o.imp+=r.imp;o.clk+=r.clk;o.cost+=r.cost;o.days.add(r.date);o.camps.add(r.camp);o.projs.add(r.proj);o.accs.add(r.acc);m.set(k,o)});
+  return [...m.values()];}
+const revOf=p=>{const m=META[p];return m?((+m.appr||0)+(+m.pend||0)+(+m.paid||0)):0;};
+/* doanh thu theo TỪNG CAMP: nếu đã nhập tay thì lấy số thật, chưa nhập thì chia theo tỉ lệ chi phí */
+function campRev(key,projName,share){
+  const v=CAMPREV[key];
+  return (v!==undefined&&v!=='')?(+v||0):(revOf(projName)*share);
+}
+function depTotal(){return DEPOSITS.reduce((s,d)=>s+(+d.amt||0),0);}
+function renderDep(){
+  $('dp_t').innerHTML=DEPOSITS.map((d,i)=>{
+    const accs=[...new Set(ROWS.map(r=>r.acc))];
+    return `<tr>
+      <td><input type="date" data-i="${i}" data-k="date" value="${d.date||''}" style="width:100%;padding:4px 6px;font-size:11.5px"></td>
+      <td><input list="accl" data-i="${i}" data-k="acc" value="${(d.acc||'').replace(/"/g,'&quot;')}" placeholder="tên tài khoản" style="width:100%;padding:4px 6px;font-size:11.5px"></td>
+      <td><input data-i="${i}" data-k="amt" inputmode="decimal" value="${d.amt??''}" placeholder="0" style="width:100%;padding:4px 6px;font-size:11.5px"></td>
+      <td><input data-i="${i}" data-k="note" value="${(d.note||'').replace(/"/g,'&quot;')}" placeholder="ghi chú" style="width:100%;padding:4px 6px;font-size:11.5px"></td>
+      <td><button class="dd" data-i="${i}" style="background:none;border:0;color:var(--text-muted);cursor:pointer">×</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="5" class="empty">Chưa ghi lần nạp nào. Bấm + Thêm lần nạp.</td></tr>';
+  const accs=[...new Set(ROWS.map(r=>r.acc))];
+  let dl0=$('accl');if(!dl0){dl0=document.createElement('datalist');dl0.id='accl';document.body.appendChild(dl0);}
+  dl0.innerHTML=accs.map(a=>`<option value="${a}">`).join('');
+  document.querySelectorAll('#dp_t input').forEach(inp=>{
+    inp.addEventListener(inp.type==='date'?'change':'input',e=>{
+      DEPOSITS[+e.target.dataset.i][e.target.dataset.k]=e.target.value;
+      clearTimeout(window.__d);window.__d=setTimeout(render3,450);});});
+  document.querySelectorAll('.dd').forEach(b=>b.onclick=e=>{DEPOSITS.splice(+e.target.dataset.i,1);render3();});
+}
+function flowChart(inMoney,spent,back,profit){
+  const s=$('c4');s.innerHTML='';const W=1180,L=150,R=170,T=10,rh=42;
+  const rows=[['Vốn đã nạp',inMoney,'var(--series-1)'],['Đã tiêu',spent,'var(--series-1)'],
+    ['Hoa hồng về',back,'var(--series-2)'],['Lãi ròng',profit,profit>=0?'var(--pos)':'var(--neg)']];
+  const mx=Math.max(1,...rows.map(r=>Math.abs(r[1])));
+  s.setAttribute('viewBox',`0 0 ${W} ${rows.length*rh+T*2}`);
+  rows.forEach((r,i)=>{
+    const y=T+i*rh,bh=22;
+    const nm=el('text',{x:L-12,y:y+bh-6,'text-anchor':'end',class:'dlab'});nm.textContent=r[0];s.appendChild(nm);
+    const w=Math.max(2,(Math.abs(r[1])/mx)*(W-L-R));
+    const rect=el('rect',{x:L,y,width:w,height:bh,rx:5,fill:r[2]});
+    rect.addEventListener('mousemove',e=>tipAt(`<b>${r[0]}</b><div class="tr"><span></span><span>${money(r[1])}</span></div>`,e));
+    rect.addEventListener('mouseleave',tipOff);s.appendChild(rect);
+    const t=el('text',{x:L+w+10,y:y+bh-6,class:'dlab'});
+    t.textContent=money(r[1])+(i===3&&spent>0?`  ·  ROI ${(profit/spent*100).toFixed(0)}%`:'');
+    if(i===3)t.setAttribute('fill',profit>=0?'var(--good)':'var(--critical)');
+    s.appendChild(t);});
+}
+function enr(o,rev){o.rev=rev;o.net=rev-o.cost;o.cpc=o.clk?o.cost/o.clk:null;o.epc=o.clk?rev/o.clk:null;
+  o.ratio=(o.cpc>0)?o.epc/o.cpc:null;o.enough=o.clk>=100||o.days.size>=14;return o;}
+const VER={cut:['critical','✕','Cắt',0],lower:['serious','↓','Giảm giá thầu',1],
+ keep:['warning','●','Giữ & tối ưu',2],scale:['good','✓','Scale',3],wait:['text-muted','○','Chờ dữ liệu',4]};
+function vOf(o){if(!o.enough)return 'wait';if(o.rev<=0)return 'cut';
+  if(o.ratio>=1.5)return 'scale';if(o.ratio>=1)return 'keep';return 'lower';}
+function todo(o,v){return v==='wait'?'Chạy tiếp cho đủ 100 click hoặc 14 ngày'
+  :v==='cut'?`Chi ${money(o.cost)} chưa ra đơn — xem cụm từ tìm kiếm rồi cắt`
+  :v==='lower'?`Hạ giá thầu về ~${per(o.epc*0.3)} (EPC × 0,3)`
+  :v==='keep'?'Phủ định từ khóa rác, cắt thiết bị và khung giờ kém'
+  :'Tăng ngân sách hoặc giá thầu ≤20% giá gốc, giãn 48–72h';}
+function leak(o,v){const d=Math.max(1,o.days.size);
+  return v==='cut'?o.cost/d:v==='lower'?Math.abs(o.net)/d:v==='scale'?-(o.net/d):0;}
+const NS='http://www.w3.org/2000/svg',TIP=$('tip');
+const el=(t,a)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);return n;};
+function tipAt(h,e){TIP.innerHTML=h;TIP.style.opacity=1;const r=TIP.getBoundingClientRect();
+  let x=e.clientX+12,y=e.clientY+12;if(x+r.width>innerWidth-8)x=e.clientX-r.width-12;
+  if(y+r.height>innerHeight-8)y=e.clientY-r.height-12;TIP.style.left=x+'px';TIP.style.top=y+'px';}
+const tipOff=()=>TIP.style.opacity=0;
+const dmy=s=>{const p=(s||'').split('-');return p.length===3?p[2]+'/'+p[1]:s;};
+function lineC(id,days){const s=$(id);s.innerHTML='';const W=560,H=220,L=54,R=16,T=12,B=26;
+  if(!days.length){const t=el('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'ax'});t.textContent='Chưa có dữ liệu';s.appendChild(t);return}
+  const A=days.map(d=>d.cost),Bv=days.map(d=>d.rev),mx=Math.max(1,...A,...Bv);
+  const x=i=>L+(days.length===1?(W-L-R)/2:i*(W-L-R)/(days.length-1)),y=v=>H-B-(v/mx)*(H-B-T);
+  for(let i=0;i<=4;i++){const v=mx*i/4,yy=y(v);s.appendChild(el('line',{x1:L,x2:W-R,y1:yy,y2:yy,class:'gl'}));
+    const t=el('text',{x:L-7,y:yy+3.5,'text-anchor':'end',class:'ax'});t.textContent=fmt(v);s.appendChild(t)}
+  const st=Math.max(1,Math.ceil(days.length/7));
+  days.forEach((d,i)=>{if(i%st&&i!==days.length-1)return;
+    const t=el('text',{x:x(i),y:H-B+14,'text-anchor':'middle',class:'ax'});t.textContent=dmy(d.key);s.appendChild(t)});
+  [[A,'var(--series-1)'],[Bv,'var(--series-2)']].forEach(([a,c])=>{
+    s.appendChild(el('path',{d:a.map((v,i)=>(i?'L':'M')+x(i)+' '+y(v)).join(' '),fill:'none',stroke:c,'stroke-width':2,'stroke-linejoin':'round'}));
+    const i=a.length-1;s.appendChild(el('circle',{cx:x(i),cy:y(a[i]),r:4,fill:c,stroke:'var(--surface-1)','stroke-width':2}));
+    const t=el('text',{x:x(i)-6,y:y(a[i])-9,'text-anchor':'end',class:'dlab'});t.textContent=fmt(a[i]);s.appendChild(t)});
+  const cr=el('line',{x1:0,x2:0,y1:T,y2:H-B,stroke:'var(--text-muted)','stroke-width':1,opacity:0});s.appendChild(cr);
+  const hit=el('rect',{x:L,y:T,width:W-L-R,height:H-B-T,fill:'transparent'});s.appendChild(hit);
+  hit.addEventListener('mousemove',e=>{const r=s.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W;
+    let i=0,bd=1e9;days.forEach((d,j)=>{const dd=Math.abs(x(j)-px);if(dd<bd){bd=dd;i=j}});
+    cr.setAttribute('x1',x(i));cr.setAttribute('x2',x(i));cr.setAttribute('opacity',.45);
+    tipAt(`<b>${days[i].key}</b><div class="tr"><span style="color:var(--series-1)">■ Chi phí</span><span>${money(A[i])}</span></div>
+      <div class="tr"><span style="color:var(--series-2)">■ Hoa hồng</span><span>${money(Bv[i])}</span></div>`,e)});
+  hit.addEventListener('mouseleave',()=>{cr.setAttribute('opacity',0);tipOff()});}
+function netC(id,days){const s=$(id);s.innerHTML='';const W=560,H=220,L=54,R=16,T=12,B=26;
+  if(!days.length){const t=el('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'ax'});t.textContent='Chưa có dữ liệu';s.appendChild(t);return}
+  const v=days.map(d=>d.net),mx=Math.max(1,...v.map(Math.abs)),y0=T+(H-T-B)/2,y=q=>y0-(q/mx)*((H-T-B)/2);
+  [mx,mx/2,0,-mx/2,-mx].forEach(q=>{const yy=y(q);s.appendChild(el('line',{x1:L,x2:W-R,y1:yy,y2:yy,class:'gl'}));
+    const t=el('text',{x:L-7,y:yy+3.5,'text-anchor':'end',class:'ax'});t.textContent=fmt(q);s.appendChild(t)});
+  s.appendChild(el('line',{x1:L,x2:W-R,y1:y0,y2:y0,stroke:'var(--line)','stroke-width':1.5}));
+  const bw=Math.max(3,Math.min(24,(W-L-R)/days.length-3));
+  days.forEach((d,i)=>{const q=d.net,cx=L+(i+.5)*(W-L-R)/days.length,h=Math.max(1,Math.abs(y(q)-y0));
+    const r=el('rect',{x:cx-bw/2,y:q>=0?y(q):y0+1,width:bw,height:Math.max(1,h-1),rx:Math.min(4,bw/2),
+      fill:q>=0?'var(--pos)':'var(--neg)'});
+    r.addEventListener('mousemove',e=>tipAt(`<b>${d.key}</b>
+      <div class="tr"><span>Hoa hồng</span><span>${money(d.rev)}</span></div>
+      <div class="tr"><span>Chi phí</span><span>${money(d.cost)}</span></div>
+      <div class="tr" style="font-weight:700;margin-top:4px"><span>Lãi ròng</span><span>${money(q)}</span></div>`,e));
+    r.addEventListener('mouseleave',tipOff);s.appendChild(r)});
+  const st=Math.max(1,Math.ceil(days.length/8));
+  days.forEach((d,i)=>{if(i%st&&i!==days.length-1)return;const cx=L+(i+.5)*(W-L-R)/days.length;
+    const t=el('text',{x:cx,y:H-B+14,'text-anchor':'middle',class:'ax'});t.textContent=dmy(d.key);s.appendChild(t)});}
+function allocC(ps){const s=$('c3');s.innerHTML='';const W=1180,L=180,R=190,T=6,rh=24;
+  const top=ps.slice(0,12);
+  if(!top.length){const t=el('text',{x:W/2,y:34,'text-anchor':'middle',class:'ax'});t.textContent='Chưa có dữ liệu';s.appendChild(t);return}
+  s.setAttribute('viewBox',`0 0 ${W} ${Math.max(50,top.length*rh+T*2)}`);
+  const mx=Math.max(...top.map(p=>p.cost))||1;
+  top.forEach((p,i)=>{const y=T+i*rh,bh=15,v=vOf(p),[c,ic,lab]=VER[v];
+    const col=c==='text-muted'?'var(--text-muted)':`var(--${c})`;
+    const nm=el('text',{x:L-9,y:y+bh-3,'text-anchor':'end',class:'dlab'});
+    nm.textContent=p.key.length>25?p.key.slice(0,24)+'…':p.key;s.appendChild(nm);
+    const w=Math.max(2,(p.cost/mx)*(W-L-R));
+    const r=el('rect',{x:L,y,width:w,height:bh,rx:4,fill:col});
+    r.addEventListener('mousemove',e=>tipAt(`<b>${p.key}</b>
+      <div class="tr"><span>Chi phí</span><span>${money(p.cost)}</span></div>
+      <div class="tr"><span>Hoa hồng</span><span>${money(p.rev)}</span></div>
+      <div class="tr"><span>Lãi ròng</span><span>${money(p.net)}</span></div>
+      <div class="tr" style="margin-top:4px"><span>${p.camps.size} camp</span><span>${ic} ${lab}</span></div>`,e));
+    r.addEventListener('mouseleave',tipOff);s.appendChild(r);
+    const t=el('text',{x:L+w+8,y:y+bh-3,class:'dlab'});t.textContent=`${money(p.cost)} · ${ic} ${lab}`;s.appendChild(t)});}
+let s3k='rank',s3d=1;
+function render3(){
+  $('b3').textContent=new Set(ROWS.map(r=>r.camp)).size;
+  const ps=aggr(ROWS,r=>r.proj).map(o=>enr(o,revOf(o.key)));ps.sort((a,b)=>b.cost-a.cost);
+  const tc=ps.reduce((s,p)=>s+p.cost,0),tr=ps.reduce((s,p)=>s+p.rev,0),tk=ps.reduce((s,p)=>s+p.clk,0);
+  const net=tr-tc;
+  $('hNet').textContent=ROWS.length?money(net):'–';
+  $('hNet').style.color=!ROWS.length?'var(--text-muted)':net>0?'var(--good)':net<0?'var(--critical)':'inherit';
+  const capD=(+$('cap').value||0)*1e6, cap=CUR()==='USD'?capD/RATE:capD;
+  const pct=cap?Math.min(100,tc/cap*100):0;
+  $('mUsed').style.width=pct+'%';$('mUsed').style.background=pct>90?'var(--critical)':pct>70?'var(--warning)':'var(--series-1)';
+  $('mRest').style.width=(100-pct)+'%';$('mRest').style.background='var(--surface-3)';
+  $('mL').textContent=money(tc)+' / '+money(cap);
+  $('mR').textContent=cap?(pct.toFixed(0)+'% · còn '+money(Math.max(0,cap-tc))):'chưa đặt';
+  $('kCost').textContent=money(tc);$('kCostN').textContent=N(tk)+' click';
+  $('kRev').textContent=money(tr);
+  const cpc=tk?tc/tk:null,epc=tk?tr/tk:null,ratio=(cpc>0)?epc/cpc:null;
+  $('kRevN').textContent='EPC '+per(epc);
+  $('kRoe').textContent=tc?((net/tc*100).toFixed(0)+'%'):'–';
+  $('kRoe').style.color=net>0?'var(--good)':net<0?'var(--critical)':'inherit';
+  $('kRatio').textContent=ratio==null?'–':ratio.toFixed(2)+'×';
+  $('kRatio').style.color=ratio==null?'inherit':ratio>=1.5?'var(--good)':ratio>=1?'var(--warning)':'var(--critical)';
+  $('kRatioN').textContent='CPC '+per(cpc);
+  const cv=aggr(ROWS,r=>r.acc+'||'+r.camp).map(o=>{const pr=[...o.projs][0];
+    const pc=ps.find(p=>p.key===pr)?.cost||0;
+    const o2=enr(o,campRev(o.key,pr,pc>0?o.cost/pc:0));o2.roi=o2.cost>0?o2.net/o2.cost*100:null;return o2});
+  const cnt={scale:0,keep:0,lower:0,cut:0,wait:0};cv.forEach(o=>cnt[vOf(o)]++);
+  $('kCamp').textContent=N(cv.length);$('kCampN').textContent=`${cnt.scale} scale · ${cnt.cut} cắt`;
+  const accs=aggr(ROWS,r=>r.acc);$('kAcc').textContent=N(accs.length);
+  const multi=accs.filter(a=>a.projs.size>1).length;
+  $('kAccN').textContent=multi?(multi+' acc >1 dự án ⚠'):'mỗi acc 1 dự án ✓';
+  const totRevCamp=cv.reduce((s,o)=>s+o.rev,0);
+  const dep=depTotal(), left=dep-tc, prof=totRevCamp-tc;
+  $('fIn').textContent=money(dep);$('fInN').textContent=DEPOSITS.length+' lần nạp';
+  $('fSp').textContent=money(tc);$('fSpN').textContent=dep>0?((tc/dep*100).toFixed(0)+'% vốn đã nạp'):' ';
+  $('fLeft').textContent=money(left);
+  $('fLeft').style.color=left<0?'var(--critical)':left<tc*0.2?'var(--warning)':'inherit';
+  $('fLeftN').textContent=left<0?'⚠ tiêu vượt số đã ghi':(tc>0?('đủ chạy ~'+Math.max(0,Math.round(left/(tc/Math.max(1,new Set(ROWS.map(r=>r.date)).size))))+' ngày nữa'):' ');
+  $('fBack').textContent=money(totRevCamp);
+  $('fBackN').textContent=tc>0?('gấp '+(totRevCamp/tc).toFixed(2)+'× tiền tiêu'):' ';
+  $('fPro').textContent=money(prof);
+  $('fPro').style.color=prof>0?'var(--good)':prof<0?'var(--critical)':'inherit';
+  $('fProN').textContent=tc>0?('ROI '+(prof/tc*100).toFixed(0)+'% trên tiền tiêu'):' ';
+  flowChart(dep,tc,totRevCamp,prof);renderDep();
+  const days=aggr(ROWS.filter(r=>r.date!=='(không ngày)'),r=>r.date).sort((a,b)=>a.key<b.key?-1:1);
+  const dr=new Map();
+  ps.forEach(p=>{const pd=ROWS.filter(r=>r.proj===p.key&&r.date!=='(không ngày)');
+    const pc=pd.reduce((s,r)=>s+r.cost,0);
+    pd.forEach(r=>dr.set(r.date,(dr.get(r.date)||0)+p.rev*(pc>0?r.cost/pc:0)))});
+  days.forEach(d=>{d.rev=dr.get(d.key)||0;d.net=d.rev-d.cost});
+  lineC('c1',days);netC('c2',days);allocC(ps);
+  const tri=cv.map(o=>{const v=vOf(o);return {o,v,leak:leak(o,v),rank:VER[v][3]}});
+  tri.sort((a,b)=>{if(s3k==='rank')return (a.rank-b.rank||b.leak-a.leak)*s3d;
+    const g=(z,k)=>k==='camp'?[...z.o.camps][0]:k==='proj'?[...z.o.projs][0]:k==='acc'?[...z.o.accs][0]:z.o[k];
+    const x=g(a,s3k),y=g(b,s3k);
+    return typeof x==='string'?x.localeCompare(y)*s3d:((y??-9e9)-(x??-9e9))*s3d;});
+  const sh=tri.slice(0,300);$('triN').textContent=tri.length?`${tri.length} camp · hiện ${sh.length}`:'';
+  $('tri').innerHTML=sh.map(({o,v})=>{const [c,i,l]=VER[v];const cc=c==='text-muted'?'text-muted':c;
+    return `<tr><td>${[...o.camps][0]}</td><td>${[...o.projs][0]}</td><td style="color:var(--text-secondary)">${[...o.accs][0]}</td>
+      <td class="num">${money(o.cost)}</td>
+      <td><input class="cr" data-k="${o.key.replace(/"/g,'&quot;')}" value="${CAMPREV[o.key]??''}"
+        placeholder="${(o.rev||0).toFixed(2)}" inputmode="decimal"
+        style="width:100%;padding:3px 6px;font-size:11.5px;text-align:right"></td>
+      <td class="num" style="color:${o.net>0?'var(--good)':o.net<0?'var(--critical)':'inherit'}">${money(o.net)}</td>
+      <td class="num" style="color:${o.roi>0?'var(--good)':o.roi<0?'var(--critical)':'inherit'}">${o.roi==null?'–':Math.round(o.roi)+'%'}</td>
+      <td class="num">${N(o.clk)}</td><td class="num">${o.ratio==null?'–':o.ratio.toFixed(2)+'×'}</td>
+      <td><span class="st" style="color:var(--${cc})"><span class="dot" style="background:var(--${cc})"></span>${i} ${l}</span></td>
+      <td style="color:var(--text-secondary)">${todo(o,v)}</td></tr>`}).join('')
+    ||'<tr><td colspan="11" class="empty">Chưa có dữ liệu — kéo file CSV vào ô phía trên</td></tr>';
+  document.querySelectorAll('.cr').forEach(inp=>inp.addEventListener('input',e=>{
+    const k=e.target.dataset.k,v=e.target.value.trim();
+    if(v==='')delete CAMPREV[k];else CAMPREV[k]=v;
+    clearTimeout(window.__cr);window.__cr=setTimeout(render3,600);}));
+  $('acct').innerHTML=accs.map(a=>{const pj=[...a.projs],w=[];
+    if(pj.length>1)w.push('⚠ '+pj.length+' dự án trong 1 tài khoản (#62)');
+    const dl=[...a.days].filter(d=>d!=='(không ngày)').sort();
+    const age=dl.length?Math.round((new Date(dl[dl.length-1])-new Date(dl[0]))/864e5)+1:0;
+    const tp=Math.min(100,age/21*100);const st=ACCM[a.key]?.status||'Đang chạy';
+    return `<tr><td><b>${a.key}</b></td><td>${pj.join(', ').slice(0,38)}</td><td class="num">${a.camps.size}</td>
+      <td class="num">${money(a.cost)}</td><td class="num">${age} ngày</td>
+      <td><div class="meter" style="height:8px;margin:0"><i style="width:${tp}%;background:${tp>=100?'var(--good)':'var(--series-1)'}"></i><i style="width:${100-tp}%;background:var(--surface-3)"></i></div></td>
+      <td><select data-a="${a.key}" class="as" style="padding:3px 5px;font-size:11px">
+        ${['Đang chạy','Đang review','Tạm ngưng','Đã kháng','Chết'].map(o=>`<option ${o===st?'selected':''}>${o}</option>`).join('')}</select></td>
+      <td style="color:var(--critical);font-size:11px">${w.join(' · ')}</td></tr>`}).join('')
+    ||'<tr><td colspan="8" class="empty">Chưa có tài khoản</td></tr>';
+  document.querySelectorAll('.as').forEach(s=>s.onchange=e=>{const k=e.target.dataset.a;
+    ACCM[k]=ACCM[k]||{};ACCM[k].status=e.target.value;render3()});
+}
+function loadCsv(fs){const a=[...fs];let n=0,f=0,d=0;
+  a.forEach(file=>{const r=new FileReader();
+    r.onload=()=>{const k=ingest(r.result,file.name);n+=k;if(k)f++;
+      if(++d===a.length){$('loaded').innerHTML=`✓ Nạp <b>${n}</b> dòng từ <b>${f}</b> file · tổng <b>${ROWS.length}</b>`;render3();render2()}};
+    r.readAsText(file,'utf-8')})}
+$('drop').onclick=()=>$('fCsv').click();
+$('drop').addEventListener('dragover',e=>{e.preventDefault();$('drop').classList.add('on')});
+$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('on'));
+$('drop').addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('on');loadCsv(e.dataTransfer.files)});
+$('fCsv').onchange=e=>loadCsv(e.target.files);
+$('clr3').onclick=()=>{if(confirm('Xóa dữ liệu camp?')){ROWS=[];ACCM={};$('loaded').textContent='';render3()}};
+document.querySelectorAll('th[data-s3]').forEach(t=>t.onclick=()=>{const k=t.dataset.s3;
+  if(s3k===k)s3d*=-1;else{s3k=k;s3d=1}render3()});
+
+/* ================= TẦNG 4 : TRIỂN KHAI ================= */
+function dl(name,text){const b=new Blob(['﻿'+text],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+function fillProjSel(){
+  const nm=names2();
+  ['k_proj','g_proj','ag_proj'].forEach(id=>{const s=$(id),cur=s.value;
+    s.innerHTML=nm.map(n=>`<option>${n}</option>`).join('')||'<option value="">(chưa có dự án)</option>';
+    if(nm.includes(cur))s.value=cur;});
+}
+function subParam(){const v=$('k_sub').value;return v==='custom'?($('k_custom').value.trim()||'subid'):v;}
+function buildLink(){
+  const raw=$('k_link').value.trim(), pr=subParam();
+  const P4=PROJ.find(p=>p.name===$('k_proj').value);
+  if(!raw){$('k_out').textContent='– nhập link affiliate ở trên –';$('k_note').textContent='';return;}
+  let url=raw;
+  const sep=url.includes('?')?'&':'?';
+  url=url+sep+encodeURIComponent(pr)+'={gclid}';
+  $('k_out').textContent=url;
+  let n=`Tham số <b>${pr}</b> sẽ mang gclid của Google sang nét. Khi có đơn, nét trả lại gclid đó và mục C ghép ngược về Google Ads.`;
+  if(P4&&P4.ppc==='b')n+=' <span style="color:var(--serious)">Dự án loại (b): URL này phải trỏ về TRANG SO SÁNH trên web của anh, không trỏ thẳng sang nhà cung cấp.</span>';
+  if(P4&&P4.ppc==='a')n+=' <span style="color:var(--critical)">Dự án loại (a) cấm mọi paid ads — không dùng link này cho Google Ads.</span>';
+  $('k_note').innerHTML=n;
+}
+['k_link','k_custom'].forEach(i=>$(i).addEventListener('input',buildLink));
+$('k_sub').onchange=()=>{$('k_cw').style.display=$('k_sub').value==='custom'?'':'none';buildLink();};
+$('k_proj').onchange=buildLink;
+$('k_copy').onclick=()=>{const t=$('k_out').textContent;
+  if(t.startsWith('http')){navigator.clipboard?.writeText(t);$('k_copy').textContent='✓ Đã chép';
+    setTimeout(()=>$('k_copy').textContent='Sao chép',1500);}};
+
+/* ---- trình sinh bộ nội dung quảng cáo ---- */
+const cap1=s=>s.split(/\s+/).map(w=>/^[A-Z0-9]{2,5}$/.test(w)?w:(w.charAt(0).toUpperCase()+w.slice(1))).join(' ');
+function pick(list,max,n){
+  const out=[],seen=new Set();
+  for(const s of list){const t=s.replace(/\s+/g,' ').trim();
+    if(t.length>max||seen.has(t.toLowerCase()))continue;
+    seen.add(t.toLowerCase());out.push(t);if(out.length===n)break;}
+  return out;}
+function genAssets(){
+  const P4=PROJ.find(p=>p.name===$('ag_proj').value);
+  if(!P4){alert('Chưa có dự án nào ở tầng ①');return null;}
+  const B=P4.name.trim();
+  const nRaw=($('ag_niche').value.trim()||P4.niche||'tool').trim();
+  const n=nRaw.toLowerCase(), N=cap1(nRaw);
+  const dom=B.toLowerCase().replace(/\s+/g,'')+(B.includes('.')?'':'.com');
+  const brandOK=P4.ppc==='c';
+  // ---- 15 từ khóa ----
+  const brandKw=[`[${B.toLowerCase()}]`,`"${B.toLowerCase()}"`,`[${dom}]`];
+  const nonBrand=[`best ${n} software`,`top ${n} tools`,`${n} alternative`,`${n} comparison`,
+    `${n} pricing`,`best ${n} for small business`,`${n} free trial`,`online ${n} tool`,
+    `${n} review`,`professional ${n} software`,`cheap ${n} tool`,`${n} for beginners`,
+    `best ${n} platform`,`${n} tools compared`,`ai ${n} tool`,`${n} software 2026`];
+  const kwList = brandOK
+    ? [...brandKw, ...nonBrand.slice(0,12).map(k=>`"${k}"`)]
+    : nonBrand.slice(0,15).map(k=>`"${k}"`);
+  // ---- 15 tiêu đề (≤30) ----
+  const hBrand=[B,`${B} Official Site`,`Try ${B} Free`,`${B} Pricing & Plans`,`${B} Review 2026`,
+    `Is ${B} Worth It?`,`${B} vs Alternatives`,`Start With ${B}`,`${B} For Teams`,`${B} Free Trial`,
+    `${B} Plans Compared`,`See ${B} Features`,`${B} Sign Up`,`Best ${N} Tool`,`Compare ${N} Tools`,
+    `Top Rated ${N}`,`Honest ${N} Reviews`,`See Plans & Pricing`];
+  const hNon=[`Best ${N} Tools 2026`,`Top ${N} Compared`,`Honest ${N} Reviews`,`${N} Tools Ranked`,
+    `Compare Top ${N}`,`Which ${N} Is Best?`,`${N} Pricing Compared`,`Free ${N} Tools`,
+    `${N} For Small Teams`,`Tested Side By Side`,`Real Pros And Cons`,`Updated This Month`,
+    `No Sponsored Reviews`,`Save Time Choosing`,`Read Before You Buy`,`${N} Buying Guide`,
+    `Best ${N} Software`,`${N} Plans Compared`];
+  const heads=pick(brandOK?hBrand:hNon,30,15);
+  // ---- 4 mô tả (≤90, có chứa tên dự án) ----
+  const dBrand=[
+    `${B} official site. See plans, pricing and features before you sign up.`,
+    `Honest ${B} review with real pros and cons, based on hands-on testing.`,
+    `Compare ${B} plans side by side and pick the tier that fits your work.`,
+    `Tested on real projects. See where ${B} performs and where it does not.`];
+  const dNon=[
+    `We tested ${B} against the main alternatives on the same material.`,
+    `${B} pricing, limits and real pros and cons. Updated this month.`,
+    `Independent review of ${B} and its rivals. No sponsored posts here.`,
+    `See where ${B} works well and where another tool is the better fit.`];
+  const descs=pick(brandOK?dBrand:dNon,90,4);
+  // ---- 4 chú thích (≤25) ----
+  const callouts=pick([`Tested Hands-On`,`Real Pros And Cons`,`No Sponsored Posts`,`Updated Monthly`,
+    `Independent Reviews`,`Pricing Compared`,`Free Plans Listed`],25,4);
+  // ---- 4 sitelink ----
+  const site=$('ag_site').value.trim(), ref=$('ag_ref').value.trim();
+  const U=a=>site?(site+(site.includes('#')?'':'#'+a)):ref;
+  const sl=[
+    {t:`Pricing & Plans`,d1:`All plans compared`,d2:`See what each tier includes`,u:U('pricing')},
+    {t:`Full Review`,d1:`Real pros and cons`,d2:`Based on hands-on testing`,u:U('review')},
+    {t:`Free Plan & Trial`,d1:`What you get for free`,d2:`Limits explained clearly`,u:U('free')},
+    {t:`Alternatives`,d1:`Other tools compared`,d2:`Find the right fit faster`,u:U('alternatives')}];
+  return {P4,B,N,n,brandOK,kwList,heads,descs,callouts,sl,brandKw,ref,site};
+}
+function paintAssets(A){
+  $('ag_out').style.display='';
+  $('ag_kw').value=A.kwList.join('\n');
+  $('ag_h').value=A.heads.join('\n');
+  $('ag_d').value=A.descs.join('\n');
+  $('ag_c').value=A.callouts.join('\n');
+  $('ag_sl').innerHTML=A.sl.map(s=>`<tr><td>${s.t} <span style="color:var(--text-muted)">${s.t.length}/25</span></td>
+    <td>${s.d1} <span style="color:var(--text-muted)">${s.d1.length}/35</span></td>
+    <td>${s.d2} <span style="color:var(--text-muted)">${s.d2.length}/35</span></td>
+    <td style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;word-break:break-all">${s.u||'<span style="color:var(--critical)">chưa có URL</span>'}</td></tr>`).join('');
+  // cảnh báo brand
+  const W=[];
+  if(!A.brandOK){
+    W.push(`<b>Dự án loại (${A.P4.ppc}) — đã BỎ 3 từ khóa thương hiệu ra khỏi danh sách.</b><br>
+      Anh yêu cầu 2–3 từ khóa là tên dự án, nhưng nguyên tắc #51 anh đã duyệt cấm đấu brand keyword ở loại (b) và (a).
+      Ba từ đó là: <code>${A.brandKw.join('</code> <code>')}</code> — <b>chỉ dùng khi nào xin được email cho phép bằng văn bản.</b><br>
+      Tên dự án vẫn được giữ trong <b>mô tả và tiêu đề</b>, vì lệnh cấm là cấm ĐẤU THẦU từ khóa thương hiệu, không cấm nhắc tên trong nội dung.
+      Vẫn nên đọc lại T&C xem có cấm dùng tên trong ad copy không.`);
+  }else{
+    W.push(`Dự án loại (c) cho phép chạy brand keyword — đã đưa 3 từ khóa thương hiệu vào đầu danh sách như anh yêu cầu.`);
+  }
+  if(!A.site&&A.ref)W.push(`Chưa có website riêng nên cả 4 sitelink đều trỏ về link ref. Google chấm <b>Trải nghiệm trang đích</b> thấp khi 4 sitelink cùng một đích, và chính sách đích đến cấm trang chỉ để chuyển hướng (#68). Có web rồi thì điền vào ô Website để mỗi sitelink trỏ một mục khác nhau.`);
+  if(!A.site&&!A.ref)W.push(`<b>Chưa có URL nào.</b> Tạo link ở mục A hoặc điền website của anh.`);
+  $('ag_warn').innerHTML=W.length?`<div class="warn">${W.join('<br><br>')}</div>`:'';
+  scoreAssets();
+}
+function scoreAssets(){
+  const hs=$('ag_h').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const ds=$('ag_d').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const cs=$('ag_c').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const ks=$('ag_kw').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const badH=hs.filter(h=>h.length>30),badD=ds.filter(d=>d.length>90),badC=cs.filter(c=>c.length>25);
+  const uniqH=new Set(hs.map(h=>h.toLowerCase())).size;
+  $('ag_kn').innerHTML=`<b style="color:${ks.length>=15?'var(--good)':'var(--warning)'}">${ks.length}/15</b>`;
+  $('ag_hn').innerHTML=`<b style="color:${hs.length>=15&&!badH.length?'var(--good)':'var(--warning)'}">${hs.length}/15</b>`+(badH.length?` <span style="color:var(--critical)">· ${badH.length} quá dài</span>`:'');
+  $('ag_dn').innerHTML=`<b style="color:${ds.length>=4&&!badD.length?'var(--good)':'var(--warning)'}">${ds.length}/4</b>`+(badD.length?` <span style="color:var(--critical)">· ${badD.length} quá dài</span>`:'');
+  $('ag_cn').innerHTML=`<b style="color:${cs.length>=4&&!badC.length?'var(--good)':'var(--warning)'}">${cs.length}/4</b>`+(badC.length?` <span style="color:var(--critical)">· ${badC.length} quá dài</span>`:'');
+  // Google chấm "độ mạnh quảng cáo" theo: đủ số lượng · không trùng · tiêu đề chứa từ khóa
+  const kwWords=ks.map(k=>k.replace(/[\[\]"]/g,'').toLowerCase()).filter(Boolean);
+  const withKw=hs.filter(h=>kwWords.some(k=>{const w=k.split(' ')[0];return w.length>2&&h.toLowerCase().includes(w)})).length;
+  const chk=[
+    ['Đủ 15 tiêu đề',hs.length>=15],
+    ['Không tiêu đề nào trùng nhau',uniqH===hs.length],
+    ['Tiêu đề trong giới hạn 30 ký tự',!badH.length],
+    ['Có ≥3 tiêu đề chứa từ khóa chính',withKw>=3],
+    ['Đủ 4 mô tả trong giới hạn 90 ký tự',ds.length>=4&&!badD.length],
+    ['Đủ 4 chú thích trong giới hạn 25 ký tự',cs.length>=4&&!badC.length],
+    ['Đủ 15 từ khóa',ks.length>=15]];
+  const ok=chk.filter(c=>c[1]).length;
+  const lv=ok===chk.length?['good','Xuất sắc']:ok>=5?['warning','Tốt']:ok>=3?['serious','Trung bình']:['critical','Kém'];
+  $('ag_score').innerHTML=`<div class="card" style="background:var(--surface-2);margin:0">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+      <b style="font-size:15px">Độ mạnh quảng cáo dự kiến:</b>
+      <span class="st" style="color:var(--${lv[0]});font-size:15px"><span class="dot" style="background:var(--${lv[0]})"></span>${lv[1]} — ${ok}/${chk.length}</span></div>
+    ${chk.map(c=>`<div style="font-size:12.5px;color:var(--text-secondary);padding:2px 0">
+      <span style="color:var(--${c[1]?'good':'critical'})">${c[1]?'✓':'✕'}</span> ${c[0]}</div>`).join('')}
+    <div class="hint" style="margin-top:9px">Nhắc lại nguyên tắc #28: <b>độ mạnh quảng cáo KHÔNG phải yếu tố xếp hạng</b>.
+    Nó chỉ giúp Google có nhiều tổ hợp để xoay tua nên vào được nhiều phiên đấu giá hơn.
+    Thứ quyết định giá thầu là <b>Điểm chất lượng</b>, gồm tỷ lệ nhấp dự kiến, mức độ liên quan và trải nghiệm trang đích.</div>
+  </div>`;
+}
+$('ag_go').onclick=()=>{const A=genAssets();if(A){window.__A=A;paintAssets(A);}};
+['ag_h','ag_d','ag_c','ag_kw'].forEach(i=>$(i).addEventListener('input',scoreAssets));
+$('ag_proj').onchange=()=>{const P4=PROJ.find(p=>p.name===$('ag_proj').value);
+  if(P4&&!$('ag_niche').value.trim())$('ag_niche').value=P4.niche||'';};
+$('ag_send').onclick=()=>{
+  $('g_proj').value=$('ag_proj').value;
+  $('g_url').value=$('ag_site').value.trim()||$('ag_ref').value.trim();
+  $('g_kw').value=[...new Set($('ag_kw').value.split('\n').map(s=>s.replace(/[\[\]"]/g,'').trim()).filter(Boolean))].join(', ');
+  $('g_h').value=$('ag_h').value.split('\n').map(s=>s.trim()).filter(Boolean).join('|');
+  $('g_d').value=$('ag_d').value.split('\n').map(s=>s.trim()).filter(Boolean).join('|');
+  const P4=PROJ.find(p=>p.name===$('ag_proj').value);if(P4)$('g_bid').value=(vet(P4).bid||0.1).toFixed(3);
+  checkG();$('g_go').scrollIntoView({behavior:'smooth',block:'center'});
+};
+$('ag_csv').onclick=()=>{
+  const A=window.__A;if(!A)return;
+  const q=s=>`"${String(s).replace(/"/g,'""')}"`;
+  let c='Loại,Nội dung,Ký tự,URL\n';
+  $('ag_kw').value.split('\n').filter(Boolean).forEach(k=>c+=['Từ khóa',q(k.trim()),'',''].join(',')+'\n');
+  $('ag_h').value.split('\n').filter(Boolean).forEach(h=>c+=['Tiêu đề',q(h.trim()),h.trim().length,''].join(',')+'\n');
+  $('ag_d').value.split('\n').filter(Boolean).forEach(d=>c+=['Mô tả',q(d.trim()),d.trim().length,''].join(',')+'\n');
+  A.sl.forEach(s=>c+=['Liên kết mở rộng',q(`${s.t} | ${s.d1} | ${s.d2}`),s.t.length,q(s.u)].join(',')+'\n');
+  $('ag_c').value.split('\n').filter(Boolean).forEach(x=>c+=['Chú thích',q(x.trim()),x.trim().length,''].join(',')+'\n');
+  dl(`bang-dan-tay-${A.B.replace(/[^\w]+/g,'-')}.csv`,c);
+};
+
+$('g_fill').onclick=()=>{
+  const P4=PROJ.find(p=>p.name===$('g_proj').value);
+  if(!P4){alert('Chưa có dự án nào ở tầng ①');return;}
+  const o=vet(P4);
+  $('g_bid').value=(o.bid||0.1).toFixed(3);
+  const d=(P4.name||'').toLowerCase().replace(/\s+/g,'');
+  const nb=P4.ppc==='b'||P4.ppc==='a';
+  $('g_kw').value=nb
+    ? `best ${P4.niche||'tool'}, ${P4.niche||'tool'} alternative, top ${P4.niche||'tool'} software`
+    : `${d}, ${d}.com`;
+  $('g_h').value=nb
+    ? `Best ${P4.niche||'Tools'} 2026|Compare Top Tools|Honest Reviews|Tested Side By Side|Real Pros And Cons|Pricing Compared|Which One Fits You|Free Plans Compared|Updated This Month|No Sponsored Posts|Read Before You Buy|Save Time Choosing|Independent Testing|What Works What Doesnt|Full Comparison Guide`
+    : `${P4.name}|${P4.name} Official Site|Try ${P4.name} Today|${P4.name} Pricing|${P4.name} Free Plan|${P4.name} Review|Get Started Fast|Official ${P4.name}|${P4.name} Features|${P4.name} Plans|Start With ${P4.name}|${P4.name} Sign Up|${P4.name} For Teams|${P4.name} Guide|About ${P4.name}`;
+  $('g_d').value=nb
+    ? `Tested side by side on the same material. See what each tool does badly too.|Pricing, limits and real pros and cons of each option. Updated this month.|Independent testing. No sponsored posts and no vendor copy anywhere.|Rule out the wrong tool fast instead of trying every free trial.`
+    : `${P4.name} official site. See plans and pricing before you sign up.|Honest review of ${P4.name} with real pros and cons, from actual use.|Compare ${P4.name} plans and find the one that fits your work.|Tested on real projects. Where ${P4.name} works and where it does not.`;
+  checkG();
+};
+function checkG(){
+  const P4=PROJ.find(p=>p.name===$('g_proj').value);
+  const kws=$('g_kw').value.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  const W=[];
+  if(P4){
+    const d=(P4.name||'').toLowerCase().replace(/\s+/g,'');
+    const brandy=kws.filter(k=>d&&k.toLowerCase().replace(/\s+/g,'').includes(d));
+    if((P4.ppc==='b'||P4.ppc==='a')&&brandy.length)
+      W.push(`<b>Dừng lại.</b> Dự án loại (${P4.ppc}) cấm đấu từ khóa thương hiệu, nhưng đang có: <b>${brandy.join(', ')}</b>. Bỏ những từ này ra (nguyên tắc #51).`);
+    if(P4.ppc==='a')W.push('<b>Dự án loại (a) cấm mọi quảng cáo trả phí.</b> Không nên sinh camp cho dự án này.');
+    if(P4.ppc==='d')W.push('Dự án loại (d): điều khoản chưa nói rõ về PPC. Xin email cho phép trước khi bật camp.');
+  }
+  const hs=$('g_h').value.split('|').map(s=>s.trim()).filter(Boolean);
+  const ds=$('g_d').value.split('|').map(s=>s.trim()).filter(Boolean);
+  const longH=hs.filter(h=>h.length>30), longD=ds.filter(d=>d.length>90);
+  if(hs.length&&hs.length<15)W.push(`Mới có ${hs.length}/15 tiêu đề. Đủ 15 thì Google mới có đủ tổ hợp để xoay tua (#59).`);
+  if(ds.length&&ds.length<4)W.push(`Mới có ${ds.length}/4 mô tả.`);
+  if(longH.length)W.push(`${longH.length} tiêu đề vượt 30 ký tự, Google sẽ từ chối: <b>${longH[0]}</b>`);
+  if(longD.length)W.push(`${longD.length} mô tả vượt 90 ký tự.`);
+  const n=+$('g_n').value||0, bud=+$('g_bud').value||0;
+  if(n&&bud)W.push(`Nếu bật hết ${n} camp: <b>$${(n*bud).toLocaleString()}/ngày</b>, ngày cao điểm Google có thể tiêu gấp đôi = <b>$${(n*bud*2).toLocaleString()}</b> (#64).`);
+  $('g_warn').innerHTML=W.length?`<div class="warn">${W.join('<br><br>')}</div>`:'';
+}
+['g_proj','g_kw','g_h','g_d','g_n','g_bud'].forEach(i=>$(i).addEventListener('input',checkG));
+$('g_proj').addEventListener('change',checkG);
+$('g_go').onclick=()=>{
+  const nm=$('g_proj').value||'DUAN', n=+$('g_n').value||1, bud=+$('g_bud').value||50, bid=+$('g_bid').value||0.1;
+  const url=$('g_url').value.trim();
+  if(!url){alert('Chưa có URL cuối cùng. Tạo ở mục A rồi dán vào.');return;}
+  const kws=$('g_kw').value.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  const hs=$('g_h').value.split('|').map(s=>s.trim()).filter(Boolean).slice(0,15);
+  const ds=$('g_d').value.split('|').map(s=>s.trim()).filter(Boolean).slice(0,4);
+  if(!kws.length||!hs.length||!ds.length){alert('Thiếu từ khóa, tiêu đề hoặc mô tả.');return;}
+  const q=s=>`"${String(s).replace(/"/g,'""')}"`;
+  const names=[];for(let i=1;i<=n;i++)names.push(`${nm} ${String(i).padStart(3,'0')}`);
+  // 1 chiến dịch
+  let c1='Campaign,Campaign Type,Networks,Budget,Bid Strategy Type,Campaign Status,Languages,Location,Excluded Location\n';
+  names.forEach(c=>{c1+=[q(c),'Search','"Google search"',bud,'"Manual CPC"','Paused','"All languages"','"All countries and territories"','Vietnam'].join(',')+'\n';});
+  // 2 nhóm quảng cáo
+  let c2='Campaign,Ad Group,Max CPC,Ad Group Status\n';
+  names.forEach(c=>{c2+=[q(c),q('Nhom 1'),bid,'Paused'].join(',')+'\n';});
+  // 3 từ khóa
+  let c3='Campaign,Ad Group,Keyword,Criterion Type,Max CPC,Keyword Status\n';
+  const NEG=['free','crack','coupon code','login','sign in','download','torrent','reddit','refund','cancel'];
+  names.forEach(c=>{
+    kws.forEach(k=>{
+      c3+=[q(c),q('Nhom 1'),q('['+k+']'),'Exact',bid,'Paused'].join(',')+'\n';
+      c3+=[q(c),q('Nhom 1'),q('"'+k+'"'),'Phrase',bid,'Paused'].join(',')+'\n';});
+    NEG.forEach(k=>{c3+=[q(c),q('Nhom 1'),q('"'+k+'"'),'Negative Phrase','','Enabled'].join(',')+'\n';});});
+  // 4 quảng cáo
+  let hdr='Campaign,Ad Group,Ad Type,Final URL,'+hs.map((_,i)=>`Headline ${i+1}`).join(',')
+    +','+ds.map((_,i)=>`Description ${i+1}`).join(',')+',Ad Status\n';
+  let c4=hdr;
+  names.forEach(c=>{c4+=[q(c),q('Nhom 1'),'"Responsive search ad"',q(url),
+    ...hs.map(q),...ds.map(q),'Paused'].join(',')+'\n';});
+  const tag=nm.replace(/[^\w]+/g,'-');
+  dl(`1_CHIEN_DICH_${tag}.csv`,c1);dl(`2_NHOM_QC_${tag}.csv`,c2);
+  dl(`3_TU_KHOA_${tag}.csv`,c3);dl(`4_QUANG_CAO_${tag}.csv`,c4);
+  $('g_out').innerHTML=`✓ Đã tải 4 file cho <b>${n}</b> camp · ${kws.length*2} từ khóa + ${NEG.length} phủ định mỗi camp · ${hs.length} tiêu đề · ${ds.length} mô tả.
+    Tất cả để <b>Tạm dừng</b>. Nhập theo thứ tự 1→2→3→4, bấm Áp dụng sau mỗi file.`;
+};
+$('v_go').onclick=()=>{
+  const nm=$('v_name').value.trim();
+  if(!nm){alert('Chưa điền tên hành động chuyển đổi');return;}
+  const tz=$('v_tz').value,cu=$('v_cur').value;
+  const L=$('v_in').value.trim().split('\n').filter(x=>x.trim());
+  const rows=[];let bad=0;
+  L.forEach(l=>{const c=l.split(/[,\t;]/).map(s=>s.trim());
+    if(c.length<2||!c[0]||c[0].length<10){bad++;return;}
+    let d=(c[1]||'').replace('T',' ').slice(0,16);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(d))d+=' 12:00';
+    if(!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(d)){bad++;return;}
+    const v=parseFloat((c[2]||'0').replace(/[^\d.]/g,''))||0;
+    rows.push([c[0],nm,d+':00 '+tz,v,cu]);});
+  if(!rows.length){alert('Không đọc được dòng nào hợp lệ. Cần: gclid, ngày giờ, giá trị.');return;}
+  let csv='Parameters:TimeZone='+tz+'\n';
+  csv+='Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n';
+  rows.forEach(r=>{csv+=r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')+'\n';});
+  dl('nhap-chuyen-doi-'+new Date().toISOString().slice(0,10)+'.csv',csv);
+  $('v_out').innerHTML=`✓ Tạo file với <b>${rows.length}</b> chuyển đổi, tổng giá trị <b>${rows.reduce((s,r)=>s+r[3],0).toLocaleString()} ${cu}</b>.`
+    +(bad?` <span style="color:var(--serious)">${bad} dòng bị bỏ qua vì sai định dạng.</span>`:'');
+};
+
+/* ================= chung ================= */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');$('p'+t.dataset.t).classList.add('on');});
+$('theme').onchange=e=>{const v=e.target.value;
+  if(v==='auto')document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme',v);renderAll()};
+$('cur').onchange=renderAll; $('cap').oninput=render3;
+function renderAll(){render1();render2();render3();renderOrd();fillProjSel();buildLink();checkG();autosave()}
+
+/* ============ BẢNG LỆNH: tự sinh việc từ số liệu, không phải nhập gì ============ */
+function orders(){
+  const L=[];
+  const ps=aggr(ROWS,r=>r.proj).map(o=>enr(o,revOf(o.key)));
+  const cv=aggr(ROWS,r=>r.acc+'||'+r.camp).map(o=>{const pr=[...o.projs][0];
+    const pc=ps.find(p=>p.key===pr)?.cost||0;
+    return enr(o,campRev(o.key,pr,pc>0?o.cost/pc:0));});
+  cv.forEach(o=>{const v=vOf(o),lk=Math.abs(leak(o,v)),camp=[...o.camps][0],acc=[...o.accs][0];
+    if(v==='cut')       L.push({p:1,t:'Cắt camp',m:lk,w:acc,
+      d:`${camp} — tiêu ${money(o.cost)} / ${N(o.clk)} click, chưa về đồng nào. Mở báo cáo Cụm từ tìm kiếm, phủ định rồi tắt.`});
+    else if(v==='lower')L.push({p:2,t:'Hạ giá thầu',m:lk,w:acc,
+      d:`${camp} — hạ về ~${per(o.epc*0.3)} (EPC × 0,3). Đang âm ${money(-o.net)}.`});
+    else if(v==='scale')L.push({p:3,t:'Tăng ngân sách',m:lk,w:acc,
+      d:`${camp} — đang ${o.ratio.toFixed(2)}× vốn. Tăng ≤20% so với giá gốc rồi để yên 48–72h.`});
+  });
+  const bud=new Map();
+  ROWS.forEach(r=>{if(r.lost_bud==null)return;const k=r.acc+'||'+r.camp;
+    const o=bud.get(k)||{s:0,n:0};o.s+=+r.lost_bud||0;o.n++;bud.set(k,o)});
+  bud.forEach((o,k)=>{const avg=o.s/o.n;if(avg<15)return;
+    const c=cv.find(x=>x.key===k);if(!c||vOf(c)==='cut'||vOf(c)==='lower')return;
+    L.push({p:2,t:'Nghẽn ngân sách',w:k.split('||')[0],
+      m:c.net>0?(c.net/Math.max(1,c.days.size))*(avg/100):0,
+      d:`${k.split('||')[1]} — mất ${avg.toFixed(0)}% lượt hiển thị vì cạn ngân sách ngày. Nâng ngân sách hoặc tách camp.`});
+  });
+  aggr(ROWS,r=>r.acc).forEach(a=>{
+    const nap=DEPOSITS.filter(d=>(d.acc||'').trim()===a.key).reduce((s,d)=>s+(+d.amt||0),0);
+    if(!nap)return;const con=nap-a.cost,ngay=a.cost/Math.max(1,a.days.size);
+    if(ngay<=0)return;const nCon=con/ngay;if(nCon>=5)return;
+    L.push({p:nCon<2?1:2,t:'Nạp tiền Ads',m:Math.max(0,con),w:a.key,
+      d:`${a.key} — còn ${money(con)}, đủ chạy ~${Math.max(0,Math.round(nCon))} ngày. Nạp trước khi camp tự tắt.`});
+  });
+  PROJ.forEach(p=>{const m=META[p.name];if(!m)return;const appr=+m.appr||0;
+    if(appr>0&&p.min!=null&&appr>=p.min)
+      L.push({p:3,t:'Rút hoa hồng',m:appr,w:m.net||'nét',
+        d:`${p.name} — đã duyệt ${money(appr)}, vượt ngưỡng rút ${money(p.min)}. Vào nét bấm yêu cầu thanh toán.`});
+  });
+  names2().forEach(n=>{const m=META[n];if(!m||!m.stage)return;
+    const i=STAGES.indexOf(m.stage);if(i<0||i>=4)return;
+    if(ROWS.some(r=>r.proj===n))return;
+    L.push({p:4,t:'Đẩy tiến trình',m:0,w:m.net||'—',
+      d:`${n} — đang đứng ở bước “${m.stage}”, chưa có camp nào chạy. Việc kế: ${
+        i===0?'nộp đơn đăng ký nét':i===1?'theo dõi đơn, 5 ngày chưa duyệt thì nhắc':i===2?'nhắc affiliate manager':'dựng landing rồi lên camp'}.`});
+  });
+  L.sort((a,b)=>a.p-b.p||b.m-a.m);
+  return L;
+}
+function renderOrd(){const L=orders();
+  $('ordN').textContent=L.length?`${L.length} việc · làm từ trên xuống`:'';
+  $('ord').innerHTML=L.slice(0,60).map((x,i)=>{
+    const c=x.p===1?'critical':x.p===2?'warning':x.p===3?'good':'text-muted';
+    return `<tr><td><span class="dot" style="background:var(--${c})"></span> ${i+1}</td>
+      <td style="color:var(--${c});font-weight:600">${x.t}</td><td>${x.d}</td>
+      <td class="num">${x.m?money(x.m):'–'}</td>
+      <td style="color:var(--text-secondary)">${x.w}</td></tr>`}).join('')
+    ||'<tr><td colspan="5" class="empty">Chưa có việc nào — hoặc số liệu chưa về, hoặc mọi camp đang trong ngưỡng.</td></tr>';
+}
+
+/* ============ TỰ LƯU · TỰ LẤY SỐ ============ */
+const LS='afi-os-v3';let __boot=true,__tm=null;
+function snap(){return{v:3,cur:CUR(),cap:$('cap').value,PROJ,META,SUPP,ROWS,ACCM,DEPOSITS,CAMPREV,
+  src:{u:$('srcUrl').value,iv:$('srcIv').value}};}
+function apply(j){PROJ=j.PROJ||[];META=j.META||{};SUPP=j.SUPP||[];ROWS=j.ROWS||[];ACCM=j.ACCM||{};
+  DEPOSITS=j.DEPOSITS||[];CAMPREV=j.CAMPREV||{};
+  if(j.cur)$('cur').value=j.cur;if(j.cap)$('cap').value=j.cap;
+  if(j.src){$('srcUrl').value=j.src.u||'';if(j.src.iv)$('srcIv').value=j.src.iv;}}
+function autosave(){if(__boot)return;clearTimeout(window.__as);
+  window.__as=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(snap()));
+    $('saved').textContent='đã tự lưu '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
+    catch(e){$('saved').textContent='không tự lưu được — nhớ bấm ↓ Lưu';}},700);}
+async function pullAuto(){
+  const u=$('srcUrl').value.trim();
+  if(!u){$('srcMsg').innerHTML='Chưa điền nguồn.';return}
+  $('srcMsg').innerHTML='⋯ đang lấy số…';
+  try{
+    const r=await fetch(u+(u.includes('?')?'&':'?')+'_='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(Array.isArray(j.ROWS)&&j.ROWS.length)ROWS=j.ROWS;
+    if(j.META)for(const k in j.META)META[k]={...(META[k]||{}),...j.META[k]};
+    if(j.CAMPREV)for(const k in j.CAMPREV)CAMPREV[k]=j.CAMPREV[k];
+    if(Array.isArray(j.DEPOSITS)&&j.DEPOSITS.length)DEPOSITS=j.DEPOSITS;
+    const t=j.cap_nhat_luc?new Date(j.cap_nhat_luc):null;
+    const gio=t?Math.round((Date.now()-t)/36e5):null, cu=gio!=null&&gio>36;
+    $('srcMsg').innerHTML=`<b style="color:var(--${cu?'warning':'good'})">${cu?'●':'✓'}</b> `+
+      `${ROWS.length} dòng · ${new Set(ROWS.map(x=>x.camp)).size} camp · nguồn chốt lúc ${t?t.toLocaleString('vi-VN'):'?'}`+
+      (cu?` — <b>đã ${gio} giờ chưa mới</b>, kiểm tra afi_sync còn chạy không`:'')+
+      ` · lấy về ${new Date().toLocaleTimeString('vi-VN')}`;
+    renderAll();
+  }catch(e){
+    $('srcMsg').innerHTML=`<b style="color:var(--critical)">✕</b> Không lấy được (${e.message}). `+
+      (location.protocol==='file:'
+        ?'Trang đang mở bằng <code>file://</code> nên trình duyệt chặn đọc file. Chạy <code>python3 afi_sync.py --serve</code> rồi mở <code>http://localhost:8765/afi-os.html</code>.'
+        :'Kiểm tra afi_sync có đang chạy và đường dẫn có đúng không.');
+  }
+}
+function armAuto(){if(__tm)clearInterval(__tm);const m=+$('srcIv').value;if(m>0)__tm=setInterval(pullAuto,m*60000);}
+$('srcNow').onclick=pullAuto;
+$('srcUrl').oninput=autosave;
+$('srcIv').onchange=()=>{armAuto();autosave()};
+$('exp').onclick=()=>{const b=new Blob([JSON.stringify({v:3,cur:CUR(),cap:$('cap').value,PROJ,META,SUPP,ROWS,ACCM,DEPOSITS,CAMPREV})],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='afi-os-'+new Date().toISOString().slice(0,10)+'.json';a.click()};
+$('impB').onclick=()=>$('fJson').click();
+$('fJson').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const j=JSON.parse(r.result);PROJ=j.PROJ||[];META=j.META||{};SUPP=j.SUPP||[];
+    ROWS=j.ROWS||[];ACCM=j.ACCM||{};DEPOSITS=j.DEPOSITS||[];CAMPREV=j.CAMPREV||{};if(j.cur)$('cur').value=j.cur;if(j.cap)$('cap').value=j.cap;
+    $('loaded').innerHTML=`✓ Đã mở file · ${ROWS.length} dòng camp · ${PROJ.length} dự án`;renderAll()}
+    catch(x){alert('File không đọc được')}};r.readAsText(f)};
+
+/* ---- dữ liệu mẫu: 15 dự án top của Tran, số lấy từ file Excel ---- */
+$('demo1').onclick=()=>{
+  PROJ=[
+  {name:'Pictory',niche:'AI',simi:980000,gg:100000,low:.06,high:1.00,geo:'US, India',ppc:'b',pk:[29,59,199],com:50,min:5,days:30,lic:0},
+  {name:'Fliki',niche:'AI',simi:626700,gg:10000,low:.03,high:.52,geo:'US, India',ppc:'a',pk:[27,85],com:30,min:50,days:30,lic:0},
+  {name:'Heartbeat',niche:'Giáo dục',simi:286000,gg:100000,low:.45,high:1.63,geo:'US, EU',ppc:'d',pk:[49,149],com:30,min:100,days:60,lic:0},
+  {name:'Magiclight',niche:'AI',simi:845700,gg:10000,low:.10,high:.59,geo:'India, US',ppc:'d',pk:[12,35,90,150],com:30,min:30,days:30,lic:0},
+  {name:'Contiki',niche:'Du lịch',simi:987000,gg:10000,low:.91,high:.85,geo:'Úc, US, UK',ppc:'d',pk:[2000],com:5,min:0,days:30,lic:0},
+  {name:'TourRadar',niche:'Du lịch',simi:1300000,gg:10000,low:2.13,high:1.93,geo:'US, UK',ppc:'d',pk:[3000],com:7,min:0,days:50,lic:0},
+  {name:'Kajabi',niche:'Sản phẩm số',simi:2300000,gg:100000,low:1.29,high:4.46,geo:'US, UK',ppc:'d',pk:[179,249,499],com:30,min:100,days:60,lic:0},
+  {name:'Netlify',niche:'Công nghệ',simi:14400000,gg:1000000,low:.03,high:2.48,geo:'US, India',ppc:'d',pk:[9,20],com:20,min:5,days:30,lic:0},
+  {name:'Snov',niche:'Phần mềm',simi:1200000,gg:10000,low:1.60,high:6.64,geo:'China, India, US',ppc:'d',pk:[39,99,189,369],com:40,min:50,days:30,lic:0},
+  {name:'Wati',niche:'Sản phẩm số',simi:1700000,gg:10000,low:.70,high:3.03,geo:'India, Brazil',ppc:'d',pk:[49,99,249],com:20,min:0,days:30,lic:0},
+  {name:'Keychron',niche:'Sản phẩm vật lý',simi:2000000,gg:100000,low:.14,high:.28,geo:'US, JP',ppc:'d',pk:[100],com:5,min:50,days:30,lic:0},
+  {name:'Teachable',niche:'Giáo dục',simi:8500000,gg:10000,low:1.09,high:4.85,geo:'US, UK',ppc:'d',pk:[39,89,189],com:30,min:50,days:30,lic:0},
+  {name:'Skool',niche:'Giáo dục',simi:33700000,gg:100000,low:.012,high:.30,geo:'US, UK',ppc:'d',pk:[99],com:40,min:0,days:14,lic:0},
+  {name:'Whop',niche:'Sản phẩm số',simi:11800000,gg:100000,low:.012,high:.40,geo:'US, Philippines',ppc:'d',pk:[29,99],com:30,min:10,days:30,lic:0},
+  {name:'Kit',niche:'Email marketing',simi:10200000,gg:100000,low:.21,high:1.20,geo:'USA, UK',ppc:'d',pk:[29,49,99],com:50,min:5,days:40,lic:0}];
+  PROJ.forEach(p=>{if(!META[p.name])META[p.name]={stage:STAGES[0]}});
+  META['Pictory']={...META['Pictory'],stage:'Có link',net:'FirstPromoter',sent:'09/08',ref:'partners.pictory.ai'};
+  META['Fliki']={...META['Fliki'],stage:'Có link',net:'FirstPromoter',ref:'fliki.ai/?via=duy-cuong'};
+  META['Heartbeat']={...META['Heartbeat'],stage:'Có link',net:'Rewardful',ref:'heartbeat.chat/?via=duy-cuong'};
+  META['Magiclight']={...META['Magiclight'],stage:'Có link',net:'trực tiếp',ref:'magiclight.ai/?code=6010n9i2c'};
+  META['TourRadar']={...META['TourRadar'],stage:'Có link',net:'trực tiếp',ref:'tr.tours/refer/ZRgIVCsDGF8v'};
+  SUPP=[{name:'support@pictory.ai',proj:'Pictory',chan:'email',ease:'Bình thường',last:'',com:'40',neg:'hỏi rõ one-time hay recurring'}];
+  showVerdict(vet(PROJ[0]));renderAll();
+};
+$('demo3').onclick=()=>{
+  ROWS=[];const P=[['Pictory',.55],['Fliki',0],['Heartbeat',1.25],['Magiclight',1.9],['TourRadar',.35],
+    ['Kajabi',.85],['Netlify',1.6],['Snov',.2],['Wati',1.1],['Keychron',1.35],['Teachable',.9],['Skool',1.7]];
+  let sd=11;const rnd=()=>((sd=sd*1103515245+12345&0x7fffffff)/0x7fffffff);
+  P.forEach((p,pi)=>{const acc=`AFI-${String(pi+1).padStart(2,'0')}-${p[0].toUpperCase().slice(0,8)}`;
+    const nc=3+Math.floor(rnd()*8);let cost=0;
+    for(let ci=1;ci<=nc;ci++){const base=1.1+rnd()*2.2;
+      for(let d=0;d<14;d++){const dt=new Date(2026,7,10+d).toISOString().slice(0,10);
+        const c=base*(.75+rnd()*.6);cost+=c;
+        ROWS.push({date:dt,acc,proj:p[0],camp:`(b) US - ${p[0]} #${ci}`,
+          imp:Math.round(c/.0024),clk:Math.round(c/.073),cost:+c.toFixed(2)})}}
+    const rev=cost*p[1];META[p[0]]={...(META[p[0]]||{}),
+      pend:Math.round(rev*.42),appr:Math.round(rev*.44),rej:Math.round(rev*.06),paid:Math.round(rev*.08),
+      stage:p[1]>=1.5?'Scale':p[1]>=1?'Ra đơn':p[1]>0?'Lên camp':'Lên camp',next:'15/09'}});
+  ACCM['AFI-06-KAJABI']={status:'Đang review'};ACCM['AFI-08-SNOV']={status:'Tạm ngưng'};
+  DEPOSITS=[...new Set(ROWS.map(r=>r.acc))].map((a,i)=>({date:'2026-08-0'+((i%8)+1),acc:a,
+    amt:Math.round(ROWS.filter(r=>r.acc===a).reduce((s,r)=>s+r.cost,0)*1.35),note:'nạp lần đầu'}));
+  $('loaded').innerHTML=`✓ Dữ liệu mẫu · <b>${ROWS.length}</b> dòng · ${new Set(ROWS.map(r=>r.camp)).size} camp`;
+  renderAll();
+};
+/* ---- khởi động: mở lại đúng chỗ lần trước, rồi tự lấy số ---- */
+try{const s=localStorage.getItem(LS);if(s)apply(JSON.parse(s));}catch(e){}
+if(!$('srcUrl').value&&location.protocol.indexOf('http')===0)$('srcUrl').value='afi-data.json';
+__boot=false;
+renderAll();armAuto();
+if($('srcUrl').value&&location.protocol.indexOf('http')===0)pullAuto();
+</script>
+</body>
+</html>

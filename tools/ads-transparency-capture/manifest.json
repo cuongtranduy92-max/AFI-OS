@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "AFI-OS Capture Helper",
+  "version": "0.1.1",
+  "description": "Manually capture visible Ads Transparency Center evidence into local AFI-OS.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "action": {
+    "default_title": "Capture to AFI-OS",
+    "default_popup": "popup.html"
+  }
+}

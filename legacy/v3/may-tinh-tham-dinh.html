@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Máy tính thẩm định dự án Affiliate — AFI-OS</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+  --tx:#e7eaf0; --tx2:#98a1b3; --acc:#4f8cff;
+  --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.55;padding:24px 16px 60px}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.sub{color:var(--tx2);font-size:14px;margin-top:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx2);font-weight:600;margin-bottom:16px}
+.f{margin-bottom:14px}
+.f label{display:block;font-size:13px;color:var(--tx2);margin-bottom:5px}
+.f label b{color:var(--tx);font-weight:600}
+.f input,.f select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--tx);
+  border-radius:9px;padding:9px 11px;font-size:15px;font-family:inherit}
+.f input:focus,.f select:focus{outline:none;border-color:var(--acc)}
+.hint{font-size:11.5px;color:#6b7484;margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.verdict{border-radius:14px;padding:20px;margin-top:24px;border:1px solid var(--line);background:var(--panel)}
+.badge{display:inline-block;padding:7px 16px;border-radius:999px;font-weight:700;font-size:15px}
+.b-ok{background:rgba(34,197,94,.15);color:var(--ok);border:1px solid rgba(34,197,94,.35)}
+.b-warn{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.35)}
+.b-bad{background:rgba(239,68,68,.15);color:var(--bad);border:1px solid rgba(239,68,68,.35)}
+
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+@media(max-width:880px){.nums{grid-template-columns:repeat(2,1fr)}}
+.num{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:14px}
+.num .k{font-size:11.5px;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em}
+.num .v{font-size:22px;font-weight:700;margin-top:5px;letter-spacing:-.02em}
+.num .u{font-size:12px;color:var(--tx2);font-weight:400}
+
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:14px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx2);font-weight:600}
+td.st{width:44px;text-align:center;font-size:16px}
+tr.pass td{color:var(--tx)}
+tr.fail td{color:#b4bcca}
+.why{font-size:12.5px;color:var(--tx2)}
+
+.note{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);
+  border-radius:10px;padding:16px 18px;font-size:13.5px;color:#c3cad6}
+.note b{color:var(--tx)}
+.note p{margin-bottom:9px}
+.note p:last-child{margin-bottom:0}
+footer{margin-top:28px;color:#5c6472;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Máy tính thẩm định dự án Affiliate</h1>
+  <div class="sub">7 ngưỡng cứng + công thức hoàn vốn theo giáo trình buổi 5–6. Nhập số, ra kết luận chạy hay bỏ.</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Số liệu dự án</h2>
+      <div class="f">
+        <label><b>Tên dự án / domain</b></label>
+        <input id="ten" type="text" placeholder="vi-du.com">
+      </div>
+      <div class="row">
+        <div class="f">
+          <label><b>Traffic SimilarWeb</b> — lượt/tháng</label>
+          <input id="traffic" type="number" value="10000">
+          <div class="hint">Ngưỡng: ≥ 10.000</div>
+        </div>
+        <div class="f">
+          <label><b>Lượng tìm kiếm</b> — nhấp/tháng</label>
+          <input id="clicks" type="number" value="2000">
+          <div class="hint">Keyword Planner. Ngưỡng: ≥ 2.000</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="f">
+          <label><b>Giá thầu đầu trang</b> — USD (lấy mức CAO NHẤT)</label>
+          <input id="bid" type="number" step="0.01" value="1.20">
+        </div>
+        <div class="f">
+          <label><b>Nước top 1</b></label>
+          <select id="nuoc">
+            <option value="manh">Mỹ / Canada</option>
+            <option value="manh">Tây Âu (Anh, Đức, Pháp...)</option>
+            <option value="manh">Úc / New Zealand</option>
+            <option value="tb">Đông Âu / Nam Mỹ</option>
+            <option value="tb">Đông Á (Nhật, Hàn, Sing)</option>
+            <option value="yeu">Ấn Độ</option>
+            <option value="yeu">Đông Nam Á / Châu Phi</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Điều khoản hoa hồng</h2>
+      <div class="row">
+        <div class="f">
+          <label><b>Giá gói trung bình</b> — USD</label>
+          <input id="gia" type="number" step="0.01" value="49">
+        </div>
+        <div class="f">
+          <label><b>% hoa hồng</b></label>
+          <input id="pct" type="number" step="0.1" value="30">
+        </div>
+      </div>
+      <div class="row">
+        <div class="f">
+          <label><b>Loại hoa hồng</b></label>
+          <select id="loai">
+            <option value="1">Một lần</option>
+            <option value="4">Recurring 4 tháng</option>
+            <option value="12">Recurring 12 tháng</option>
+            <option value="24">Vĩnh viễn (tính 24 tháng)</option>
+          </select>
+        </div>
+        <div class="f">
+          <label><b>Phân loại PPC</b></label>
+          <select id="ppc">
+            <option value="c">(c) Cho phép chạy ads</option>
+            <option value="b">(b) Cấm brand keyword, non-brand OK</option>
+            <option value="d">(d) T&amp;C không nhắc → phải xin văn bản</option>
+            <option value="a">(a) Cấm mọi paid ads</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="f">
+          <label><b>Mức rút tối thiểu</b> — USD</label>
+          <input id="minpay" type="number" value="50">
+        </div>
+        <div class="f">
+          <label><b>Thời gian trả tiền</b> — ngày</label>
+          <input id="paydays" type="number" value="30">
+          <div class="hint">Ngưỡng: ≤ 60 ngày</div>
+        </div>
+      </div>
+      <div class="f">
+        <label><b>Số click cần cho 1 đơn</b></label>
+        <input id="cvr" type="number" value="150">
+        <div class="hint">Mặc định 150 theo giáo trình. Có số thật thì thay vào.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div id="badge" class="badge b-ok">ĐANG TÍNH</div>
+    <div class="nums">
+      <div class="num"><div class="k">Chi phí / đơn</div><div class="v" id="n1">–</div></div>
+      <div class="num"><div class="k">Doanh thu / đơn</div><div class="v" id="n2">–</div></div>
+      <div class="num"><div class="k">Lãi / đơn</div><div class="v" id="n3">–</div></div>
+      <div class="num"><div class="k">Hoàn vốn</div><div class="v" id="n4">–</div></div>
+    </div>
+    <table>
+      <thead><tr><th class="st"></th><th>Tiêu chí</th><th>Thực tế</th><th>Ngưỡng</th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    <div class="why" id="why" style="margin-top:14px"></div>
+  </div>
+
+  <div class="note">
+    <p><b>Cách đọc kết quả.</b> Chỉ số quyết định chính là lượng tìm kiếm trên Keyword Planner (≥2.000 nhấp/tháng) và số ngày hoàn vốn (≤120 ngày). Traffic SimilarWeb chỉ là bộ lọc thô — traffic khủng không có nghĩa là dự án tốt.</p>
+    <p><b>Cách lấy số Keyword Planner:</b> đặt ngôn ngữ tiếng Anh, tắt giới hạn vị trí Việt Nam, để phạm vi toàn cầu. Giá thầu đầu trang lấy ở cột mức cao nhất, không lấy mức thấp.</p>
+    <p><b>Trước khi tin bất kỳ con số hoa hồng nào:</b> đọc T&amp;C gốc trên trang chương trình và kiểm tra Changelog. Các trang review bên thứ ba thường đăng số liệu đã cũ. Pictory là ví dụ: các trang ngoài vẫn ghi 20–50% recurring trong khi điều khoản gốc đã đổi sang 40% trả một lần từ 04/05/2026.</p>
+    <p><b>Dự án loại (d):</b> điều khoản không nhắc tới PPC không có nghĩa là được phép. Gửi email xin trả lời chính thức và lưu lại email đó trước khi tiêu tiền quảng cáo.</p>
+  </div>
+
+  <footer>AFI-OS · module A2b · dựng theo giáo trình buổi 5–6</footer>
+</div>
+
+<script>
+var ids=["ten","traffic","clicks","bid","nuoc","gia","pct","loai","ppc","minpay","paydays","cvr"];
+function g(id){return document.getElementById(id);}
+function num(id){var v=parseFloat(g(id).value);return isNaN(v)?0:v;}
+function usd(v){return "$"+v.toFixed(2);}
+
+function tinh(){
+  var traffic=num("traffic"), clicks=num("clicks"), bid=num("bid");
+  var gia=num("gia"), pct=num("pct"), thang=parseFloat(g("loai").value);
+  var minpay=num("minpay"), paydays=num("paydays"), cvr=num("cvr");
+  var nuoc=g("nuoc").value, ppc=g("ppc").value;
+
+  // Công thức gốc buổi 6
+  var chiphi = cvr * bid;                    // 150 click x giá thầu đầu trang
+  var dt1 = gia * pct/100;                   // doanh thu 1 kỳ
+  var dtTong = dt1 * thang;                  // nhân số tháng nếu recurring
+  var lai = dtTong - chiphi;
+
+  // Hoàn vốn: bao nhiêu ngày để lãi bù lại chi phí bỏ ra
+  var soNgay;
+  if(dtTong<=0){ soNgay=Infinity; }
+  else if(thang<=1){
+    // một lần: hoàn vốn ngay khi có đơn, cộng thời gian chờ trả tiền
+    soNgay = (dtTong>=chiphi) ? paydays : Infinity;
+  } else {
+    // recurring: mỗi tháng nhận dt1, cần bao nhiêu tháng bù chi phí
+    var thangCan = Math.ceil(chiphi/dt1);
+    soNgay = (thangCan<=thang) ? (thangCan*30 + paydays) : Infinity;
+  }
+
+  g("n1").innerHTML = usd(chiphi);
+  g("n2").innerHTML = usd(dtTong) + (thang>1?' <span class="u">/'+thang+'th</span>':'');
+  g("n3").innerHTML = (lai>=0?"":"−")+usd(Math.abs(lai));
+  g("n3").style.color = lai>=0 ? "var(--ok)" : "var(--bad)";
+  g("n4").innerHTML = isFinite(soNgay) ? Math.round(soNgay)+' <span class="u">ngày</span>' : "không hoàn";
+  g("n4").style.color = !isFinite(soNgay) ? "var(--bad)" : (soNgay<=120?"var(--ok)":"var(--warn)");
+
+  var nuocTxt = g("nuoc").options[g("nuoc").selectedIndex].text;
+  var ppcTxt = g("ppc").options[g("ppc").selectedIndex].text;
+
+  var rows=[
+    [traffic>=10000, "Traffic SimilarWeb", traffic.toLocaleString("vi-VN")+" lượt/tháng", "≥ 10.000"],
+    [clicks>=2000, "Lượng tìm kiếm (chỉ số chính)", clicks.toLocaleString("vi-VN")+" nhấp/tháng", "≥ 2.000"],
+    [nuoc==="manh", "Nước top — kinh tế", nuocTxt, "Mỹ / Âu / Mỹ châu"],
+    [isFinite(soNgay)&&soNgay<=120, "Thời gian hoàn vốn", isFinite(soNgay)?Math.round(soNgay)+" ngày":"không hoàn", "≤ 120 ngày"],
+    [dtTong>=10, "Hoa hồng mỗi đơn", usd(dtTong), "≥ $10"],
+    [minpay<=100, "Mức rút tối thiểu", usd(minpay), "càng thấp càng tốt"],
+    [paydays<=60, "Thời gian trả tiền", paydays+" ngày", "≤ 60 ngày"],
+    [ppc==="c"||ppc==="b", "Phân loại PPC", ppcTxt, "(b) hoặc (c)"]
+  ];
+
+  var html="";
+  var dat=0, hard=0;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    if(r[0]) dat++;
+    if(i<7 && r[0]) hard++;
+    html+='<tr class="'+(r[0]?"pass":"fail")+'"><td class="st">'+(r[0]?"✅":"❌")+
+          '</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td class="why">'+r[3]+'</td></tr>';
+  }
+  g("tb").innerHTML=html;
+
+  // Kết luận
+  var b=g("badge"), why=g("why"), ten=g("ten").value.trim();
+  var pre = ten ? ten+" — " : "";
+  b.className="badge";
+
+  if(ppc==="a"){
+    b.className+=" b-bad"; b.textContent="BỎ — cấm chạy ads";
+    why.innerHTML=pre+"Điều khoản cấm mọi hình thức quảng cáo trả phí. Chạy Google Ads vào dự án này sẽ mất hoa hồng và có thể bị khóa tài khoản affiliate. Dự án chỉ hợp với hướng content/SEO.";
+  } else if(!isFinite(soNgay)||soNgay>120){
+    b.className+=" b-bad"; b.textContent="BỎ — không hoàn vốn kịp";
+    why.innerHTML=pre+"Chi phí "+usd(chiphi)+" cho mỗi đơn so với doanh thu "+usd(dtTong)+" khiến dự án "+
+      (isFinite(soNgay)?("mất "+Math.round(soNgay)+" ngày mới hoàn vốn, vượt ngưỡng 120 ngày"):"không bao giờ hoàn vốn")+
+      ". Muốn cứu thì phải đàm phán nâng % hoa hồng hoặc tìm từ khóa có giá thầu thấp hơn.";
+  } else if(dat>=7){
+    b.className+=" b-ok"; b.textContent="ĐẠT — "+dat+"/8 tiêu chí";
+    why.innerHTML=pre+"Hoàn vốn "+Math.round(soNgay)+" ngày, lãi "+usd(lai)+" mỗi đơn. Trước khi tiêu tiền: đọc T&C gốc + Changelog, đăng ký lấy link, và gửi email liên hệ sàn để thẩm định mức độ hỗ trợ."+
+      (ppc==="b"?" Dự án loại (b) nên chỉ chạy từ khóa non-brand, giữ sẵn bằng chứng nguồn từ khóa.":"");
+  } else if(hard>=5){
+    b.className+=" b-warn"; b.textContent="CÂN NHẮC — "+dat+"/8 tiêu chí";
+    why.innerHTML=pre+"Hoàn vốn "+Math.round(soNgay)+" ngày là chấp nhận được nhưng còn tiêu chí chưa đạt (xem dấu ❌). "+
+      (ppc==="d"?"Đặc biệt: điều khoản không nhắc tới PPC — phải gửi email xin văn bản cho phép trước khi tiêu tiền. ":"")+
+      "Nên để vào danh sách chờ, ưu tiên các dự án đạt đủ trước.";
+  } else {
+    b.className+=" b-bad"; b.textContent="BỎ — chỉ "+dat+"/8 tiêu chí";
+    why.innerHTML=pre+"Quá nhiều tiêu chí không đạt. Thị trường có rất nhiều dự án, không cần cố với dự án yếu.";
+  }
+}
+for(var i=0;i<ids.length;i++){
+  g(ids[i]).addEventListener("input",tinh);
+  g(ids[i]).addEventListener("change",tinh);
+}
+tinh();
+</script>
+</body>
+</html>
