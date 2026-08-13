@@ -24,7 +24,7 @@ APIFY_SYNC_URL = (
     "https://api.apify.com/v2/acts/" + APIFY_ACTOR_ID + "/run-sync-get-dataset-items"
 )
 APIFY_SOURCE_URL = "https://apify.com/trakk/similarweb-scraper"
-APIFY_TIMEOUT_S = 120.0
+APIFY_TIMEOUT_S = 45.0
 APIFY_BATCH_SIZE = 50
 TRAFFIC_VALID_DAYS = 45
 
@@ -522,6 +522,7 @@ def collect_project_traffic(
     readiness_getter: Callable[[], dict] = traffic_provider_readiness,
     credential_reader: Callable[[str], str] = read_credential,
     fetchers: dict[str, Callable] | None = None,
+    force_refresh: bool = False,
 ) -> dict:
     now = now or datetime.now(UTC)
     readiness = readiness_getter()
@@ -532,7 +533,7 @@ def collect_project_traffic(
         and cached is not None
         and "top_traffic_countries" not in cached["fields"]
     )
-    if cached is not None and not apify_needs_countries:
+    if cached is not None and not apify_needs_countries and not force_refresh:
         return cached
     if readiness.get("status") != "READY":
         return {
@@ -594,6 +595,7 @@ def collect_project_traffic_batch(
     readiness_getter: Callable[[], dict] = traffic_provider_readiness,
     credential_reader: Callable[[str], str] = read_credential,
     batch_fetcher: Callable = fetch_apify_similarweb_batch,
+    force_refresh: bool = False,
 ) -> dict[str, dict]:
     """Pre-collect uncached Apify traffic in one actor call for an appraisal batch."""
 
@@ -609,14 +611,33 @@ def collect_project_traffic_batch(
             and cached is not None
             and "top_traffic_countries" not in cached["fields"]
         )
-        if cached is not None and not apify_needs_countries:
+        if cached is not None and not apify_needs_countries and not force_refresh:
             results[project.domain] = cached
         else:
             uncached.append(project)
     if not uncached:
         return results
 
-    if readiness.get("status") != "READY" or str(readiness.get("provider", "")).upper() != "APIFY":
+    if readiness.get("status") != "READY":
+        for project in uncached:
+            results[project.domain] = {
+                **readiness,
+                "fields": ["website_traffic_monthly", "top_traffic_countries"],
+                "requires_user": True,
+                "source_urls": _provider_source_urls(readiness.get("provider")),
+                "google_ads_write": False,
+            }
+        return results
+    if str(readiness.get("provider", "")).upper() != "APIFY":
+        for project in uncached:
+            results[project.domain] = collect_project_traffic(
+                db,
+                project,
+                now=now,
+                readiness_getter=lambda readiness=readiness: readiness,
+                credential_reader=credential_reader,
+                force_refresh=force_refresh,
+            )
         return results
     domains = [project.domain for project in uncached]
     try:

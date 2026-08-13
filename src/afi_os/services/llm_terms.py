@@ -122,7 +122,7 @@ def call_anthropic(
                 "system": system_prompt,
                 "messages": [{"role": "user", "content": user_prompt}],
             },
-            timeout=60,
+            timeout=30,
         )
     except httpx.HTTPError as exc:
         raise LLMExtractionError("RETRY_REQUIRED", "Không kết nối được Claude API") from exc

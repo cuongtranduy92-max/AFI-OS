@@ -194,11 +194,6 @@ def run_auto_check_portfolio_project(
     source_results: list[ProjectCheckSourceResult] = []
     try:
         terms = collect_domain_proposal(db, payload.domain)
-        if (
-            not terms.get("pages")
-            and getattr(terms.get("run"), "fixture_version", "") != "official-web-v9"
-        ):
-            terms = collect_domain_proposal(db, payload.domain)
         program = terms.get("program")
         if program is not None:
             ensure_project_for_program(db, program)

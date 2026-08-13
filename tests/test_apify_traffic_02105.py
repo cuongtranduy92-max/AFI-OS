@@ -8,12 +8,12 @@ from types import SimpleNamespace
 import httpx
 from fastapi.testclient import TestClient
 
-from afi_os.api import appraisal as appraisal_api
 from afi_os.api import portfolio
 from afi_os.db import Base, SessionLocal, engine
 from afi_os.enums import ResearchStatus
 from afi_os.main import app
 from afi_os.models import MetricSnapshot, Project
+from afi_os.services import appraisal_jobs
 from afi_os.services.appraisal import build_appraisal_contract
 from afi_os.services.portfolio import load_portfolio_project
 from afi_os.services.traffic_keychain import SUPPORTED_PROVIDERS, traffic_provider_readiness
@@ -321,6 +321,28 @@ def test_collect_batch_stores_ten_domains_once_then_uses_cache() -> None:
     assert all(item["status"] == "CACHED" for item in second.values())
 
 
+def test_collect_batch_reports_connection_required_for_every_domain() -> None:
+    with SessionLocal() as db:
+        projects = [
+            Project(domain=f"missing-source-{index}.example", brand_name="Missing")
+            for index in range(3)
+        ]
+        db.add_all(projects)
+        db.commit()
+        result = collect_project_traffic_batch(
+            db,
+            projects,
+            readiness_getter=lambda: {
+                "status": "CONNECTION_REQUIRED",
+                "provider": None,
+                "detail": "Chưa nối nguồn traffic",
+            },
+        )
+
+    assert set(result) == {project.domain for project in projects}
+    assert all(item["status"] == "CONNECTION_REQUIRED" for item in result.values())
+
+
 def test_appraisal_batch_returns_fresh_traffic_for_every_domain(monkeypatch) -> None:
     calls = 0
 
@@ -345,7 +367,7 @@ def test_appraisal_batch_returns_fresh_traffic_for_every_domain(monkeypatch) -> 
             }
         return result
 
-    monkeypatch.setattr(appraisal_api, "collect_project_traffic_batch", fake_batch)
+    monkeypatch.setattr(appraisal_jobs, "collect_project_traffic_batch", fake_batch)
     monkeypatch.setattr(
         portfolio,
         "collect_domain_proposal",
@@ -371,10 +393,21 @@ def test_appraisal_batch_returns_fresh_traffic_for_every_domain(monkeypatch) -> 
     response = client.post("/api/appraise/batch", json={"domains": domains})
 
     assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 10
+    assert [item["domain"] for item in body["jobs"]] == domains
+    for _attempt in range(100):
+        status = client.get(f"/api/appraise/batches/{body['batch_id']}")
+        assert status.status_code == 200, status.text
+        current = status.json()
+        if current["done"] == current["total"]:
+            break
+        import time
+
+        time.sleep(0.02)
     assert calls == 1
-    assert [item["domain"] for item in response.json()] == domains
-    assert all(item["traffic"]["monthly"] == 123456 for item in response.json())
-    assert all(item["traffic"]["source_status"] == "ready" for item in response.json())
+    assert all(item["traffic"]["monthly"] == 123456 for item in current["jobs"])
+    assert all(item["traffic"]["source_status"] == "ready" for item in current["jobs"])
 
 
 def test_ui_and_setup_command_use_batch_and_recommend_apify() -> None:

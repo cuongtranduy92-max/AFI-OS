@@ -28,6 +28,7 @@ from afi_os.enums import (
     AdsAccountState,
     AdsAccountType,
     AdvertiserClassification,
+    AppraisalJobStatus,
     AuditAction,
     AutomationJobStatus,
     AutomationJobType,
@@ -396,6 +397,9 @@ class Project(TimestampMixin, Base):
         foreign_keys="AdsAccount.current_project_id",
         uselist=False,
     )
+    appraisal_jobs: Mapped[list[AppraisalJob]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class CampPlan(TimestampMixin, Base):
@@ -504,6 +508,36 @@ class AutomationJob(TimestampMixin, Base):
             "created_at",
         ),
         Index("ix_automation_job_lease", "status", "lease_expires_at"),
+    )
+
+
+class AppraisalJob(TimestampMixin, Base):
+    """Durable per-domain state for the cache-first progressive appraisal UI."""
+
+    __tablename__ = "appraisal_jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    domain: Mapped[str] = mapped_column(String(255), index=True)
+    status: Mapped[AppraisalJobStatus] = mapped_column(
+        Enum(AppraisalJobStatus, native_enum=False),
+        default=AppraisalJobStatus.QUEUED,
+        index=True,
+    )
+    per_source_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    batch_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    force_refresh: Mapped[bool] = mapped_column(Boolean, default=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+    project: Mapped[Project] = relationship(back_populates="appraisal_jobs")
+
+    __table_args__ = (
+        Index("ix_appraisal_job_status_created", "status", "created_at"),
+        Index("ix_appraisal_job_batch_status", "batch_id", "status"),
     )
 
 

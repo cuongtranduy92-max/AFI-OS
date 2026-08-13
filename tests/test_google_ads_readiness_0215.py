@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from fastapi.testclient import TestClient
 
 from afi_os.api import operations as operations_api
 from afi_os.db import Base, SessionLocal, engine
 from afi_os.main import app
-from afi_os.models import AdsAccount
+from afi_os.models import AdsAccount, Project
+from afi_os.services.google_ads_api import GoogleAdsKeywordMetric
+from afi_os.services.google_ads_keyword_check import collect_project_keyword_metrics
 from afi_os.services.google_ads_readiness import (
     CREDENTIAL_LABELS,
     google_ads_readiness,
@@ -67,6 +71,43 @@ def test_all_keychain_entries_make_read_only_preflight_ready() -> None:
     assert result["mode"] == "READ_ONLY_REPORTING"
     assert result["write_operations_enabled"] is False
     assert result["login_customer_id_configured"] is True
+
+
+def test_keyword_planner_matches_hyphenated_customer_id() -> None:
+    with SessionLocal() as db:
+        db.add(AdsAccount(external_id="123-456-7890", name="Google Ads", currency="VND"))
+        project = Project(domain="format-match.example", brand_name="Format Match")
+        db.add(project)
+        db.commit()
+        db.refresh(project)
+
+        result = collect_project_keyword_metrics(
+            db,
+            project,
+            readiness_getter=lambda *_args, **_kwargs: {
+                "status": "READY",
+                "customer_ids": ["1234567890"],
+            },
+            credential_checker=lambda _label: True,
+            credential_reader=lambda label: {
+                "oauth-client-id": "client-id",
+                "oauth-client-secret": "client-secret",
+                "refresh-token": "refresh-token",
+                "developer-token": "developer-token",
+                "login-customer-id": "1112223333",
+            }[label],
+            token_refresher=lambda **_kwargs: "access-token",
+            idea_generator=lambda **_kwargs: [
+                GoogleAdsKeywordMetric(
+                    text="Format Match",
+                    average_monthly_searches=1200,
+                    bid_low=Decimal("1000"),
+                    bid_high=Decimal("5000"),
+                )
+            ],
+        )
+
+    assert result["status"] == "COLLECTED"
 
 
 def test_keychain_checker_rejects_unknown_label_without_shelling_out() -> None:

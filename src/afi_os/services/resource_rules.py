@@ -16,7 +16,7 @@ Thuần deterministic, không chạm DB — mọi hàm nhận dữ liệu vào, 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 SOAK_HOURS = 48
 CHIN_DAYS = 21
@@ -97,7 +97,9 @@ class NurtureStatus:
 
 
 def _age_days(created_at: datetime, today: date) -> int:
-    return max(0, (today - created_at.date()).days)
+    timestamp = created_at if created_at.tzinfo is not None else created_at.replace(tzinfo=UTC)
+    created_date = timestamp.astimezone().date()
+    return max(0, (today - created_date).days)
 
 
 def is_dirty(email: EmailInfo) -> bool:

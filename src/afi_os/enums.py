@@ -189,6 +189,15 @@ class AutomationJobStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class AppraisalJobStatus(StrEnum):
+    """Operator-visible lifecycle for progressive Step 1 collection."""
+
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
 class CaptureStatus(StrEnum):
     RAW = "RAW"
     PARSED = "PARSED"

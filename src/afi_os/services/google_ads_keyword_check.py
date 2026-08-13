@@ -23,7 +23,56 @@ from afi_os.services.google_ads_readiness import google_ads_readiness
 KEYWORD_IDEAS_DOCS_URL = (
     "https://developers.google.com/google-ads/api/docs/keyword-planning/generate-keyword-ideas"
 )
-KEYWORD_VALID_DAYS = 35
+KEYWORD_VALID_DAYS = 7
+
+
+def cached_keyword_result(
+    db: Session,
+    project: Project,
+    *,
+    now: datetime | None = None,
+) -> dict | None:
+    """Return keyword metrics only when all three canonical snapshots are fresh."""
+
+    now = now or datetime.now(UTC)
+    keys = {
+        "primary_keyword_search_volume",
+        "primary_keyword_bid_low",
+        "primary_keyword_bid_high",
+    }
+    snapshots = list(
+        db.scalars(
+            select(MetricSnapshot)
+            .where(
+                MetricSnapshot.project_id == project.id,
+                MetricSnapshot.metric_key.in_(keys),
+            )
+            .order_by(MetricSnapshot.observed_at.desc(), MetricSnapshot.id.desc())
+        ).all()
+    )
+    latest: dict[str, MetricSnapshot] = {}
+    for snapshot in snapshots:
+        if snapshot.metric_key in latest or snapshot.valid_until is None:
+            continue
+        valid_until = snapshot.valid_until
+        if valid_until.tzinfo is None:
+            valid_until = valid_until.replace(tzinfo=UTC)
+        if valid_until >= now:
+            latest[snapshot.metric_key] = snapshot
+    if set(latest) != keys:
+        return None
+    observed_at = min(item.observed_at for item in latest.values())
+    return {
+        "status": "CACHED",
+        "detail": "Đang dùng từ khóa và CPC còn hạn trong cache 7 ngày.",
+        "requires_user": False,
+        "fields": sorted(keys),
+        "source_urls": sorted(
+            {item.source_url for item in latest.values() if item.source_url}
+        ),
+        "cache_hit": True,
+        "checked_at": observed_at,
+    }
 
 
 def _normalized(value: str) -> str:
@@ -123,8 +172,12 @@ def collect_project_keyword_metrics(
     credential_reader: Callable[[str], str] = read_credential,
     token_refresher: Callable = refresh_access_token,
     idea_generator: Callable = generate_domain_keyword_ideas,
+    force_refresh: bool = False,
 ) -> dict:
     now = now or datetime.now(UTC)
+    cached = cached_keyword_result(db, project, now=now)
+    if cached is not None and not force_refresh:
+        return cached
     readiness = readiness_getter(db, credential_checker=credential_checker)
     if readiness.get("status") != "READY":
         return {
@@ -151,7 +204,15 @@ def collect_project_keyword_metrics(
             ],
             "source_urls": [KEYWORD_IDEAS_DOCS_URL],
         }
-    account = db.scalar(select(AdsAccount).where(AdsAccount.external_id == customer_ids[0]))
+    account = next(
+        (
+            candidate
+            for candidate in db.scalars(select(AdsAccount).order_by(AdsAccount.id.asc())).all()
+            if "".join(character for character in candidate.external_id if character.isdigit())
+            == customer_ids[0]
+        ),
+        None,
+    )
     if account is None:
         return {
             "status": "CONNECTION_REQUIRED",
@@ -211,6 +272,9 @@ def collect_project_keyword_metrics(
             )
             for key, value, unit in entries
         ]
+        for snapshot, _created in snapshots:
+            snapshot.observed_at = now
+            snapshot.valid_until = now + timedelta(days=KEYWORD_VALID_DAYS)
         db.add(
             AuditLog(
                 entity_type="project_keyword_check",

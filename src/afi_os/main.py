@@ -8,6 +8,7 @@ from afi_os import __version__
 from afi_os.api import api_router
 from afi_os.config import get_settings
 from afi_os.db import Base, engine
+from afi_os.services.appraisal_jobs import recover_stale_appraisal_jobs
 
 settings = get_settings()
 
@@ -15,6 +16,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    recover_stale_appraisal_jobs()
     yield
 
 
@@ -49,7 +51,10 @@ async def security_headers(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def unhandled_error(_request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"detail": "Internal error", "type": type(exc).__name__})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal error", "type": type(exc).__name__},
+    )
 
 
 app.mount("/", StaticFiles(directory=settings.web_root, html=True), name="web")

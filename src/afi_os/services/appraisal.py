@@ -11,6 +11,7 @@ from afi_os.models import AdObservation, Project
 from afi_os.schemas import (
     AppraisalAdvertisers,
     AppraisalCommission,
+    AppraisalFieldStatus,
     AppraisalFlag,
     AppraisalKeyword,
     AppraisalPayback,
@@ -299,6 +300,10 @@ def build_appraisal_contract(
     db: Session,
     project: Project,
     auto_check: ProjectAutoCheckResponse | None = None,
+    *,
+    job_id: int | None = None,
+    job_status: str | None = None,
+    field_statuses: dict[str, AppraisalFieldStatus | dict] | None = None,
 ) -> AppraisalResponse:
     """Map collected facts into the stable Dot1.1 contract.
 
@@ -437,4 +442,7 @@ def build_appraisal_contract(
             terms,
             score_flags,
         ),
+        job_id=job_id,
+        job_status=job_status,
+        field_statuses=field_statuses or {},
     )

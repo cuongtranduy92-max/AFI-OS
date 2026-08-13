@@ -214,7 +214,7 @@ def test_anthropic_http_contract_uses_ticket_configuration() -> None:
         "system": "system",
         "messages": [{"role": "user", "content": "user"}],
     }
-    assert captured["timeout"] == 60
+    assert captured["timeout"] == 30
 
 
 def test_extract_terms_endpoint_runs_crawl_to_proposal_chain(

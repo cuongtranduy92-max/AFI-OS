@@ -97,7 +97,9 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.108**. Bước 3 có Camp Doctor chỉ đọc: tự chẩn đoán CTR, chi phí/ref
+Đây là **v0.2.109**. Bước 1 trả kết quả dần ngay lập tức, chạy nguồn chậm ở nền,
+hiển thị rõ lý do thiếu dữ liệu và cho thử lại riêng từng nguồn. Bước 3 vẫn có
+Camp Doctor chỉ đọc: tự chẩn đoán CTR, chi phí/ref
 thật, từ khóa, cụm từ tìm kiếm, thiết bị, vị trí, nhân khẩu học và quy tắc thay đổi
 20%/24 giờ. Hệ thống chỉ cảnh báo và đề xuất theo thứ tự; không sửa, dừng hoặc loại
 campaign.

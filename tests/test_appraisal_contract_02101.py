@@ -87,6 +87,18 @@ def test_appraise_returns_exact_contract_and_explicit_pending_sources(monkeypatc
         "terms",
         "payback",
         "score",
+        "job_id",
+        "job_status",
+        "field_statuses",
+    }
+    assert isinstance(body["job_id"], int)
+    assert body["job_status"] in {"RUNNING", "DONE"}
+    assert set(body["field_statuses"]) == {
+        "keyword",
+        "traffic",
+        "terms",
+        "advertisers",
+        "niche",
     }
     assert set(body["traffic"]) == {
         "monthly",

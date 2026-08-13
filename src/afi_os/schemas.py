@@ -610,6 +610,18 @@ class AppraisalScore(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class AppraisalFieldStatus(BaseModel):
+    status: Literal["ready", "loading", "pending_source", "blocked", "error"]
+    label: str
+    detail: str | None = None
+    color: Literal["green", "grey", "yellow", "red"] = "grey"
+    retryable: bool = False
+    source_urls: list[str] = Field(default_factory=list)
+    checked_at: datetime | None = None
+    cache_date: datetime | None = None
+    duration_ms: int | None = Field(default=None, ge=0)
+
+
 class AppraisalResponse(BaseModel):
     domain: str
     niche: str | None = None
@@ -622,6 +634,27 @@ class AppraisalResponse(BaseModel):
     terms: AppraisalTerms
     payback: AppraisalPayback
     score: AppraisalScore
+    job_id: int | None = None
+    job_status: Literal["QUEUED", "RUNNING", "DONE", "FAILED"] | None = None
+    field_statuses: dict[str, AppraisalFieldStatus] = Field(default_factory=dict)
+
+
+class AppraisalJobResponse(BaseModel):
+    job_id: int
+    domain: str
+    status: Literal["QUEUED", "RUNNING", "DONE", "FAILED"]
+    progress_done: int = Field(ge=0)
+    progress_total: int = Field(ge=0)
+    created_at: datetime
+    finished_at: datetime | None = None
+    appraisal: AppraisalResponse
+
+
+class AppraisalBatchResponse(BaseModel):
+    batch_id: str
+    total: int = Field(ge=1, le=50)
+    done: int = Field(ge=0)
+    jobs: list[AppraisalResponse] = Field(default_factory=list)
 
 
 class ProjectStepOneDecisionRequest(BaseModel):

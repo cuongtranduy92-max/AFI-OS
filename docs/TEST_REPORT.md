@@ -1,4 +1,20 @@
-# TEST REPORT — AFI-OS 0.2.108
+# TEST REPORT — AFI-OS 0.2.109
+
+## 0.2.109 — Progressive appraisal + truthful empty states
+
+- Full application regression before packaging: 440 passed, 1 skipped
+  (441 tests collected), including a regression test for matching a hyphenated
+  stored Google Ads Customer ID to the normalized Keyword Planner account ID.
+- API tests verify immediate appraisal responses with persistent job IDs, one-second
+  UI polling, isolated per-source retry and stale-job recovery after ten minutes.
+- Batch tests verify one Apify collection for the batch, explicit per-domain states
+  when a provider is not connected and cache reuse without a second provider call.
+- Terms tests verify no blind second crawl on an empty result and exactly one retry
+  only for a transient network exception.
+- Migration and updater round-trip tests reach `82c6d4f1a9b7`, preserve database rows,
+  maintain SQLite integrity and restore version 0.2.108 on rollback.
+- Static checks confirm no Google Ads mutate/write operation was introduced; LLM
+  facts remain proposals and warning-only Terms behavior is unchanged.
 
 ## 0.2.108 — Camp Doctor + Vietnamese Terms
 

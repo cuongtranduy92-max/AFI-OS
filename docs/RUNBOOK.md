@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Update 0.2.109 — Check nhanh và minh bạch
+
+1. Chạy `UPDATE-AFI-OS-0.2.109.command` một lần.
+2. Updater tự kiểm checksum, backup SQLite/code, migrate rồi chạy test và health check.
+3. Vào **Tìm dự án**, nhập một domain; kết quả hiện dần và tự cập nhật mỗi giây.
+4. Ô đỏ/vàng có thể bấm **Thử lại nguồn này**; nút **Làm mới dữ liệu** bỏ cache.
+
+Rollback bằng `ROLLBACK-AFI-OS-0.2.109.command` trong thư mục AFI-OS.
+
 ## Update 0.2.108 — Camp Doctor và điều khoản tiếng Việt
 
 1. Chạy `UPDATE-AFI-OS-0.2.108.command` một lần.

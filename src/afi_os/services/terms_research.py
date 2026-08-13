@@ -5,6 +5,7 @@ import ipaddress
 import json
 import re
 import socket
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -42,7 +43,8 @@ FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures"
 WEB_COLLECTOR_VERSION = "official-web-v9"
 MAX_PAGE_BYTES = 1_000_000
 MAX_FETCHED_PAGES = 8
-FETCH_TIMEOUT_SECONDS = 4
+FETCH_TIMEOUT_SECONDS = 8
+CRAWL_TOTAL_TIMEOUT_SECONDS = 20
 RETRYABLE_ERROR_PREFIX = "Tạm thời · "
 RESERVED_SUFFIXES = (".test", ".invalid", ".localhost", ".local", ".example")
 STANDARD_PATHS = (
@@ -1744,18 +1746,29 @@ def collect_domain_proposal(db: Session, domain: str, *, fetcher=None) -> dict:
     existing_program = _find_program(db, domain)
     priority_urls = _stored_source_urls(db, existing_program)
     if fetcher is None:
+        crawl_started = time.monotonic()
         pages, errors = discover_official_pages(
             domain,
             priority_urls=priority_urls,
         )
         partner_signup_url = _external_partner_signup_url(existing_program)
-        if partner_signup_url:
+        crawler_has_time = (
+            time.monotonic() - crawl_started
+            <= CRAWL_TOTAL_TIMEOUT_SECONDS - FETCH_TIMEOUT_SECONDS
+        )
+        if partner_signup_url and crawler_has_time:
             partner_pages, partner_errors = discover_partner_portal_signup(
                 partner_signup_url
             )
             if partner_pages:
                 pages = [*pages[: MAX_FETCHED_PAGES - 1], *partner_pages]
             errors = [*errors, *partner_errors][:MAX_FETCHED_PAGES]
+        elif partner_signup_url:
+            errors = [
+                *errors,
+                "External partner portal was skipped because the 20-second "
+                "crawl budget was exhausted.",
+            ][:MAX_FETCHED_PAGES]
     else:
         pages, errors = fetcher(domain)
     permission_specs = _extract_permission_specs(pages)

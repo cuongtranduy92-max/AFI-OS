@@ -1,4 +1,6 @@
 const API = "/api";
+const appraisalPollers = new Map();
+let appraisalBatchPoller = null;
 
 const views = {
   portfolio: ["Tìm dự án", "Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo."],
@@ -313,6 +315,7 @@ async function intakePortfolioProject(domain, button, messageNode = null) {
     filters.reset();
     filters.elements.query.value = domain;
     await Promise.all([loadPortfolio(), loadPrograms(), loadOperations(), loadSummary()]);
+    startAppraisalPolling(result.job_id, message);
     const pending = appraisalPendingLabels(result);
     message.textContent = pending.length
       ? `Đã check ${domain}. Đang chờ: ${pending.join(" · ")}.`
@@ -334,7 +337,7 @@ function appraisalKnown(value) {
 }
 
 function appraisalDisplay(value, suffix = "") {
-  if (!appraisalKnown(value)) return '<span class="appraisal-pending">Đang chờ nguồn</span>';
+  if (!appraisalKnown(value)) return '<span class="appraisal-pending">Chưa có số liệu</span>';
   if (Array.isArray(value)) {
     return value.length ? esc(value.map((item) => Array.isArray(item) ? item.join(" · ") : item).join(", ")) : "Không có mục khác";
   }
@@ -344,11 +347,31 @@ function appraisalDisplay(value, suffix = "") {
 }
 
 function appraisalSource(source) {
-  return `<small>Nguồn: ${appraisalKnown(source) ? esc(source) : '<span class="appraisal-pending">đang chờ kết nối</span>'}</small>`;
+  return `<small>Nguồn: ${appraisalKnown(source) ? esc(source) : '<span class="appraisal-pending">chưa có nguồn</span>'}</small>`;
 }
 
-function appraisalCard(index, title, body, source = null) {
-  return `<article class="appraisal-card"><div class="appraisal-card-head"><span>${String(index).padStart(2, "0")}</span><h3>${esc(title)}</h3></div><div class="appraisal-card-body">${body}</div>${appraisalSource(source)}</article>`;
+function appraisalStatus(result, sourceName) {
+  // API dùng đúng bốn nhãn minh bạch: Chưa nối nguồn dữ liệu; Không tìm thấy dữ liệu;
+  // Site chặn truy cập hoặc không có trang affiliate công khai — cần đọc tay; Lỗi: …
+  return result.field_statuses?.[sourceName] || {status: "pending_source", label: "Chưa nối nguồn dữ liệu", color: "grey", source_urls: []};
+}
+
+function appraisalStatusHtml(result, sourceName, fieldValues = []) {
+  let state = appraisalStatus(result, sourceName);
+  if (fieldValues.length && fieldValues.every((value) => !appraisalKnown(value)) && state.status === "ready") {
+    state = {...state, label: "Không tìm thấy dữ liệu", color: "grey"};
+  }
+  const dateValue = state.cache_date || state.checked_at;
+  const dateLabel = dateValue ? ` · dữ liệu ngày ${new Date(dateValue).toLocaleDateString("vi-VN")}` : "";
+  const sourceLink = state.source_urls?.length ? ` · ${safeExternalLink(state.source_urls[0], "Mở nguồn gốc")}` : "";
+  const retry = state.retryable && result.job_id && ["keyword", "traffic", "terms"].includes(sourceName)
+    ? `<button type="button" class="appraisal-retry" data-appraisal-retry="${esc(sourceName)}" data-job-id="${result.job_id}">Thử lại nguồn này</button>`
+    : "";
+  return `<div class="appraisal-source-state state-${esc(state.color)}"><strong>${esc(state.label)}</strong><span>${esc(state.detail || "")}${esc(dateLabel)}</span>${sourceLink}${retry}</div>`;
+}
+
+function appraisalCard(index, title, body, source = null, statusHtml = "") {
+  return `<article class="appraisal-card"><div class="appraisal-card-head"><span>${String(index).padStart(2, "0")}</span><h3>${esc(title)}</h3></div>${statusHtml}<div class="appraisal-card-body">${body}</div>${appraisalSource(source)}</article>`;
 }
 
 function appraisalPendingLabels(result) {
@@ -374,19 +397,69 @@ function renderAppraisal(result) {
   const packages = result.commission.packages?.map(([name, percent]) => `${name}: ${percent}%`) || null;
   const flags = (result.score.flags || []).map((item) => `<li class="flag-${esc(item.level)}">${esc(item.msg)}</li>`).join("");
   const cards = [
-    appraisalCard(1, "Nhà quảng cáo", `<strong>${appraisalDisplay(result.advertisers.count)}</strong><p>Cùng chạy dự án khác: ${appraisalDisplay(result.advertisers.also_running)}</p>`, result.advertisers.source),
-    appraisalCard(2, "Traffic website", `<strong>${appraisalDisplay(result.traffic.monthly, " visit/tháng")}</strong><p>Top quốc gia: ${appraisalDisplay(countries)}</p><b>${esc(result.traffic.source_status)}</b>`, result.traffic.source),
-    appraisalCard(3, "Affiliate link", `<strong>${appraisalKnown(result.affiliate_link) ? safeExternalLink(result.affiliate_link, result.affiliate_link) : appraisalDisplay(null)}</strong>`, result.affiliate_link),
-    appraisalCard(4, "Điều khoản PPC", `<strong>Ads: ${appraisalDisplay(result.terms.ads_allowed)}</strong><p>Hạn chế brand bid: ${appraisalDisplay(result.terms.brand_bid_restricted)}</p><p>${appraisalDisplay(result.terms.summary)}</p>`, result.terms.source),
-    appraisalCard(5, "Ngành dự án", `<strong>${appraisalDisplay(result.niche)}</strong>`, null),
-    appraisalCard(6, "Thanh toán", `<strong>${appraisalDisplay(result.payment.gateways)}</strong><p>Min: ${appraisalDisplay(result.payment.min_payment)} · Clear: ${appraisalDisplay(result.payment.clear_days, " ngày")} · Cookie: ${appraisalDisplay(result.payment.cookie_days, " ngày")}</p><p>Network: ${appraisalDisplay(result.payment.net)}</p>`, result.payment.net),
-    appraisalCard(7, "Commission & giá gói", `<strong>${appraisalDisplay(result.commission.percent, "%")} · ${appraisalDisplay(result.commission.type)}</strong><p>Gói: ${appraisalDisplay(packages)}</p><p>Giá trung bình: ${appraisalDisplay(result.commission.avg_package)}</p>`, null),
-    appraisalCard(8, "Giá thầu từ khóa chính", `<strong>${appraisalDisplay(result.keyword.term)}</strong><p>Thấp: ${appraisalDisplay(result.keyword.bid_low_vnd, " VND")} · Cao: ${appraisalDisplay(result.keyword.bid_high_vnd, " VND")}</p>`, result.keyword.source),
-    appraisalCard(9, "Hoàn vốn ước tính", `<strong>${appraisalDisplay(result.payback.days_low, " ngày")} → ${appraisalDisplay(result.payback.days_high, " ngày")}</strong><p>${appraisalDisplay(result.payback.mode)}</p>`, result.payback.mode),
-    appraisalCard(10, "Lượt tìm kiếm", `<strong>${appraisalDisplay(result.keyword.search_volume, "/tháng")}</strong><p>Global · English · Google Ads Keyword Planner</p>`, result.keyword.source),
+    appraisalCard(1, "Nhà quảng cáo", `<strong>${appraisalDisplay(result.advertisers.count)}</strong><p>Cùng chạy dự án khác: ${appraisalDisplay(result.advertisers.also_running)}</p>`, result.advertisers.source, appraisalStatusHtml(result, "advertisers", [result.advertisers.count])),
+    appraisalCard(2, "Traffic website", `<strong>${appraisalDisplay(result.traffic.monthly, " visit/tháng")}</strong><p>Top quốc gia: ${appraisalDisplay(countries)}</p>`, result.traffic.source, appraisalStatusHtml(result, "traffic", [result.traffic.monthly, countries])),
+    appraisalCard(3, "Affiliate link", `<strong>${appraisalKnown(result.affiliate_link) ? safeExternalLink(result.affiliate_link, result.affiliate_link) : appraisalDisplay(null)}</strong>`, result.affiliate_link, appraisalStatusHtml(result, "terms", [result.affiliate_link])),
+    appraisalCard(4, "Điều khoản PPC", `<strong>Ads: ${appraisalDisplay(result.terms.ads_allowed)}</strong><p>Hạn chế brand bid: ${appraisalDisplay(result.terms.brand_bid_restricted)}</p><p>${appraisalDisplay(result.terms.summary)}</p>`, result.terms.source, appraisalStatusHtml(result, "terms", [result.terms.ads_allowed, result.terms.brand_bid_restricted, result.terms.summary])),
+    appraisalCard(5, "Ngành dự án", `<strong>${appraisalDisplay(result.niche)}</strong>`, null, appraisalStatusHtml(result, "niche", [result.niche])),
+    appraisalCard(6, "Thanh toán", `<strong>${appraisalDisplay(result.payment.gateways)}</strong><p>Min: ${appraisalDisplay(result.payment.min_payment)} · Clear: ${appraisalDisplay(result.payment.clear_days, " ngày")} · Cookie: ${appraisalDisplay(result.payment.cookie_days, " ngày")}</p><p>Network: ${appraisalDisplay(result.payment.net)}</p>`, result.payment.net, appraisalStatusHtml(result, "terms", [result.payment.gateways, result.payment.min_payment, result.payment.clear_days, result.payment.cookie_days, result.payment.net])),
+    appraisalCard(7, "Commission & giá gói", `<strong>${appraisalDisplay(result.commission.percent, "%")} · ${appraisalDisplay(result.commission.type)}</strong><p>Gói: ${appraisalDisplay(packages)}</p><p>Giá trung bình: ${appraisalDisplay(result.commission.avg_package)}</p>`, null, appraisalStatusHtml(result, "terms", [result.commission.percent, result.commission.type, packages, result.commission.avg_package])),
+    appraisalCard(8, "Giá thầu từ khóa chính", `<strong>${appraisalDisplay(result.keyword.term)}</strong><p>Thấp: ${appraisalDisplay(result.keyword.bid_low_vnd, " VND")} · Cao: ${appraisalDisplay(result.keyword.bid_high_vnd, " VND")}</p>`, result.keyword.source, appraisalStatusHtml(result, "keyword")),
+    appraisalCard(9, "Hoàn vốn ước tính", `<strong>${appraisalDisplay(result.payback.days_low, " ngày")} → ${appraisalDisplay(result.payback.days_high, " ngày")}</strong><p>${appraisalDisplay(result.payback.mode)}</p>`, result.payback.mode, appraisalStatusHtml(result, "keyword", [result.payback.days_low, result.payback.days_high])),
+    appraisalCard(10, "Lượt tìm kiếm", `<strong>${appraisalDisplay(result.keyword.search_volume, "/tháng")}</strong><p>Global · English · Google Ads Keyword Planner</p>`, result.keyword.source, appraisalStatusHtml(result, "keyword", [result.keyword.search_volume])),
   ];
   target.hidden = false;
-  target.innerHTML = `<article class="panel appraisal-summary"><div class="appraisal-verdict"><div><span>BƯỚC 1 · ${esc(result.domain)}</span><h2>Tổng quan quyết định</h2><p>10 nhóm dữ liệu trên cùng một màn hình; chưa nối nguồn hiện “Đang chờ”.</p></div><div class="appraisal-score score-${scoreState}"><strong>${scoreLabel}</strong><b>${esc(score)}</b></div></div><div class="appraisal-grid">${cards.join("")}</div><div class="appraisal-decision"><ul>${flags || '<li>Không có cảnh báo.</li>'}</ul><button class="button primary" type="button" data-appraisal-save="${esc(result.domain)}"${result.score.pass === true ? "" : " disabled"}>Lưu và chuyển Bước 2</button><span>${result.score.pass === true ? "Đủ điều kiện theo engine." : "Nút sẽ mở khi engine trả pass = true."}</span></div></article>`;
+  const progress = [
+    ["Từ khoá", "keyword"], ["Traffic", "traffic"], ["Điều khoản", "terms"], ["Nhà quảng cáo", "advertisers"],
+  ].map(([label, name]) => {
+    const state = appraisalStatus(result, name);
+    const icon = state.status === "ready" ? "✓" : state.status === "loading" ? "⏳" : state.status === "blocked" ? "⚠" : state.status === "error" ? "✕" : "—";
+    return `<span class="progress-${esc(state.color)}">${esc(label)} ${icon}</span>`;
+  }).join(" · ");
+  target.innerHTML = `<article class="panel appraisal-summary"><div class="appraisal-verdict"><div><span>BƯỚC 1 · ${esc(result.domain)}</span><h2>Tổng quan quyết định</h2><p>Hiện dữ liệu dần; mỗi ô nói rõ đang lấy, thiếu nguồn, bị chặn hay gặp lỗi.</p><div class="appraisal-progress">${progress}</div></div><div class="appraisal-score score-${scoreState}"><strong>${scoreLabel}</strong><b>${esc(score)}</b></div></div><div class="appraisal-toolbar"><button type="button" class="button secondary" data-appraisal-refresh="${result.job_id || ""}"${result.job_id ? "" : " disabled"}>Làm mới dữ liệu</button><span>${result.job_status === "DONE" ? "Đã hoàn tất các nguồn tự động." : "Nguồn chậm đang chạy nền; anh vẫn có thể đọc dữ liệu đã hiện."}</span></div><div class="appraisal-grid">${cards.join("")}</div><div class="appraisal-decision"><ul>${flags || '<li>Không có cảnh báo.</li>'}</ul><button class="button primary" type="button" data-appraisal-save="${esc(result.domain)}"${result.score.pass === true ? "" : " disabled"}>Lưu và chuyển Bước 2</button><span>${result.score.pass === true ? "Đủ điều kiện theo engine." : "Nút sẽ mở khi engine trả pass = true."}</span></div></article>`;
+}
+
+function stopAppraisalPolling(jobId) {
+  const timer = appraisalPollers.get(jobId);
+  if (timer) window.clearTimeout(timer);
+  appraisalPollers.delete(jobId);
+}
+
+function startAppraisalPolling(jobId, messageNode = null) {
+  if (!jobId) return;
+  stopAppraisalPolling(jobId);
+  const poll = async () => {
+    try {
+      const state = await request(`/appraise/jobs/${jobId}`);
+      appraisalCache.set(state.domain, state.appraisal);
+      renderAppraisal(state.appraisal);
+      if (messageNode) messageNode.textContent = `Đã xong ${state.progress_done}/${state.progress_total} nguồn tự động cho ${state.domain}.`;
+      if (!["DONE", "FAILED"].includes(state.status)) {
+        appraisalPollers.set(jobId, window.setTimeout(poll, 1000));
+      } else {
+        stopAppraisalPolling(jobId);
+        loadPortfolio();
+      }
+    } catch (error) {
+      if (messageNode) messageNode.textContent = `Lỗi cập nhật tiến độ: ${error.message}`;
+      appraisalPollers.set(jobId, window.setTimeout(poll, 3000));
+    }
+  };
+  appraisalPollers.set(jobId, window.setTimeout(poll, 1000));
+}
+
+async function retryAppraisalSource(button) {
+  button.disabled = true;
+  const state = await request(`/appraise/jobs/${button.dataset.jobId}/retry/${button.dataset.appraisalRetry}`, {method: "POST", body: "{}"});
+  renderAppraisal(state.appraisal);
+  startAppraisalPolling(state.job_id, document.getElementById("projectTraceMessage"));
+}
+
+async function refreshAppraisal(button) {
+  button.disabled = true;
+  const state = await request(`/appraise/jobs/${button.dataset.appraisalRefresh}/refresh`, {method: "POST", body: "{}"});
+  renderAppraisal(state.appraisal);
+  startAppraisalPolling(state.job_id, document.getElementById("projectTraceMessage"));
 }
 
 async function runAppraisalBatch() {
@@ -399,26 +472,14 @@ async function runAppraisalBatch() {
     return;
   }
   button.disabled = true;
-  target.innerHTML = domains.map((domain) => `<button type="button" class="batch-result pending" data-appraisal-domain="${esc(domain)}"><strong>${esc(domain)}</strong><span>Đang chờ…</span></button>`).join("");
+  target.innerHTML = domains.map((domain) => `<button type="button" class="batch-result pending" data-appraisal-domain="${esc(domain)}"><strong>${esc(domain)}</strong><span>Đang xếp hàng…</span></button>`).join("");
   try {
-    const results = await request("/appraise/batch", {
+    const batch = await request("/appraise/batch", {
       method: "POST",
       body: JSON.stringify({domains}),
     });
-    const resultByDomain = new Map(results.map((result) => [result.domain, result]));
-    for (const domain of domains) {
-      const row = target.querySelector(`[data-appraisal-domain="${CSS.escape(domain)}"]`);
-      const result = resultByDomain.get(domain);
-      if (!result) {
-        row.className = "batch-result error";
-        row.querySelector("span").textContent = "Không có dữ liệu trả về";
-        continue;
-      }
-      appraisalCache.set(domain, result);
-      const pending = appraisalPendingLabels(result).length;
-      row.className = `batch-result ${result.score.pass === true ? "pass" : "warning"}`;
-      row.querySelector("span").textContent = result.score.pass === true ? "Đạt" : `${pending} nhóm đang chờ`;
-    }
+    renderAppraisalBatchState(batch, target);
+    pollAppraisalBatch(batch.batch_id, target, button);
   } catch (error) {
     for (const domain of domains) {
       const row = target.querySelector(`[data-appraisal-domain="${CSS.escape(domain)}"]`);
@@ -426,8 +487,44 @@ async function runAppraisalBatch() {
       row.querySelector("span").textContent = `Lỗi: ${error.message}`;
     }
   }
-  button.disabled = false;
-  await loadPortfolio();
+  if (!appraisalBatchPoller) button.disabled = false;
+}
+
+function renderAppraisalBatchState(batch, target) {
+  const resultByDomain = new Map(batch.jobs.map((result) => [result.domain, result]));
+  for (const row of target.querySelectorAll("[data-appraisal-domain]")) {
+    const result = resultByDomain.get(row.dataset.appraisalDomain);
+    if (!result) continue;
+    appraisalCache.set(result.domain, result);
+    const pending = Object.values(result.field_statuses || {}).filter((item) => item.status === "loading").length;
+    const terminal = ["DONE", "FAILED"].includes(result.job_status);
+    row.className = `batch-result ${result.job_status === "FAILED" ? "error" : result.job_status === "DONE" ? (result.score.pass === true ? "pass" : "warning") : "pending"}`;
+    row.querySelector("span").textContent = result.job_status === "FAILED" ? "Có nguồn lỗi · bấm để xem" : terminal ? (result.score.pass === true ? "Đạt" : "Đã xong · có cảnh báo") : `${pending} nguồn đang lấy`;
+  }
+  const progress = document.getElementById("appraisalBatchProgress");
+  if (progress) progress.textContent = `${batch.done}/${batch.total} xong`;
+}
+
+function pollAppraisalBatch(batchId, target, button) {
+  if (appraisalBatchPoller) window.clearTimeout(appraisalBatchPoller);
+  const poll = async () => {
+    try {
+      const batch = await request(`/appraise/batches/${batchId}`);
+      renderAppraisalBatchState(batch, target);
+      if (batch.done < batch.total) {
+        appraisalBatchPoller = window.setTimeout(poll, 1000);
+        return;
+      }
+      appraisalBatchPoller = null;
+      button.disabled = false;
+      loadPortfolio();
+    } catch (error) {
+      const progress = document.getElementById("appraisalBatchProgress");
+      if (progress) progress.textContent = `Lỗi cập nhật: ${error.message}`;
+      appraisalBatchPoller = window.setTimeout(poll, 3000);
+    }
+  };
+  appraisalBatchPoller = window.setTimeout(poll, 1000);
 }
 
 async function saveAppraisalToStepTwo(domain, button) {
@@ -2896,6 +2993,22 @@ document.getElementById("appraisalBatchResults").addEventListener("click", (even
   if (result) renderAppraisal(result);
 });
 document.getElementById("appraisalResult").addEventListener("click", (event) => {
+  const retryButton = event.target.closest("[data-appraisal-retry]");
+  if (retryButton) {
+    retryAppraisalSource(retryButton).catch((error) => {
+      retryButton.disabled = false;
+      window.alert(`Không thể thử lại nguồn: ${error.message}`);
+    });
+    return;
+  }
+  const refreshButton = event.target.closest("[data-appraisal-refresh]");
+  if (refreshButton) {
+    refreshAppraisal(refreshButton).catch((error) => {
+      refreshButton.disabled = false;
+      window.alert(`Không thể làm mới: ${error.message}`);
+    });
+    return;
+  }
   const button = event.target.closest("[data-appraisal-save]");
   if (!button || button.disabled) return;
   saveAppraisalToStepTwo(button.dataset.appraisalSave, button).catch((error) => {

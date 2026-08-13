@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AFI-OS · Vận hành affiliate</title>
-  <link rel="stylesheet" href="/styles.css?v=02108">
+  <link rel="stylesheet" href="/styles.css?v=02109">
 </head>
 <body>
   <div class="app-shell">
@@ -66,7 +66,7 @@
           <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
         </div>
         <div class="top-actions">
-          <span class="badge badge-demo">CHẨN ĐOÁN CAMPAIGN · v0.2.108</span>
+          <span class="badge badge-demo">CHECK NHANH & MINH BẠCH · v0.2.109</span>
           <button id="refreshAll" class="button secondary">Làm mới</button>
         </div>
       </header>
@@ -272,7 +272,7 @@
           </form>
           <div id="appraisalBatchPanel" class="appraisal-batch" hidden>
             <label>Mỗi dòng một domain<textarea id="appraisalBatchInput" rows="5" placeholder="snov.io&#10;fliki.ai&#10;example.com"></textarea></label>
-            <div class="form-actions"><button id="appraisalBatchRun" class="button primary" type="button">Check danh sách</button><span>Tối đa 25 domain/lượt để bảo vệ quota API.</span></div>
+            <div class="form-actions"><button id="appraisalBatchRun" class="button primary" type="button">Check danh sách</button><span>Tối đa 50 domain/lượt; trả kết quả ngay rồi tiếp tục chạy nền.</span><strong id="appraisalBatchProgress">0/0 xong</strong></div>
             <div id="appraisalBatchResults" class="batch-results"></div>
           </div>
           <div id="projectTraceMessage" class="portfolio-summary">Dữ liệu chưa có nguồn sẽ hiện “Đang chờ”, không để ô trống và không biến thành 0.</div>
@@ -833,6 +833,6 @@
     </div>
     <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
   </aside>
-  <script src="/app.js?v=02108"></script>
+  <script src="/app.js?v=02109"></script>
 </body>
 </html>

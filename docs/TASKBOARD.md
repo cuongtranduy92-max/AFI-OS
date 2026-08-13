@@ -1,5 +1,15 @@
 # TASKBOARD
 
+## 0.2.109 — Progressive appraisal
+
+- [x] Fast path và cache-first response có `job_id`.
+- [x] Ba nguồn nền chạy trong executor bốn worker, mỗi worker một DB session.
+- [x] Polling 1 giây, retry từng nguồn và refresh toàn bộ.
+- [x] Batch tối đa 50 domain với một lượt Apify.
+- [x] Bốn nhãn trống minh bạch, nguồn và ngày cache.
+- [x] Timeout hữu hạn và phục hồi job treo.
+- [x] Không có Google Ads write; cảnh báo không loại dự án.
+
 ## 0.2.108 — Camp Doctor + Việt hóa
 
 - [x] Add deterministic diagnoses and persistent diagnosis/change-event history.

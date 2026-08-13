@@ -67,11 +67,6 @@ def extract_project_terms(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     research = collect_domain_proposal(db, project.domain)
-    if (
-        not research.get("pages")
-        and getattr(research.get("run"), "fixture_version", "") != "official-web-v9"
-    ):
-        research = collect_domain_proposal(db, project.domain)
     pages = research.get("pages") or []
     project = load_portfolio_project(db, project_id) or project
     try:

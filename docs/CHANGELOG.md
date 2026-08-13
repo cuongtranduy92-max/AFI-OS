@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.2.109 — Progressive appraisal and truthful empty states
+
+- `POST /api/appraise` trả cache và kết quả nhanh ngay, kèm job nền cho traffic,
+  từ khoá và Terms; giao diện tự cập nhật mỗi giây mà không cần tải lại trang.
+- Batch tối đa 50 domain trả ngay một batch ID, dùng một lượt Apify và bốn worker.
+- Mỗi nguồn có trạng thái, nguồn gốc, ngày cache và nút thử lại độc lập.
+- Mọi ô trống dùng nhãn rõ: chưa nối nguồn, không tìm thấy, cần đọc tay hoặc lỗi.
+- Cache từ khoá 7 ngày; timeout Apify 45 giây, crawler 8/20 giây, Claude 30 giây.
+- Job treo quá 10 phút được chuyển `FAILED` và có thể thử lại an toàn.
+- Chuẩn hóa Customer ID có/không có dấu gạch khi Keyword Planner ghép tài khoản;
+  phép tính tuổi tài nguyên không lệch một ngày quanh nửa đêm theo múi giờ máy.
+- Google Ads vẫn chỉ đọc; PPC chưa đủ bằng chứng chỉ cảnh báo; LLM chỉ đề xuất.
+
 ## 0.2.108 — Camp Doctor and Vietnamese Terms summaries
 
 - Add deterministic Camp Doctor diagnoses for CTR, real cost/ref, learning periods,
