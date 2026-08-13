@@ -391,6 +391,8 @@ class ProjectCheckEvidence(BaseModel):
     decision: PermissionStatus
     review_status: EvidenceReviewStatus
     excerpt: str
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     source_url: str
     source_authority: SourceAuthority
     checked_at: datetime
@@ -407,6 +409,8 @@ class ProjectCheckCommission(BaseModel):
     applies_to: str
     review_status: EvidenceReviewStatus
     excerpt: str
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     source_url: str
     source_authority: SourceAuthority
     checked_at: datetime
@@ -420,6 +424,8 @@ class CommercialProposalRead(ORMModel):
     payload_json: dict[str, Any]
     source_url: str
     excerpt: str
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     source_authority: SourceAuthority
     confidence: float = Field(ge=0, le=1)
     review_status: EvidenceReviewStatus
@@ -1441,6 +1447,8 @@ class TermsEvidenceCreate(BaseModel):
     source_url: str = Field(min_length=1, max_length=1000)
     source_type: str = Field(default="TERMS_PAGE", min_length=1, max_length=80)
     excerpt: str = Field(min_length=3)
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     checked_at: datetime
     expires_at: datetime | None = None
     reviewer: str = Field(default="Tran", min_length=1, max_length=120)
@@ -1475,6 +1483,8 @@ class TermsEvidenceRead(ORMModel):
     source_url: str
     source_type: str
     excerpt: str
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     checked_at: datetime
     expires_at: datetime | None
     reviewer: str
@@ -1524,6 +1534,8 @@ class CommissionFactRead(ORMModel):
     source_url: str
     source_authority: SourceAuthority
     excerpt: str
+    summary_vi: str | None = None
+    quote_vi: str | None = None
     checked_at: datetime
     confidence: float
     commission_type: CommissionType

@@ -139,6 +139,28 @@ tr:last-child td { border-bottom: 0; }
 .risk-green { color: var(--accent); }
 .risk-amber { color: var(--warning); }
 .risk-red { color: var(--danger); }
+.camp-doctor-intro { border-color: #c4e6db; background: linear-gradient(135deg, #fff, #effaf6); }
+.doctor-status { display: inline-flex; padding: 5px 8px; border-radius: 999px; font-size: 9px; font-weight: 850; }
+.doctor-healthy { background: var(--accent-soft); color: var(--accent); }
+.doctor-learning { background: #eaf2ff; color: #245a9a; }
+.doctor-attention { background: var(--warning-soft); color: var(--warning); }
+.doctor-critical { background: var(--danger-soft); color: var(--danger); }
+.doctor-unknown { background: var(--surface-2); color: var(--muted); }
+.camp-doctor-detail { border-color: #b8dbd0; scroll-margin-top: 16px; }
+.camp-doctor-findings { display: grid; gap: 8px; margin: 14px 0 18px; }
+.doctor-finding { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.doctor-finding > span { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); font-size: 9px; font-weight: 800; }
+.doctor-finding strong { font-size: 11px; line-height: 1.5; }
+.doctor-finding p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.doctor-finding-ok { border-color: #bce3d6; background: #f4fcf8; }
+.doctor-finding-info { border-color: #cbdcf0; background: #f5f9ff; }
+.doctor-finding-warning { border-color: #f1dfad; background: #fffaf0; }
+.doctor-finding-error { border-color: #f0cccc; background: #fff6f6; }
+.camp-doctor-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.camp-doctor-detail-grid > section { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+.camp-doctor-detail-grid h2 { margin-bottom: 10px; }
+.doctor-data-table { max-height: 320px; overflow: auto; background: var(--surface); border-radius: 8px; }
+.doctor-empty { padding: 24px 10px; color: var(--muted); font-size: 10px; text-align: center; }
 .evidence-excerpt { display: inline-block; max-width: 520px; color: var(--muted); font-size: 10px; line-height: 1.45; margin-top: 4px; }
 .preview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .preview-grid > div { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); display: grid; gap: 4px; }
@@ -185,6 +207,7 @@ tr:last-child td { border-bottom: 0; }
   .preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .domain-research-form { grid-template-columns: 1fr; }
   .proposal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .camp-doctor-detail-grid { grid-template-columns: 1fr; }
 }
 .portfolio-intro { background: linear-gradient(135deg, #fff, #f2faf7); border-color: #cfe6de; }
 .project-trace-panel { background: linear-gradient(135deg, #123d34, #17604f); color: #f5fffb; border: 0; }
@@ -281,6 +304,16 @@ tr:last-child td { border-bottom: 0; }
 .evidence-card strong { font-size: 10px; }
 .evidence-card p { margin: 7px 0; font-size: 10px; line-height: 1.5; }
 .evidence-card a { color: var(--accent); }
+.vietnamese-summary { font-weight: 700; color: #173b34; line-height: 1.55; }
+.translated-quote { margin: 8px 0; padding: 9px 12px; border-left: 3px solid #75b7a5; background: #f2faf7; color: #35524c; }
+.original-quote { margin: 9px 0; border-top: 1px solid #d9e7e2; padding-top: 8px; }
+.original-quote summary { color: #126f5b; font-weight: 800; cursor: pointer; }
+.original-quote p { color: #5e6d69; font-weight: 500; }
+.ppc-summary-card { margin: 14px 0; padding: 16px; border: 2px solid #19866e; border-radius: 14px; background: #eaf8f3; display: grid; gap: 8px; }
+.ppc-summary-card span { color: #126b58; font-size: 12px; font-weight: 900; letter-spacing: .06em; }
+.ppc-summary-card strong { color: #163f36; font-size: 16px; line-height: 1.55; }
+.ppc-summary-card small { color: #52706a; }
+.ppc-summary-card.missing { border-color: #d6a244; background: #fff8e8; }
 .step-one-empty, .step-one-complete { padding: 12px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 10px; }
 .step-one-complete { border-style: solid; border-color: #bce3d6; background: var(--accent-soft); color: var(--accent); }
 .proposal-card { border-style: dashed; background: #fbfaf6; color: #64706b; }

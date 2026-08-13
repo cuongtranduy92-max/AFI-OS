@@ -319,13 +319,13 @@ def test_prohibited_campaign_is_included_and_financial_exposure_is_separate() ->
 def test_risk_exposure_ui_uses_warning_only_language() -> None:
     page = client.get("/")
     assert page.status_code == 200
-    assert "CLAUDE TERMS · v0.2.107" in page.text
-    assert 'src="/app.js?v=02107"' in page.text
-    assert 'href="/styles.css?v=02107"' in page.text
+    assert "CHẨN ĐOÁN CAMPAIGN · v0.2.108" in page.text
+    assert 'src="/app.js?v=02108"' in page.text
+    assert 'href="/styles.css?v=02108"' in page.text
     assert 'id="view-exposure"' in page.text
     assert "Mọi campaign vẫn được giữ lại" in page.text
     assert 'id="researchAttemptRows"' in page.text
-    assert "Lịch sử rà Terms tự động" in page.text
+    assert "Lịch sử rà điều khoản tự động" in page.text
 
     script = client.get("/app.js")
     assert script.status_code == 200

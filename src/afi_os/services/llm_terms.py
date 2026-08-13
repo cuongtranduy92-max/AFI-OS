@@ -47,6 +47,7 @@ from afi_os.services.terms_research import (
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 LLM_COLLECTOR = "ANTHROPIC_LLM"
+EXTRACTION_SCHEMA_VERSION = "terms-vi-v2"
 
 
 class LLMExtractionError(RuntimeError):
@@ -75,7 +76,7 @@ def _bounded_pages(pages: list[dict]) -> list[tuple[str, str]]:
 
 def _content_hash(domain: str, model: str, pages: list[tuple[str, str]]) -> str:
     digest = hashlib.sha256()
-    digest.update(f"{domain}\0{model}\0".encode())
+    digest.update(f"{domain}\0{model}\0{EXTRACTION_SCHEMA_VERSION}\0".encode())
     for url, text in pages:
         digest.update(url.encode())
         digest.update(b"\0")
@@ -184,6 +185,8 @@ def _commission_spec(fact: ExtractedFact, pages: list[dict]) -> dict | None:
         "source_url": source[0],
         "source_authority": source[1],
         "excerpt": fact.quote,
+        "summary_vi": fact.summary_vi or None,
+        "quote_vi": fact.quote_vi or None,
         "confidence": fact.confidence,
         "commission_type": commission_type,
         "commission_rate": percent,
@@ -204,8 +207,10 @@ def _terms_specs(fact: ExtractedFact, pages: list[dict]) -> list[dict]:
         "source_url": source[0],
         "source_authority": source[1],
         "excerpt": fact.quote,
+        "summary_vi": fact.summary_vi or None,
+        "quote_vi": fact.quote_vi or None,
         "confidence": fact.confidence,
-        "reason": "Claude proposal with source quote verified by AFI-OS.",
+        "reason": "Đề xuất Claude có trích dẫn gốc đã được AFI-OS đối chiếu.",
     }
     if not ads_allowed:
         return [
@@ -244,26 +249,9 @@ def _terms_specs(fact: ExtractedFact, pages: list[dict]) -> list[dict]:
     return []
 
 
-def _raw_package_quote(raw: dict | None, package: dict) -> str | None:
-    packages = raw.get("packages") if isinstance(raw, dict) else None
-    if not isinstance(packages, list):
-        return None
-    for raw_package in packages:
-        if not isinstance(raw_package, dict):
-            continue
-        if (
-            raw_package.get("name") == package.get("name")
-            and raw_package.get("price_usd") == package.get("price_usd")
-            and isinstance(raw_package.get("quote"), str)
-        ):
-            return raw_package["quote"]
-    return None
-
-
 def _commercial_specs(
     fact: ExtractedFact,
     pages: list[dict],
-    raw: dict | None,
 ) -> list[dict]:
     if fact.scope == "PAYMENT":
         source = _source_for_quote(fact.quote, pages)
@@ -297,6 +285,8 @@ def _commercial_specs(
                 "scope": "PAYMENT",
                 "payload": payload,
                 "quote": fact.quote,
+                "summary_vi": fact.summary_vi or None,
+                "quote_vi": fact.quote_vi or None,
                 "source_url": source[0],
                 "source_authority": source[1],
                 "confidence": fact.confidence,
@@ -307,8 +297,7 @@ def _commercial_specs(
     for package in fact.payload.get("packages", []):
         if not isinstance(package, dict):
             continue
-        quote = _raw_package_quote(raw, package)
-        source = _source_for_quote(quote or "", pages)
+        source = _source_for_quote(fact.quote, pages)
         name = package.get("name")
         price = _decimal(package.get("price_usd"))
         if source is None or not isinstance(name, str) or not name.strip() or price is None:
@@ -325,7 +314,9 @@ def _commercial_specs(
                         }
                     ]
                 },
-                "quote": quote,
+                "quote": fact.quote,
+                "summary_vi": fact.summary_vi or None,
+                "quote_vi": fact.quote_vi or None,
                 "source_url": source[0],
                 "source_authority": source[1],
                 "confidence": fact.confidence,
@@ -362,15 +353,20 @@ def _import_commercial_proposals(
                 payload_json=spec["payload"],
                 source_url=spec["source_url"],
                 excerpt=spec["quote"],
+                summary_vi=spec.get("summary_vi"),
+                quote_vi=spec.get("quote_vi"),
                 source_authority=spec["source_authority"],
                 confidence=spec["confidence"],
                 review_status=EvidenceReviewStatus.PROPOSED,
                 proposal_hash=digest,
                 collected_by=LLM_COLLECTOR,
-                notes="Claude proposal; operator review is required before applying.",
+                notes="Đề xuất Claude; người vận hành phải duyệt trước khi áp dụng.",
             )
             db.add(proposal)
             db.flush()
+        elif proposal.review_status == EvidenceReviewStatus.PROPOSED:
+            proposal.summary_vi = spec.get("summary_vi")
+            proposal.quote_vi = spec.get("quote_vi")
         output.append(proposal)
     return output
 
@@ -468,10 +464,38 @@ def extract_terms_from_pages(
                 rejected.append("TERMS: phạm vi Ads chưa đủ rõ — giữ NOT_CHECKED")
             terms_specs.extend(specs)
         elif fact.scope in {"PACKAGES", "PAYMENT"}:
-            specs = _commercial_specs(fact, pages, result.raw)
+            specs = _commercial_specs(fact, pages)
             if not specs:
                 rejected.append(f"{fact.scope}: payload không hợp lệ — loại")
             commercial_specs.extend(specs)
+        elif fact.scope == "PPC_POLICY_VI":
+            summary = fact.summary_vi.strip()
+            if not summary:
+                rejected.append("PPC_POLICY_VI: thiếu tóm tắt tiếng Việt — loại")
+            else:
+                summary_page = next(
+                    (
+                        page
+                        for page in pages
+                        if page.get("url") == bounded[0][0]
+                    ),
+                    pages[0],
+                )
+                # Tóm tắt này chỉ là proposal hiển thị. Nó không map vào bất kỳ
+                # permission canonical nào và không có nút chấp nhận mở quyền.
+                terms_specs.append(
+                    {
+                        "source_url": bounded[0][0],
+                        "source_authority": _page_source_authority(summary_page),
+                        "excerpt": summary,
+                        "summary_vi": summary,
+                        "quote_vi": None,
+                        "confidence": fact.confidence,
+                        "reason": "Tóm tắt PPC tiếng Việt; chỉ hiển thị, không mở quyền.",
+                        "scope": "PPC_POLICY_VI",
+                        "decision": PermissionStatus.NOT_CHECKED,
+                    }
+                )
 
     facts, _, _, _ = _import_commission_specs(db, program, commission_specs, checked_at)
     evidence, _, _, _ = _import_permission_specs(db, program, terms_specs, checked_at)
@@ -487,10 +511,25 @@ def extract_terms_from_pages(
         if spec is not None:
             fact.commission_flat = spec["commission_flat"]
             fact.recurring_months = spec["recurring_months"]
+            fact.summary_vi = spec["summary_vi"]
+            fact.quote_vi = spec["quote_vi"]
             fact.collected_by = LLM_COLLECTOR
     for item in evidence:
         item.collected_by = LLM_COLLECTOR
         item.reviewer = LLM_COLLECTOR
+        spec = next(
+            (
+                candidate
+                for candidate in terms_specs
+                if candidate["source_url"] == item.source_url
+                and candidate["excerpt"] == item.excerpt
+                and candidate["scope"] == item.scope
+            ),
+            None,
+        )
+        if spec is not None:
+            item.summary_vi = spec.get("summary_vi")
+            item.quote_vi = spec.get("quote_vi")
     commercial = _import_commercial_proposals(db, program, commercial_specs)
     run = LLMExtractionRun(
         program_id=program.id,
@@ -519,6 +558,7 @@ def extract_terms_from_pages(
                 "domain": project.domain,
                 "content_hash": content_hash,
                 "model": model,
+                "schema_version": EXTRACTION_SCHEMA_VERSION,
                 "source_urls": list(run.source_urls),
                 "commission_fact_ids": [item.id for item in facts],
                 "evidence_ids": [item.id for item in evidence],

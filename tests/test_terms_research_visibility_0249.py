@@ -176,4 +176,4 @@ def test_web_ui_explains_research_and_permission_evidence_separately() -> None:
     assert "last_research_attempted_at" in script
     assert "Không thấy quyền PPC công khai" in script
     assert "đến hạn rà lại" in script
-    assert "Lần rà / evidence" in page
+    assert "Lần rà / bằng chứng" in page

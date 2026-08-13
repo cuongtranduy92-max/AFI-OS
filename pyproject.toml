@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "afi-os"
-version = "0.2.107"
+version = "0.2.108"
 description = "Local-first affiliate operations platform for Google Ads and affiliate program governance"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -38,7 +38,7 @@ afi_os = ["fixtures/*.json"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 
 [tool.ruff]
 line-length = 100

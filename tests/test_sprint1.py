@@ -10,7 +10,7 @@ from sqlalchemy import delete
 from afi_os.db import SessionLocal, engine
 from afi_os.main import app
 from afi_os.models import AffiliateNetwork, Commission, Conversion, Merchant, Program, TermsEvidence
-from afi_os.services.backups import backup_root
+from afi_os.services.backups import backup_root, expected_schema_heads
 
 client = TestClient(app)
 
@@ -161,7 +161,8 @@ def test_backup_api_creates_integrity_checked_sqlite_copy() -> None:
         )
         connection.exec_driver_sql("DELETE FROM alembic_version")
         connection.exec_driver_sql(
-            "INSERT INTO alembic_version (version_num) VALUES ('4f7c2a91d5e0')"
+            "INSERT INTO alembic_version (version_num) VALUES (?)",
+            (expected_schema_heads()[0],),
         )
     response = client.post("/api/system/backups", json={})
     assert response.status_code == 200, response.text

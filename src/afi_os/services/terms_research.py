@@ -1174,6 +1174,10 @@ def _refresh_automated_evidence(
     evidence.source_url = spec["source_url"]
     evidence.source_type = "AFFILIATE_TERMS_PAGE"
     evidence.excerpt = spec["excerpt"]
+    if "summary_vi" in spec:
+        evidence.summary_vi = spec.get("summary_vi")
+    if "quote_vi" in spec:
+        evidence.quote_vi = spec.get("quote_vi")
     evidence.evidence_hash = evidence_hash
     evidence.checked_at = checked_at
     evidence.reviewer = WEB_COLLECTOR_VERSION
@@ -1253,6 +1257,8 @@ def _import_permission_specs(
                     source_url=spec["source_url"],
                     source_type="AFFILIATE_TERMS_PAGE",
                     excerpt=spec["excerpt"],
+                    summary_vi=spec.get("summary_vi"),
+                    quote_vi=spec.get("quote_vi"),
                     evidence_hash=evidence_hash,
                     checked_at=checked_at,
                     reviewer=WEB_COLLECTOR_VERSION,
@@ -1376,6 +1382,10 @@ def _refresh_automated_fact(
     }
     fact.source_url = spec["source_url"]
     fact.excerpt = spec["excerpt"]
+    if "summary_vi" in spec:
+        fact.summary_vi = spec.get("summary_vi")
+    if "quote_vi" in spec:
+        fact.quote_vi = spec.get("quote_vi")
     fact.checked_at = checked_at
     fact.confidence = spec["confidence"]
     fact.commission_type = spec["commission_type"]
@@ -1467,6 +1477,8 @@ def _import_commission_specs(
                     source_url=spec["source_url"],
                     source_authority=source_authority,
                     excerpt=spec["excerpt"],
+                    summary_vi=spec.get("summary_vi"),
+                    quote_vi=spec.get("quote_vi"),
                     checked_at=checked_at,
                     confidence=spec["confidence"],
                     commission_type=spec["commission_type"],

@@ -97,10 +97,15 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.107**. Bước 1 có thể gọi Claude để trích Terms/Pricing/Commission
-có trích dẫn, cache theo nội dung và chống bịa bằng kiểm tra quote. API key chỉ nằm
-trong macOS Keychain. Proposal chưa được chấp nhận không vào payback, không đổi PPC
-và không chạm Google Ads.
+Đây là **v0.2.108**. Bước 3 có Camp Doctor chỉ đọc: tự chẩn đoán CTR, chi phí/ref
+thật, từ khóa, cụm từ tìm kiếm, thiết bị, vị trí, nhân khẩu học và quy tắc thay đổi
+20%/24 giờ. Hệ thống chỉ cảnh báo và đề xuất theo thứ tự; không sửa, dừng hoặc loại
+campaign.
+
+Bước 1 gọi Claude một lần để vừa trích Terms/Pricing/Commission có nguồn vừa tạo
+bản dịch và tóm tắt tiếng Việt. Việc chống bịa luôn kiểm tra câu nguyên văn, không
+kiểm tra trên bản dịch. Trang không nêu PPC hiện đúng cảnh báo cần hỏi support;
+proposal chưa được chấp nhận không vào payback, không đổi PPC và không chạm Google Ads.
 
 Tab **Tài nguyên** tiếp tục theo dõi kho email, lịch nuôi thủ công,
 tài khoản Ads và tài nguyên thanh toán. Bước 2 chỉ cho chọn tài khoản READY có email

@@ -67,6 +67,8 @@ def _metric(
                 payload_json={
                     "proposal_id": proposal.id,
                     "quote": proposal.excerpt,
+                    "quote_vi": proposal.quote_vi,
+                    "summary_vi": proposal.summary_vi,
                     "reviewed_by": proposal.reviewed_by,
                 },
             )

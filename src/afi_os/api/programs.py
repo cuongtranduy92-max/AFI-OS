@@ -506,6 +506,8 @@ def create_evidence(
         updated = False
         if existing.review_status != EvidenceReviewStatus.ACCEPTED:
             existing.source_type = payload.source_type
+            existing.summary_vi = payload.summary_vi
+            existing.quote_vi = payload.quote_vi
             existing.checked_at = payload.checked_at
             existing.expires_at = payload.expires_at
             existing.reviewer = payload.reviewer
@@ -600,6 +602,11 @@ def review_evidence(
     )
     if evidence is None:
         raise HTTPException(status_code=404, detail="Evidence not found")
+    if evidence.scope == "PPC_POLICY_VI" and payload.action == "ACCEPT":
+        raise HTTPException(
+            status_code=422,
+            detail="Tóm tắt PPC tiếng Việt chỉ để đọc; không thể dùng để mở quyền.",
+        )
 
     if payload.action == "ACCEPT":
         if evidence.decision not in EXPLICIT_PERMISSION_DECISIONS:

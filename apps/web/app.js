@@ -3,14 +3,15 @@ const API = "/api";
 const views = {
   portfolio: ["Tìm dự án", "Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo."],
   command: ["Bước 2 · Chuẩn bị campaign", "Các dự án đã đủ dữ liệu Bước 1 và được lưu để chuẩn bị nội dung, cấu trúc campaign."],
+  doctor: ["Bước 3 · Chẩn đoán campaign", "Theo dõi campaign, chẩn đoán đúng bệnh và ưu tiên việc cần tối ưu; Google Ads luôn chỉ đọc."],
   intelligence: ["Nhà quảng cáo & dự án", "Bổ sung snapshot có nguồn để mạng lưới dự án ↔ nhà quảng cáo ngày càng rộng."],
-  compliance: ["Terms Warning", "Cảnh báo theo bằng chứng; không loại dự án khỏi phân tích."],
+  compliance: ["Cảnh báo điều khoản", "Cảnh báo theo bằng chứng; không loại dự án khỏi phân tích."],
   resources: ["Tài nguyên", "Theo dõi email, tài khoản Ads, thanh toán và cảnh báo để chuẩn bị campaign an toàn."],
-  economics: ["Economics Lab", "Tính break-even CPC theo loại hoa hồng và độ tin cậy của giả định."],
-  exposure: ["Risk & Exposure", "Theo dõi spend và commission cùng cảnh báo terms, nhưng luôn giữ dự án trong hệ thống."],
-  programs: ["Terms Evidence Center", "Thu thập proposal có nguồn; commission tách riêng và permission vẫn khóa cho tới khi được xác nhận."],
-  finance: ["Finance & Reconciliation", "Quy đổi có nguồn, giữ số gốc và đưa ngoại lệ vào hàng đợi đối soát."],
-  system: ["Backup & Restore", "Sao lưu dữ liệu trước mọi thay đổi lớn và khôi phục có kiểm soát."],
+  economics: ["Phòng tính hoàn vốn", "Tính CPC hòa vốn theo loại hoa hồng và độ tin cậy của giả định."],
+  exposure: ["Rủi ro & mức chi", "Theo dõi chi phí và hoa hồng cùng cảnh báo điều khoản, nhưng luôn giữ dự án trong hệ thống."],
+  programs: ["Trung tâm bằng chứng điều khoản", "Thu thập đề xuất có nguồn; hoa hồng tách riêng và quyền vẫn khóa cho tới khi được xác nhận."],
+  finance: ["Tài chính & đối soát", "Quy đổi có nguồn, giữ số gốc và đưa ngoại lệ vào hàng đợi đối soát."],
+  system: ["Sao lưu & khôi phục", "Sao lưu dữ liệu trước mọi thay đổi lớn và khôi phục có kiểm soát."],
 };
 
 function esc(value) {
@@ -110,6 +111,7 @@ function switchView(name, {loadData = true} = {}) {
   if (!loadData) return;
   if (name === "portfolio") loadPortfolio();
   if (name === "command") loadStepTwoProjects();
+  if (name === "doctor") loadCampDoctor();
   if (name === "resources") loadResources();
   if (name === "programs") loadPrograms();
   if (name === "intelligence") {
@@ -474,9 +476,9 @@ function truthMeta(metricItem) {
     : esc(metricItem.source_name);
   return `<div class="truth-value">${esc(displayMetricValue(metricItem))}</div>
     <div class="truth-meta">
-      <div><span>Chất lượng</span><strong>${esc(metricItem.quality)}</strong></div>
-      <div><span>Trạng thái thu thập</span><strong>${esc(metricItem.collection_state || "NOT_COLLECTED")}</strong></div>
-      <div><span>Confidence</span><strong>${Math.round(Number(metricItem.confidence || 0) * 100)}%</strong></div>
+      <div><span>Chất lượng</span><strong>${esc(qualityLabels[metricItem.quality] || metricItem.quality)}</strong></div>
+      <div><span>Trạng thái thu thập</span><strong>${esc(checkStateLabels[metricItem.collection_state] || metricItem.collection_state || "Chưa thu thập")}</strong></div>
+      <div><span>Độ tin cậy</span><strong>${Math.round(Number(metricItem.confidence || 0) * 100)}%</strong></div>
       <div><span>Nguồn</span><strong>${source}</strong></div>
       <div><span>Ngày quan sát</span><strong>${metricItem.observed_at ? new Date(metricItem.observed_at).toLocaleString("vi-VN") : "Chưa thu thập"}</strong></div>
       <div><span>Khoảng dữ liệu</span><strong>${esc(metricItem.date_from || "—")} → ${esc(metricItem.date_to || "—")}</strong></div>
@@ -518,6 +520,133 @@ const permissionLabels = {
   NOT_CHECKED: "Chưa xác minh",
 };
 
+const reviewStateLabels = {
+  PROPOSED: "Chờ người vận hành duyệt",
+  ACCEPTED: "Đã xác nhận",
+  REJECTED: "Đã loại",
+  RESOLVED: "Đã thống nhất",
+  MISSING: "Chưa có dữ kiện",
+  CONFLICT: "Mâu thuẫn",
+  UNRESOLVED: "Chưa thống nhất",
+};
+
+const factScopeLabels = {
+  PAID_SEARCH: "Quảng cáo tìm kiếm",
+  BRAND_KEYWORD: "Đấu thầu từ khóa thương hiệu",
+  NON_BRAND: "Từ khóa không phải thương hiệu",
+  DIRECT_LINK: "Dẫn link trực tiếp",
+  TRADEMARK_AD_COPY: "Tên thương hiệu trong mẫu quảng cáo",
+  PPC_POLICY_VI: "Tóm tắt chính sách PPC",
+  COMMISSION: "Hoa hồng",
+  PACKAGES: "Gói sản phẩm",
+  PAYMENT: "Thanh toán",
+};
+
+const commissionTypeLabels = {
+  ONE_TIME: "Hoa hồng một lần",
+  RECURRING_UNSPECIFIED: "Hoa hồng định kỳ, chưa rõ thời hạn",
+  RECURRING_LIMITED: "Hoa hồng định kỳ có giới hạn",
+  RECURRING_LIFETIME: "Hoa hồng định kỳ trọn đời",
+  HYBRID: "Hoa hồng kết hợp",
+};
+
+const criterionStatusLabels = {
+  PASS: "Đạt",
+  FAIL: "Không đạt",
+  WARNING: "Cảnh báo",
+  UNKNOWN: "Chưa có kết luận",
+};
+
+const connectionStateLabels = {
+  AVAILABLE: "Đã có dữ liệu",
+  SUCCESS: "Đã lấy dữ liệu",
+  PARTIAL: "Chưa đủ dữ liệu",
+  NO_DATA: "Không có dữ liệu",
+  NEEDS_CONNECTION: "Cần kết nối",
+  NEEDS_SOURCE: "Cần nguồn",
+  CONNECTION_REQUIRED: "Cần kết nối",
+  AUTH_FAILED: "Xác thực thất bại",
+  RETRY_REQUIRED: "Cần thử lại",
+  ERROR: "Có lỗi",
+};
+
+const qualityLabels = {
+  OBSERVED: "Quan sát trực tiếp",
+  IMPORTED: "Đã nhập",
+  MATCHED: "Đã đối chiếu",
+  ESTIMATED: "Ước tính",
+  MODELED: "Theo mô hình",
+  UNKNOWN: "Chưa rõ",
+};
+
+const generalStateLabels = {
+  ENABLED: "Đang bật",
+  PAUSED: "Tạm dừng",
+  REMOVED: "Đã xóa",
+  ACTIVE: "Đang hoạt động",
+  INACTIVE: "Không hoạt động",
+  APPROVED: "Đã duyệt",
+  LOCKED: "Đã khóa",
+  PAID: "Đã thanh toán",
+  PENDING: "Đang chờ",
+  DECLINED: "Bị từ chối",
+  ATTRIBUTED: "Đã truy nguồn",
+  PARTIAL: "Truy nguồn một phần",
+  UNATTRIBUTED: "Chưa truy được nguồn",
+  DUPLICATE: "Trùng lặp",
+  EXACT: "Khớp chính xác",
+  FALLBACK: "Dùng dữ liệu dự phòng",
+  LIVE_READ_ONLY: "Dữ liệu trực tiếp, chỉ đọc",
+  STORED_FALLBACK: "Dữ liệu đã lưu an toàn",
+  READY: "Sẵn sàng",
+  REVIEW: "Cần kiểm tra",
+  OK: "Tốt",
+  SPAM: "Có dấu hiệu spam",
+  KHANG: "Đang kháng nghị",
+  DANG_KY: "Đăng ký",
+  VERIFY: "Xác minh",
+  DOI_DUYET: "Chờ duyệt",
+  HO_SO: "Hoàn thiện hồ sơ",
+  ADD_PAYMENT: "Thêm thanh toán",
+  CHON_DU_AN: "Chọn dự án",
+  CHAY: "Đang chạy",
+  NEEDS_REVIEW: "Cần người vận hành duyệt",
+  ACCEPTED: "Đã xác nhận",
+  REJECTED: "Đã loại",
+  PROPOSED: "Chờ người vận hành duyệt",
+  INFO: "Thông tin",
+  WARNING: "Cảnh báo",
+  ERROR: "Lỗi",
+  CRITICAL: "Nghiêm trọng",
+  HIGH: "Cao",
+  MEDIUM: "Trung bình",
+  LOW: "Thấp",
+};
+
+function enumLabel(value) {
+  return reviewStateLabels[value]
+    || permissionLabels[value]
+    || factScopeLabels[value]
+    || commissionTypeLabels[value]
+    || criterionStatusLabels[value]
+    || connectionStateLabels[value]
+    || qualityLabels[value]
+    || termsGateLabels[value]
+    || generalStateLabels[value]
+    || value;
+}
+
+function translatedFactBody(item, missingText = "Dữ liệu cũ chưa có bản dịch tiếng Việt.") {
+  const primary = item.summary_vi || item.quote_vi;
+  const translatedQuote = item.quote_vi && item.quote_vi !== primary
+    ? `<blockquote class="translated-quote">${esc(item.quote_vi)}</blockquote>`
+    : "";
+  const original = item.excerpt
+    ? `<details class="original-quote"><summary>Xem bản gốc</summary><p>${esc(item.excerpt)}</p></details>`
+    : "";
+  return `<p class="vietnamese-summary">${esc(primary || missingText)}</p>${translatedQuote}${original}`;
+}
+
 function projectCheckFieldCard(field) {
   const available = field.value !== null && field.value !== undefined && field.value !== "";
   const source = field.source_url
@@ -536,7 +665,7 @@ function projectCheckSection(title, subtitle, fields) {
 }
 
 function proposalReviewActions(type, item, check) {
-  if (item.review_status !== "PROPOSED") return "";
+  if (item.review_status !== "PROPOSED" || item.scope === "PPC_POLICY_VI") return "";
   const attributes = type === "commercial"
     ? `data-step-commercial-id="${item.id}" data-project-id="${check.project_id}"`
     : type === "commission"
@@ -566,26 +695,32 @@ function projectStepOneHtml(check) {
   const marketKeys = ["independent_advertisers", "active_advertisers_30d", "primary_keyword", "primary_keyword_search_volume", "primary_keyword_bid_low", "primary_keyword_bid_high"];
   const economicsKeys = ["average_package_price", "accepted_commission_rate", "accepted_commission_flat", "accepted_commission_type", "clicks_per_buyer", "estimated_commission_per_buyer", "estimated_payback_days_low_bid", "estimated_payback_days_high_bid"];
   const permissionCards = Object.entries(check.permissions).map(([scope, value]) =>
-    `<div class="permission-card ${["PROHIBITED", "CONFLICT"].includes(value) ? "danger" : value === "NOT_CHECKED" ? "pending" : ""}"><span>${esc(scope)}</span><strong>${esc(permissionLabels[value] || value)}</strong></div>`
+    `<div class="permission-card ${["PROHIBITED", "CONFLICT"].includes(value) ? "danger" : value === "NOT_CHECKED" ? "pending" : ""}"><span>${esc(factScopeLabels[scope] || scope)}</span><strong>${esc(permissionLabels[value] || value)}</strong></div>`
   ).join("");
-  const evidence = check.terms_evidence.length
-    ? check.terms_evidence.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.scope)} · ${esc(item.review_status)}</span><strong>${esc(permissionLabels[item.decision] || item.decision)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("evidence", item, check)}</article>`).join("")
+  const ppcSummaryItem = check.terms_evidence.find((item) => item.scope === "PPC_POLICY_VI");
+  const fallbackPpcSummary = check.terms_evidence.find((item) => item.summary_vi && item.scope !== "PPC_POLICY_VI");
+  const ppcSummaryText = ppcSummaryItem?.summary_vi || fallbackPpcSummary?.summary_vi;
+  const ppcSummary = `<article class="ppc-summary-card${ppcSummaryText ? "" : " missing"}"><span>TÓM TẮT ĐIỀU KHOẢN PPC (TIẾNG VIỆT)</span><strong>${esc(ppcSummaryText || "Chưa có tóm tắt tiếng Việt. Hãy chạy trích xuất Terms; quyền PPC vẫn Chưa xác minh.")}</strong>${ppcSummaryItem ? `<small>${safeExternalHostLink(ppcSummaryItem.source_url)} · chỉ là đề xuất, không tự mở quyền PPC</small>` : ""}</article>`;
+  const permissionEvidence = check.terms_evidence.filter((item) => item.scope !== "PPC_POLICY_VI");
+  const evidence = permissionEvidence.length
+    ? permissionEvidence.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(factScopeLabels[item.scope] || item.scope)} · ${esc(reviewStateLabels[item.review_status] || item.review_status)}</span><strong>${esc(permissionLabels[item.decision] || item.decision)}</strong></div>${translatedFactBody(item)}<small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · tin cậy ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("evidence", item, check)}</article>`).join("")
     : '<div class="step-one-empty">Chưa có bằng chứng điều khoản PPC công khai. Trạng thái giữ NOT_CHECKED và chỉ cảnh báo.</div>';
   const commissions = check.commission_facts.length
     ? check.commission_facts.map((item) => {
       const value = item.commission_rate != null
         ? `${(Number(item.commission_rate) * 100).toLocaleString("vi-VN")}%`
         : item.commission_flat != null ? `$${Number(item.commission_flat).toLocaleString("vi-VN")}` : "Chưa rõ mức";
-      const cadence = item.recurring_months ? `${item.commission_type} · ${item.recurring_months} tháng` : item.commission_type;
-      return `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.review_status)}${item.rate_is_maximum ? " · UP TO · KHÔNG TÍNH PAYBACK" : ""}</span><strong>${esc(value)} · ${esc(cadence)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commission", item, check)}</article>`;
+      const cadenceLabel = commissionTypeLabels[item.commission_type] || item.commission_type;
+      const cadence = item.recurring_months ? `${cadenceLabel} · ${item.recurring_months} tháng` : cadenceLabel;
+      return `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(reviewStateLabels[item.review_status] || item.review_status)}${item.rate_is_maximum ? " · MỨC TỐI ĐA · KHÔNG TÍNH HOÀN VỐN" : ""}</span><strong>${esc(value)} · ${esc(cadence)}</strong></div>${translatedFactBody(item)}<small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · tin cậy ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commission", item, check)}</article>`;
     }).join("")
     : '<div class="step-one-empty">Chưa có commission fact có nguồn. Hệ thống không tính hoàn vốn.</div>';
   const commercial = check.commercial_proposals?.length
-    ? check.commercial_proposals.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.scope)} · ${esc(item.review_status)}</span><strong>${esc(commercialProposalValue(item))}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commercial", item, check)}</article>`).join("")
+    ? check.commercial_proposals.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(factScopeLabels[item.scope] || item.scope)} · ${esc(reviewStateLabels[item.review_status] || item.review_status)}</span><strong>${esc(commercialProposalValue(item))}</strong></div>${translatedFactBody(item)}<small>${safeExternalHostLink(item.source_url)} · tin cậy ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commercial", item, check)}</article>`).join("")
     : '<div class="step-one-empty">Chưa có đề xuất gói giá hoặc thanh toán từ Claude.</div>';
-  const criteria = check.criteria.map((item) => `<article class="criterion-card criterion-${item.status.toLowerCase()}"><span>${esc(item.label)}</span><strong>${esc(item.status)}</strong><b>${esc(item.value ?? "Chưa có số")}</b><small>Ngưỡng: ${esc(item.threshold)} · ${esc(item.explanation)}</small></article>`).join("");
+  const criteria = check.criteria.map((item) => `<article class="criterion-card criterion-${item.status.toLowerCase()}"><span>${esc(item.label)}</span><strong>${esc(criterionStatusLabels[item.status] || item.status)}</strong><b>${esc(item.value ?? "Chưa có số")}</b><small>Ngưỡng: ${esc(item.threshold)} · ${esc(item.explanation)}</small></article>`).join("");
   const needs = check.collection_needs.length
-    ? check.collection_needs.map((item) => `<article class="collection-need"><div><strong>${esc(item.group)}</strong><span>${esc(item.status)}</span></div><p>Thiếu: ${item.fields.map(esc).join(" · ")}</p><b>Cần: ${esc(item.source_required)}</b></article>`).join("")
+    ? check.collection_needs.map((item) => `<article class="collection-need"><div><strong>${esc(item.group)}</strong><span>${esc(connectionStateLabels[item.status] || item.status)}</span></div><p>Thiếu: ${item.fields.map(esc).join(" · ")}</p><b>Cần: ${esc(item.source_required)}</b></article>`).join("")
     : '<div class="step-one-complete">Đã có đủ nguồn cốt lõi để quyết định và tính hoàn vốn.</div>';
   const blockerText = check.blocking_fields.length ? check.blocking_fields.map(esc).join(" · ") : "Không còn đầu vào cốt lõi bị thiếu";
   return `<div class="step-one-hero">
@@ -599,8 +734,8 @@ function projectStepOneHtml(check) {
     ${projectCheckSection("Hồ sơ & thị trường", "Thông tin dự án, traffic và yêu cầu pháp lý.", identityKeys.map((key) => f[key]))}
     ${projectCheckSection("Affiliate & thanh toán", "Link đăng ký/đăng nhập/ref cùng cách và thời gian nhận tiền.", affiliateKeys.map((key) => f[key]))}
     ${projectCheckSection("Nhà quảng cáo, từ khóa & CPC", "Sức cầu và cạnh tranh quốc tế bằng tiếng Anh.", marketKeys.map((key) => f[key]))}
-    <section class="step-one-section"><div class="step-one-section-head"><div><h3>Điều khoản PPC</h3><p>Cảnh báo đi cùng dự án nhưng không tự loại hoặc dừng campaign.</p></div><span class="gate gate-pending">${esc(termsGateLabels[check.terms_gate_status] || check.terms_gate_status)}</span></div><div class="permission-grid">${permissionCards}</div><div class="evidence-list">${evidence}</div></section>
-    <section class="step-one-section"><div class="step-one-section-head"><div><h3>Commission đã xác minh</h3><p>Tách khỏi quyền PPC. Proposal, “up to” và nguồn mâu thuẫn không được dùng làm sự thật để tính tiền.</p></div><span class="gate ${check.commission_state === "RESOLVED" ? "gate-ready" : "gate-blocked"}">${esc(check.commission_state)}</span></div><div class="evidence-list">${commissions}</div></section>
+    <section class="step-one-section"><div class="step-one-section-head"><div><h3>Điều khoản PPC</h3><p>Cảnh báo đi cùng dự án nhưng không tự loại hoặc dừng campaign.</p></div><span class="gate gate-pending">${esc(termsGateLabels[check.terms_gate_status] || check.terms_gate_status)}</span></div>${ppcSummary}<div class="permission-grid">${permissionCards}</div><div class="evidence-list">${evidence}</div></section>
+    <section class="step-one-section"><div class="step-one-section-head"><div><h3>Hoa hồng đã xác minh</h3><p>Tách khỏi quyền PPC. Đề xuất, “lên đến” và nguồn mâu thuẫn không được dùng làm sự thật để tính tiền.</p></div><span class="gate ${check.commission_state === "RESOLVED" ? "gate-ready" : "gate-blocked"}">${esc(enumLabel(check.commission_state))}</span></div><div class="evidence-list">${commissions}</div></section>
     <section class="step-one-section"><div class="step-one-section-head"><div><h3>Gói giá & thanh toán do Claude đề xuất</h3><p>Chữ mờ là proposal. Bấm ✓ sau khi đọc đúng trích dẫn; lúc đó dữ liệu mới vào công thức.</p></div><span class="badge">HUMAN REVIEW</span></div><div class="evidence-list">${commercial}</div><span id="proposalReviewMessage" class="form-message"></span></section>
     ${projectCheckSection("Hoàn vốn ước tính", "30 × (150 click × bid) ÷ (giá gói trung bình × % hoa hồng đã xác minh).", economicsKeys.map((key) => f[key]))}
     <section class="step-one-section"><div class="step-one-section-head"><div><h3>Bảng chấm điểm</h3><p>Điểm giúp quyết định; cảnh báo Terms không xóa dự án.</p></div></div><div class="criteria-grid">${criteria}</div></section>
@@ -610,7 +745,7 @@ function projectStepOneHtml(check) {
 
 function projectDetailHtml(item, check) {
   const metrics = Object.values(item.metrics).map((metricItem) =>
-    `<button type="button" class="truth-metric-card" data-truth-project="${item.id}" data-truth-metric="${esc(metricItem.key)}"><span>${esc(metricItem.label)}</span><strong>${esc(displayMetricValue(metricItem))}</strong><small>${esc(metricItem.collection_state || "NOT_COLLECTED")} · ${esc(metricItem.quality)} · ${Math.round(Number(metricItem.confidence || 0) * 100)}%</small></button>`
+    `<button type="button" class="truth-metric-card" data-truth-project="${item.id}" data-truth-metric="${esc(metricItem.key)}"><span>${esc(metricItem.label)}</span><strong>${esc(displayMetricValue(metricItem))}</strong><small>${esc(checkStateLabels[metricItem.collection_state] || metricItem.collection_state || "Chưa thu thập")} · ${esc(qualityLabels[metricItem.quality] || metricItem.quality)} · ${Math.round(Number(metricItem.confidence || 0) * 100)}%</small></button>`
   ).join("");
   return `${projectStepOneHtml(check)}<div class="project-journey" aria-label="Luồng truy vết">
       <span class="active">1 · ${esc(item.brand_name)}</span><b>→</b><span>2 · Nhà quảng cáo</span><b>→</b><span>3 · Dự án liên quan</span>
@@ -693,7 +828,7 @@ function autoCheckSourcesHtml(sources) {
     const links = (item.source_urls || []).slice(0, 3).map((url) => safeExternalHostLink(url)).join(" · ");
     const setup = item.setup_command && item.status === "CONNECTION_REQUIRED"
       ? `<small>Cần chạy một lần: ${esc(item.setup_command)}</small>` : "";
-    return `<article class="auto-check-source status-${String(item.status).toLowerCase()}"><div><strong>${esc(item.source)}</strong><span>${esc(item.status)}</span></div><p>${esc(item.detail)}</p>${links ? `<small>Nguồn: ${links}</small>` : ""}${setup}</article>`;
+    return `<article class="auto-check-source status-${String(item.status).toLowerCase()}"><div><strong>${esc(item.source)}</strong><span>${esc(connectionStateLabels[item.status] || item.status)}</span></div><p>${esc(item.detail)}</p>${links ? `<small>Nguồn: ${links}</small>` : ""}${setup}</article>`;
   }).join("");
 }
 
@@ -1095,8 +1230,8 @@ function renderResourceOverview(data) {
     <td>${esc(item.email_address || "Chưa gắn email")}</td>
     <td><strong>${esc(item.display_name)}</strong><br><span class="small mono">${esc(item.external_id)}</span></td>
     <td>${esc(item.type || "—")}<br><span class="small">Thuê $${Number(item.rent_cost).toLocaleString("en-US")} · phí ${Number(item.spend_fee_pct)}%</span></td>
-    <td><span class="badge">${esc(item.state)}</span><br><span class="small">${esc(item.health)}</span></td>
-    <td>${item.camp_plan_id ? `<strong>#${item.camp_plan_id}</strong><br><span class="small">${esc(item.camp_plan_status || "—")}</span>` : "Chưa tạo"}</td>
+    <td><span class="badge">${esc(enumLabel(item.state))}</span><br><span class="small">${esc(enumLabel(item.health))}</span></td>
+    <td>${item.camp_plan_id ? `<strong>#${item.camp_plan_id}</strong><br><span class="small">${esc(enumLabel(item.camp_plan_status || "—"))}</span>` : "Chưa tạo"}</td>
     <td>${item.current_project_domain ? `<strong>${esc(item.current_project_domain)}</strong>` : "Đang rảnh"}</td>
     <td>${item.selectable ? '<span class="risk-green">ĐƯỢC CHỌN</span>' : '<span class="small">Chưa đủ điều kiện</span>'}</td>
   </tr>`).join("") : '<tr><td colspan="7" class="empty">Chưa có tài khoản Ads.</td></tr>';
@@ -1643,7 +1778,7 @@ async function refreshAll() {
       loadHealth(), loadSummary(), loadRadar(), loadGraph(), loadCaptures(),
       loadCaptureReviewQueue(),
       loadPrograms(), loadPortfolio(), loadStepTwoProjects(), loadExposure(), loadFinance(), loadBackups(), loadOperations(),
-      loadRuntimeStatus(), loadAutomationQueue(), loadResources(),
+      loadRuntimeStatus(), loadAutomationQueue(), loadResources(), loadCampDoctor(),
     ]);
   } catch (error) {
     setApiStatus(false, `Lỗi dữ liệu: ${error.message}`);
@@ -1758,7 +1893,7 @@ function updateCaptureSubmitMode(form = document.getElementById("captureForm"), 
 
 const permissions = ["NOT_CHECKED", "AMBIGUOUS", "CONFLICT", "APPROVAL_REQUIRED", "PROHIBITED", "NON_BRAND_ONLY", "BRAND_ALLOWED"];
 function permissionOptions() {
-  return permissions.map((value) => `<option value="${value}">${value}</option>`).join("");
+  return permissions.map((value) => `<option value="${value}">${esc(permissionLabels[value] || value)}</option>`).join("");
 }
 function setLocalDateTime(input, date = new Date()) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -1851,12 +1986,12 @@ function gateBadge(status) {
   const cls = status === "TERMS_OK" || status.includes("READY")
     ? "gate-ready"
     : ((status.includes("PROHIBITED") || status.includes("CONFLICT")) ? "gate-blocked" : "gate-pending");
-  return `<span class="gate ${cls}">${esc(status)}</span>`;
+  return `<span class="gate ${cls}">${esc(enumLabel(status))}</span>`;
 }
 
 function stateBadge(status) {
   const cls = status === "ACCEPTED" || status === "RESOLVED" ? "gate-ready" : (status === "CONFLICT" || status === "REJECTED" ? "gate-blocked" : "gate-pending");
-  return `<span class="gate ${cls}">${esc(status)}</span>`;
+  return `<span class="gate ${cls}">${esc(enumLabel(status))}</span>`;
 }
 
 async function loadPrograms() {
@@ -1882,9 +2017,9 @@ async function loadPrograms() {
       <tr class="clickable-row" data-program-id="${item.id}">
         <td><strong>${esc(item.merchant_name)}</strong><br><span class="small">${esc(item.website_domain)} · ${esc(item.program_name)}</span><br>${signupSource}</td>
         <td>${esc(item.network_name || "—")}</td>
-        <td>${esc(item.paid_search_permission)}</td>
-        <td>${esc(item.brand_keyword_permission)}</td>
-        <td>${esc(item.non_brand_permission)}</td>
+        <td>${esc(permissionLabels[item.paid_search_permission] || item.paid_search_permission)}</td>
+        <td>${esc(permissionLabels[item.brand_keyword_permission] || item.brand_keyword_permission)}</td>
+        <td>${esc(permissionLabels[item.non_brand_permission] || item.non_brand_permission)}</td>
         <td>${stateBadge(item.commission_state)}<br><span class="small">${item.commission_fact_count} facts</span></td>
         <td>${researchSummary}</td>
         <td>${gateBadge(item.gate_status)}</td>
@@ -1970,11 +2105,11 @@ async function loadEvidence(programId) {
     return `
     <tr>
       <td>${new Date(item.checked_at).toLocaleDateString("vi-VN")}</td>
-      <td>${esc(item.scope)}</td>
-      <td>${esc(item.decision)}</td>
-      <td>${esc(item.source_authority)}<br><span class="small">${Math.round(item.confidence * 100)}%</span></td>
+      <td>${esc(factScopeLabels[item.scope] || item.scope)}</td>
+      <td>${esc(permissionLabels[item.decision] || item.decision)}</td>
+      <td>${esc(sourceAuthorityLabel(item.source_authority))}<br><span class="small">tin cậy ${Math.round(item.confidence * 100)}%</span></td>
       <td>${stateBadge(item.review_status)}</td>
-      <td>${safeExternalLink(item.source_url, "Mở nguồn")}<br><span class="evidence-excerpt">${esc(item.excerpt)}</span></td>
+      <td>${safeExternalLink(item.source_url, "Mở nguồn")}<br>${translatedFactBody(item)}</td>
       <td><div class="review-actions">${review}</div></td>
     </tr>`;
   }).join("");
@@ -2042,11 +2177,11 @@ async function loadCommissionFacts(programId) {
       : "—";
     return `<tr>
       <td>${new Date(item.checked_at).toLocaleDateString("vi-VN")}</td>
-      <td>${esc(item.commission_type)}</td>
+      <td>${esc(commissionTypeLabels[item.commission_type] || item.commission_type)}</td>
       <td>${esc(rate)}</td>
       <td>${esc(item.applies_to)}</td>
       <td>${stateBadge(item.review_status)}</td>
-      <td>${safeExternalLink(item.source_url, "Mở nguồn")}<br><span class="evidence-excerpt">${esc(item.excerpt)}</span></td>
+      <td>${safeExternalLink(item.source_url, "Mở nguồn")}<br>${translatedFactBody(item)}</td>
       <td><div class="review-actions">${review}</div></td>
     </tr>`;
   }).join("");
@@ -2303,14 +2438,125 @@ async function loadExposure() {
     return `<tr>
       <td><strong>${esc(item.campaign_name)}</strong><br><span class="small">${esc(item.account_name)} · ${esc(item.campaign_external_id)}</span></td>
       <td><select class="compact-select campaign-program-map" data-campaign-id="${item.campaign_id}">${exposureProgramOptions(item.program_id)}</select></td>
-      <td>${esc(item.campaign_status)}<br><span class="small">${esc(item.channel_type)}</span></td>
-      <td>${gateBadge(item.terms_warning_status)}<br><span class="risk-level risk-${item.warning_level.toLowerCase()}">${esc(item.warning_level)} · vẫn theo dõi</span></td>
+      <td>${esc(enumLabel(item.campaign_status))}<br><span class="small">${esc(item.channel_type)}</span></td>
+      <td>${gateBadge(item.terms_warning_status)}<br><span class="risk-level risk-${item.warning_level.toLowerCase()}">${esc(enumLabel(item.warning_level))} · vẫn theo dõi</span></td>
       <td>${money(item.spend, item.currency)}</td>
       <td>${item.clicks.toLocaleString("en-US")} clicks<br><span class="small">${item.impressions.toLocaleString("en-US")} impressions</span></td>
       <td>${item.average_cpc == null ? "—" : money(item.average_cpc, item.currency)}</td>
       <td>${acknowledgement}</td>
     </tr>`;
   }).join("");
+}
+
+const campDoctorStatus = {
+  HEALTHY: ["Khoẻ", "doctor-healthy"],
+  LEARNING: ["Đang học", "doctor-learning"],
+  NEEDS_ATTENTION: ["Cần tối ưu", "doctor-attention"],
+  CRITICAL: ["Cần xử lý", "doctor-critical"],
+};
+
+function campDoctorBadge(status) {
+  const [label, className] = campDoctorStatus[status] || [status || "Chưa rõ", "doctor-unknown"];
+  return `<span class="doctor-status ${className}">${esc(label)}</span>`;
+}
+
+function campDoctorMoney(value) {
+  return value == null ? "Chưa có dữ liệu" : `$${Number(value).toFixed(2)}`;
+}
+
+async function loadCampDoctor() {
+  const body = document.getElementById("campDoctorRows");
+  if (!body) return;
+  const response = await request("/campaigns/diagnoses");
+  const campaigns = response.campaigns || [];
+  const counts = Object.fromEntries(Object.keys(campDoctorStatus).map((key) => [key, campaigns.filter((item) => item.status === key).length]));
+  document.getElementById("campDoctorCards").innerHTML = [
+    metric("Tổng campaign", campaigns.length, "Không campaign nào bị tự loại"),
+    metric("Đang học", counts.LEARNING || 0, "Không chỉnh sớm camp <24h"),
+    metric("Cần tối ưu", counts.NEEDS_ATTENTION || 0, "Cảnh báo theo dữ liệu"),
+    metric("Cần xử lý", counts.CRITICAL || 0, "Vẫn chỉ cảnh báo, không tự dừng"),
+  ].join("");
+  if (!campaigns.length) {
+    body.innerHTML = '<tr><td colspan="8" class="empty">Chưa có campaign. Nhập báo cáo Google Ads ở mục Risk &amp; Exposure trước.</td></tr>';
+    return;
+  }
+  body.innerHTML = campaigns.map((item) => `<tr>
+    <td><strong>${esc(item.campaign_name)}</strong><br><span class="small">${esc(item.account_name)} · ${esc(item.campaign_external_id)}</span></td>
+    <td>${campDoctorBadge(item.status)}<br><span class="small">${esc(enumLabel(item.campaign_status))}</span></td>
+    <td>${item.age_days} ngày</td>
+    <td><strong>${item.ctr_pct == null ? "Chưa có" : `${Number(item.ctr_pct).toFixed(1)}%`}</strong><br><span class="small">Chuẩn cảnh báo: 40%</span></td>
+    <td>${campDoctorMoney(item.cost_usd)}<br><span class="small">${esc(item.cost_data_status)}</span></td>
+    <td>${item.refs == null ? "Chưa có dữ liệu ref" : Number(item.refs).toLocaleString("vi-VN")}<br><span class="small">${esc(item.ref_data_status)}</span></td>
+    <td>${campDoctorMoney(item.cost_per_ref)}</td>
+    <td><button class="button primary" type="button" data-camp-doctor-id="${item.campaign_id}">Mở chẩn đoán</button></td>
+  </tr>`).join("");
+}
+
+function doctorTable(headers, rows) {
+  if (!rows.length) return '<div class="doctor-empty">Chưa có dữ liệu từ nguồn này.</div>';
+  return `<div class="table-wrap"><table><thead><tr>${headers.map((item) => `<th>${esc(item[0])}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${headers.map(([, key, format]) => `<td>${format ? format(row[key], row) : esc(row[key] ?? "—")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+function doctorMetricNumber(value) {
+  return value == null ? "—" : Number(value).toLocaleString("vi-VN", {maximumFractionDigits: 2});
+}
+
+function renderCampDoctorDetail(item) {
+  const details = item.details || {};
+  document.getElementById("campDoctorDetail").hidden = false;
+  document.getElementById("campDoctorDetailTitle").textContent = item.campaign_name;
+  const source = item.source || {};
+  document.getElementById("campDoctorDetailSource").textContent = `${source.message || "Dùng dữ liệu đã lưu."} Không có thao tác ghi Google Ads.`;
+  document.getElementById("campDoctorBenchmarks").innerHTML = [
+    metric("Trạng thái", campDoctorStatus[item.status]?.[0] || item.status, `${item.age_days} ngày`),
+    metric("CTR", item.ctr_pct == null ? "Chưa có" : `${Number(item.ctr_pct).toFixed(1)}%`, "Cảnh báo nếu dưới 40%"),
+    metric("Ref thật", item.refs == null ? "Chưa có dữ liệu" : item.refs, item.ref_data_status),
+    metric("Chi phí / ref", campDoctorMoney(item.cost_per_ref), item.cost_per_ref == null ? "Không giả thành $0" : "Tốt nếu ≤$4"),
+  ].join("");
+  const findings = item.findings || [];
+  document.getElementById("campDoctorFindings").innerHTML = findings.length ? findings.map((finding, index) => `<div class="doctor-finding doctor-finding-${esc(finding.level)}">
+    <span>${index + 1}</span><div><strong>${esc(finding.message)}</strong>${finding.action ? `<p>Việc nên làm: ${esc(finding.action)}</p>` : ""}</div>
+  </div>`).join("") : '<div class="doctor-empty">Chưa có phát hiện.</div>';
+  const ctr = (value) => value == null ? "—" : `${(Number(value) * 100).toFixed(1)}%`;
+  const cost = (value) => value == null ? "—" : `${doctorMetricNumber(value)} ${esc(item.currency)}`;
+  document.getElementById("campDoctorKeywords").innerHTML = doctorTable([
+    ["Từ khoá", "keyword"], ["Trạng thái", "status", (value) => esc(enumLabel(value))], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["CPC TB", "average_cpc", cost],
+  ], details.keywords || []);
+  document.getElementById("campDoctorSearchTerms").innerHTML = doctorTable([
+    ["Cụm từ", "term"], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Chi phí", "cost", cost], ["Ref", "refs", () => "Chưa nối SubID"],
+  ], details.search_terms || []);
+  document.getElementById("campDoctorDevices").innerHTML = doctorTable([
+    ["Thiết bị", "device"], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Chi phí", "cost", cost],
+  ], details.devices || []);
+  document.getElementById("campDoctorGeography").innerHTML = doctorTable([
+    ["Vị trí", "country"], ["Loại", "location_type"], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Chi phí", "cost", cost],
+  ], details.geography || []);
+  document.getElementById("campDoctorAges").innerHTML = doctorTable([
+    ["Độ tuổi", "age"], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Chi phí", "cost", cost],
+  ], details.ages || []);
+  document.getElementById("campDoctorGenders").innerHTML = doctorTable([
+    ["Giới tính", "gender"], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Chi phí", "cost", cost],
+  ], details.genders || []);
+  document.getElementById("campDoctorAds").innerHTML = doctorTable([
+    ["ID", "ad_id"], ["Trạng thái", "status", (value) => esc(enumLabel(value))], ["Lượt hiển thị", "impressions", doctorMetricNumber], ["Lượt nhấp", "clicks", doctorMetricNumber], ["CTR", "ctr", ctr], ["Tiêu đề", "headlines", (value) => esc((value || []).filter(Boolean).join(" · "))],
+  ], details.ads || []);
+  document.getElementById("campDoctorDetail").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+async function openCampDoctor(campaignId, button) {
+  const message = document.getElementById("campDoctorMessage");
+  button.disabled = true;
+  message.textContent = "Đang đọc báo cáo chi tiết Google Ads ở chế độ chỉ đọc…";
+  try {
+    const item = await request(`/campaigns/${campaignId}/diagnosis?refresh=true`);
+    renderCampDoctorDetail(item);
+    message.textContent = item.source?.status === "LIVE_READ_ONLY" ? "Đã cập nhật từ Google Ads." : "Đang hiển thị dữ liệu an toàn đã có; xem thông báo nguồn trong panel.";
+    await loadCampDoctor();
+  } catch (error) {
+    message.textContent = `Không mở được chẩn đoán: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function acknowledgeCampaignRisk(campaignId) {
@@ -2414,7 +2660,7 @@ function reconciliationBadge(status) {
   const cls = status === "ATTRIBUTED"
     ? "gate-ready"
     : (["CONFLICT", "DUPLICATE"].includes(status) ? "gate-blocked" : "gate-pending");
-  return `<span class="gate ${cls}">${esc(status)}</span>`;
+  return `<span class="gate ${cls}">${esc(enumLabel(status))}</span>`;
 }
 
 async function saveFinanceSettings(event) {
@@ -2552,16 +2798,16 @@ async function loadFinance() {
         <td>${new Date(item.occurred_at).toLocaleString("vi-VN")}</td>
         <td><span class="mono">${esc(item.external_id)}</span></td>
         <td>${esc(item.source)}</td>
-        <td><span class="state state-${item.state.toLowerCase()}">${esc(item.state)}</span></td>
+        <td><span class="state state-${item.state.toLowerCase()}">${esc(enumLabel(item.state))}</span></td>
         <td>${money(item.amount, item.currency)}${item.normalized_amount == null ? "" : `<br><span class="small">${money(item.normalized_amount, item.normalized_currency)}</span>`}</td>
         <td>${reconciliationBadge(item.reconciliation_status || "UNATTRIBUTED")}<br><span class="small">${esc(item.click_reference || "")}</span></td>
       </tr>`).join("");
   }
 
   const counts = Object.entries(reconciliation.status_counts || {})
-    .map(([status, count]) => `${esc(status)}: ${count}`).join(" · ") || "Chưa có commission";
+    .map(([status, count]) => `${esc(enumLabel(status))}: ${count}`).join(" · ") || "Chưa có commission";
   const issues = Object.entries(reconciliation.open_issue_counts || {})
-    .map(([status, count]) => `${esc(status)}: ${count}`).join(" · ") || "Không có DUPLICATE/CONFLICT mở";
+    .map(([status, count]) => `${esc(enumLabel(status))}: ${count}`).join(" · ") || "Không có mục trùng lặp/mâu thuẫn đang mở";
   document.getElementById("reconciliationSummary").innerHTML =
     `<strong>Attribution:</strong> ${counts}<br><strong>Ngoại lệ:</strong> ${issues}`;
   const reconciliationBody = document.getElementById("reconciliationRows");
@@ -2710,6 +2956,13 @@ document.getElementById("campPlanEditor").addEventListener("input", (event) => {
 document.getElementById("campPlanStepThree").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-switch-view]");
   if (button) switchView(button.dataset.switchView);
+});
+document.getElementById("campDoctorRows").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-camp-doctor-id]");
+  if (button) openCampDoctor(button.dataset.campDoctorId, button);
+});
+document.getElementById("campDoctorClose").addEventListener("click", () => {
+  document.getElementById("campDoctorDetail").hidden = true;
 });
 document.getElementById("truthDrawerBody").addEventListener("click", (event) => {
   const proposalButton = event.target.closest("button[data-step-commercial-id], button[data-step-commission-id], button[data-step-evidence-id]");

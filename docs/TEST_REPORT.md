@@ -1,4 +1,21 @@
-# TEST REPORT — AFI-OS 0.2.107
+# TEST REPORT — AFI-OS 0.2.108
+
+## 0.2.108 — Camp Doctor + Vietnamese Terms
+
+- Full application regression before packaging: 436 passed, 1 skipped
+  (437 tests collected).
+- Camp Doctor unit/API tests cover learning protection, low CTR with competitors,
+  click-fraud warning, real cost/ref bands, low-data protection, search-term waste
+  and the 20%/24-hour rule.
+- Static and request-contract tests confirm all new Google Ads queries use read-only
+  searchStream reports and add no mutate/write endpoint.
+- Vietnamese extraction tests prove original fake quotes are rejected, translations
+  cannot rescue fabricated facts, missing PPC uses the exact support warning and
+  Step 2 remains exactly 15/4/4/4 English assets.
+- Migration upgrade/downgrade/re-upgrade reached `71e4a2b890c3`, kept SQLite
+  integrity `ok`, zero foreign-key errors and nullable translation fields.
+- Release checksum covers all 49 payload files. Production-copy update/rollback
+  and live post-install checks are mandatory gates before this release is handed off.
 
 ## 0.2.107 — Claude Terms extraction
 

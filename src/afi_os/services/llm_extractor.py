@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass, field
 
 MAX_PAGE_CHARS = 15_000
+PPC_UNDISCLOSED_VI = "Trang không nêu quy định PPC — cần hỏi support trước khi chạy."
 
 SYSTEM_PROMPT = """Bạn là bộ trích xuất dữ kiện chương trình affiliate. Chỉ trả về JSON đúng schema.
 Luật sắt:
@@ -20,6 +21,9 @@ Luật sắt:
 - Mỗi field có giá trị PHẢI kèm "quote": câu NGUYÊN VĂN (copy đúng từng ký tự) từ văn bản chứng minh giá trị đó.
 - Nếu hoa hồng ghi "up to"/"lên đến" → rate_is_upper_bound=true.
 - commission_type: ONE_TIME | RECURRING_LIMITED (ghi số tháng) | RECURRING_LIFETIME | HYBRID | null.
+- "quote" giữ NGUYÊN VĂN ngôn ngữ gốc, KHÔNG dịch, KHÔNG sửa.
+- Thêm "quote_vi": bản dịch tiếng Việt của quote, dịch sát nghĩa, giữ nguyên số/tên riêng.
+- Thêm "summary_vi": tóm tắt tiếng Việt dễ hiểu cho người không giỏi tiếng Anh.
 - Trả về DUY NHẤT JSON, không giải thích."""
 
 USER_PROMPT_TEMPLATE = """Văn bản các trang của dự án "{domain}" (đã cắt gọn):
@@ -33,20 +37,27 @@ Trích xuất theo schema JSON sau (giá trị null nếu không chắc):
   "commission": {{
     "type": "...", "percent": 30.0, "rate_is_upper_bound": false,
     "recurring_months": null, "flat_usd": null,
-    "quote": "câu nguyên văn về hoa hồng"
+    "quote": "câu nguyên văn (KHÔNG dịch)",
+    "quote_vi": "bản dịch tiếng Việt của câu trên",
+    "summary_vi": "tóm tắt tiếng Việt về hoa hồng"
   }},
   "packages": [
-    {{"name": "Standard", "price_usd": 28.0, "period": "month", "quote": "câu nguyên văn giá gói"}}
+    {{"name": "Standard", "price_usd": 28.0, "period": "month",
+      "quote": "câu nguyên văn", "quote_vi": "bản dịch"}}
   ],
   "payment": {{
     "gateways": ["PayPal"], "min_payment_usd": 50.0, "clear_days": 30,
     "cookie_days": 30, "net_platform": "Rewardful",
-    "quote": "câu nguyên văn về thanh toán"
+    "quote": "câu nguyên văn", "quote_vi": "bản dịch",
+    "summary_vi": "tóm tắt tiếng Việt: trả qua đâu, tối thiểu bao nhiêu, bao lâu nhận tiền"
   }},
   "terms": {{
     "ads_allowed": true, "brand_bid_restricted": false,
-    "quote": "câu nguyên văn về quy định quảng cáo"
+    "direct_link_allowed": null, "trademark_plus_coupon_banned": null,
+    "quote": "câu nguyên văn về quy định quảng cáo", "quote_vi": "bản dịch",
+    "summary_vi": "tóm tắt tiếng Việt quy định quảng cáo"
   }},
+  "ppc_policy_vi": "TÓM TẮT TIẾNG VIỆT ĐẦY ĐỦ mọi ràng buộc PPC/Google Ads của dự án: được hay không được chạy quảng cáo tìm kiếm; có cấm đặt giá thầu từ khoá thương hiệu không; có cấm dẫn link trực tiếp (direct linking) không; có cấm dùng tên thương hiệu trong tiêu đề/đường dẫn hiển thị không; ràng buộc khác. Nếu trang không nói gì về PPC, ghi rõ: 'Trang không nêu quy định PPC — cần hỏi support trước khi chạy.'",
   "confidence": 0.0
 }}"""
 
@@ -57,6 +68,8 @@ class ExtractedFact:
     payload: dict         # dữ liệu đã lọc
     quote: str            # trích dẫn ĐÃ kiểm chứng
     confidence: float
+    quote_vi: str = ""
+    summary_vi: str = ""
 
 
 @dataclass
@@ -124,8 +137,21 @@ def parse_and_validate(llm_text: str, pages: list[tuple[str, str]]) -> Extractio
         if not _quote_in_sources(quote, pages):
             result.rejected.append(f"{scope}: trích dẫn không khớp nguồn — LOẠI (chống bịa)")
             return
-        payload = {k: v for k, v in obj.items() if k != "quote"}
-        result.facts.append(ExtractedFact(scope, payload, quote.strip(), round(base_conf * 0.9, 3)))
+        payload = {
+            key: value
+            for key, value in obj.items()
+            if key not in ("quote", "quote_vi", "summary_vi")
+        }
+        result.facts.append(
+            ExtractedFact(
+                scope,
+                payload,
+                quote.strip(),
+                round(base_conf * 0.9, 3),
+                quote_vi=(obj.get("quote_vi") or "").strip(),
+                summary_vi=(obj.get("summary_vi") or "").strip(),
+            )
+        )
 
     accept("COMMISSION", data.get("commission"), "type")
     accept("PAYMENT", data.get("payment"), "gateways")
@@ -133,20 +159,50 @@ def parse_and_validate(llm_text: str, pages: list[tuple[str, str]]) -> Extractio
 
     # PACKAGES: verify từng gói
     packages = data.get("packages") or []
-    kept = []
     for pkg in packages:
         if not isinstance(pkg, dict) or pkg.get("price_usd") is None:
             continue
-        if _quote_in_sources(pkg.get("quote") or "", pages):
-            kept.append({k: v for k, v in pkg.items() if k != "quote"})
-        else:
+        quote = pkg.get("quote") or ""
+        if not _quote_in_sources(quote, pages):
             result.rejected.append(f"PACKAGES[{pkg.get('name')}]: trích dẫn không khớp — loại")
-    if kept:
-        joined_quote = "; ".join((p.get("name") or "?") for p in kept)
-        result.facts.append(ExtractedFact("PACKAGES", {"packages": kept}, joined_quote, round(base_conf * 0.9, 3)))
+            continue
+        payload = {
+            key: value
+            for key, value in pkg.items()
+            if key not in ("quote", "quote_vi", "summary_vi")
+        }
+        result.facts.append(
+            ExtractedFact(
+                "PACKAGES",
+                {"packages": [payload]},
+                quote.strip(),
+                round(base_conf * 0.9, 3),
+                quote_vi=(pkg.get("quote_vi") or "").strip(),
+                summary_vi=(pkg.get("summary_vi") or "").strip(),
+            )
+        )
 
     # Cờ nghiệp vụ: up-to không được dùng tính payback (rule có sẵn phía appraisal)
     comm = next((f for f in result.facts if f.scope == "COMMISSION"), None)
     if comm and comm.payload.get("rate_is_upper_bound"):
         result.rejected.append("COMMISSION: rate dạng 'up to' — giữ làm tham khảo, KHÔNG dùng payback")
+
+    # Đây là bản tóm tắt, không phải trích dẫn. Quote gốc của từng fact phía trên vẫn
+    # được kiểm chứng độc lập; bản dịch không bao giờ có thể cứu một quote bịa.
+    terms_fact = next((fact for fact in result.facts if fact.scope == "TERMS"), None)
+    ppc_vi = (
+        (data.get("ppc_policy_vi") or "").strip()
+        if terms_fact is not None
+        else PPC_UNDISCLOSED_VI
+    )
+    if ppc_vi:
+        result.facts.append(
+            ExtractedFact(
+                "PPC_POLICY_VI",
+                {"text": ppc_vi},
+                "",
+                round(base_conf * 0.9, 3),
+                summary_vi=ppc_vi,
+            )
+        )
     return result

@@ -73,6 +73,10 @@ def _response() -> str:
                 "brand_bid_restricted": None,
                 "quote": "Paid search ads are not allowed in the affiliate program.",
             },
+            "ppc_policy_vi": (
+                "Không được chạy quảng cáo tìm kiếm; chưa thấy quy định brand bid "
+                "hoặc direct link."
+            ),
             "confidence": 0.95,
         }
     )

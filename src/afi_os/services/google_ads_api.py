@@ -6,7 +6,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 API_VERSION = "v25"
@@ -48,6 +48,18 @@ class GoogleAdsKeywordMetric:
     average_monthly_searches: int
     bid_low: Decimal
     bid_high: Decimal
+
+
+DETAIL_REPORT_NAMES = (
+    "keywords",
+    "search_terms",
+    "devices",
+    "geography",
+    "ages",
+    "genders",
+    "ads",
+    "change_events",
+)
 
 
 def _bounded_json_response(response, *, max_bytes: int = MAX_RESPONSE_BYTES):
@@ -292,6 +304,173 @@ def search_campaign_metrics(
             if metric.metric_date < start_date or metric.metric_date > end_date:
                 raise GoogleAdsApiError("Google Ads trả metric ngoài khoảng ngày yêu cầu")
             output.append(metric)
+    return output
+
+
+def search_google_ads_rows(
+    *,
+    customer_id: str,
+    access_token: str,
+    developer_token: str,
+    query: str,
+    login_customer_id: str | None = None,
+    opener=urllib.request.urlopen,
+    sleeper=time.sleep,
+    max_attempts: int = MAX_ATTEMPTS,
+) -> list[dict]:
+    """Run one bounded GAQL SearchStream query. This helper never calls a mutate method."""
+
+    normalized_customer_id = _customer_id(customer_id)
+    if not isinstance(query, str) or not query.strip() or len(query) > 20000:
+        raise GoogleAdsApiError("Truy vấn Google Ads không hợp lệ")
+    endpoint = f"{API_ROOT}/customers/{normalized_customer_id}/googleAds:searchStream"
+    headers = {
+        "Authorization": f"Bearer {_required_secret(access_token, 'OAuth Access Token')}",
+        "Content-Type": "application/json",
+        "developer-token": _required_secret(developer_token, "Developer Token"),
+    }
+    if login_customer_id:
+        headers["login-customer-id"] = _customer_id(login_customer_id, "Login Customer ID")
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps({"query": query.strip()}, separators=(",", ":")).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    payload = _request_json(
+        request,
+        opener=opener,
+        timeout=60,
+        max_bytes=MAX_RESPONSE_BYTES,
+        failure_message="Không đọc được báo cáo chi tiết từ Google Ads",
+        sleeper=sleeper,
+        max_attempts=max_attempts,
+    )
+    if not isinstance(payload, list):
+        raise GoogleAdsApiError("Google Ads SearchStream không trả JSON array")
+    rows: list[dict] = []
+    for chunk in payload:
+        results = chunk.get("results") if isinstance(chunk, dict) else None
+        if not isinstance(results, list):
+            raise GoogleAdsApiError("Google Ads SearchStream thiếu results")
+        if not all(isinstance(item, dict) for item in results):
+            raise GoogleAdsApiError("Google Ads trả dòng báo cáo không hợp lệ")
+        rows.extend(results)
+    return rows
+
+
+def _campaign_filter(campaign_external_id: str) -> str:
+    value = str(campaign_external_id).strip()
+    if not value.isdigit():
+        raise GoogleAdsApiError("Campaign ID Google Ads không hợp lệ")
+    return value
+
+
+def build_campaign_detail_queries(
+    *,
+    customer_id: str,
+    campaign_external_id: str,
+    start_date: date,
+    end_date: date,
+) -> dict[str, str]:
+    """Build the ticket's eight read-only reports for one campaign."""
+
+    normalized_customer_id = _customer_id(customer_id)
+    campaign_id = _campaign_filter(campaign_external_id)
+    if start_date > end_date or (end_date - start_date).days + 1 > MAX_DATE_RANGE_DAYS:
+        raise GoogleAdsApiError(f"Mỗi lần chỉ đọc tối đa {MAX_DATE_RANGE_DAYS} ngày Google Ads")
+    dates = f"segments.date BETWEEN '{start_date.isoformat()}' AND '{end_date.isoformat()}'"
+    campaign = f"campaign.id = {campaign_id}"
+    since = datetime.combine(max(start_date, end_date - timedelta(days=29)), datetime.min.time())
+    resource = f"customers/{normalized_customer_id}/campaigns/{campaign_id}"
+    return {
+        "keywords": " ".join((
+            "SELECT ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,",
+            "ad_group_criterion.status, metrics.ctr, metrics.average_cpc, metrics.cost_micros,",
+            "metrics.impressions, metrics.clicks, metrics.search_impression_share",
+            "FROM keyword_view WHERE", campaign, "AND", dates,
+            "ORDER BY metrics.clicks DESC",
+        )),
+        "search_terms": " ".join((
+            "SELECT search_term_view.search_term, search_term_view.status, metrics.cost_micros,",
+            "metrics.impressions, metrics.clicks, metrics.conversions",
+            "FROM search_term_view WHERE", campaign, "AND", dates,
+            "ORDER BY metrics.clicks DESC",
+        )),
+        "devices": " ".join((
+            "SELECT segments.device, metrics.ctr, metrics.cost_micros, metrics.impressions,",
+            "metrics.clicks, metrics.conversions FROM campaign WHERE", campaign, "AND", dates,
+            "ORDER BY metrics.clicks DESC",
+        )),
+        "geography": " ".join((
+            "SELECT geographic_view.country_criterion_id, geographic_view.location_type,",
+            "metrics.ctr, metrics.cost_micros, metrics.impressions, metrics.clicks,",
+            "metrics.conversions FROM geographic_view WHERE", campaign, "AND", dates,
+            "ORDER BY metrics.clicks DESC",
+        )),
+        "ages": " ".join((
+            "SELECT ad_group_criterion.age_range.type, metrics.ctr, metrics.cost_micros,",
+            "metrics.impressions, metrics.clicks, metrics.conversions FROM age_range_view",
+            "WHERE", campaign, "AND", dates, "ORDER BY metrics.clicks DESC",
+        )),
+        "genders": " ".join((
+            "SELECT ad_group_criterion.gender.type, metrics.ctr, metrics.cost_micros,",
+            "metrics.impressions, metrics.clicks, metrics.conversions FROM gender_view",
+            "WHERE", campaign, "AND", dates, "ORDER BY metrics.clicks DESC",
+        )),
+        "ads": " ".join((
+            "SELECT ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.ad.type,",
+            "ad_group_ad.ad.responsive_search_ad.headlines,",
+            "ad_group_ad.ad.responsive_search_ad.descriptions, metrics.ctr,",
+            "metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions",
+            "FROM ad_group_ad WHERE", campaign, "AND", dates,
+            "ORDER BY metrics.impressions DESC",
+        )),
+        "change_events": " ".join((
+            "SELECT change_event.resource_name, change_event.change_date_time,",
+            "change_event.change_resource_type, change_event.changed_fields,",
+            "change_event.old_resource, change_event.new_resource FROM change_event",
+            f"WHERE change_event.change_date_time >= '{since:%Y-%m-%d %H:%M:%S}'",
+            f"AND change_event.campaign = '{resource}'",
+            "ORDER BY change_event.change_date_time DESC LIMIT 1000",
+        )),
+    }
+
+
+def search_campaign_detail_reports(
+    *,
+    customer_id: str,
+    campaign_external_id: str,
+    access_token: str,
+    developer_token: str,
+    start_date: date,
+    end_date: date,
+    login_customer_id: str | None = None,
+    row_searcher=search_google_ads_rows,
+) -> dict[str, list]:
+    """Fetch every diagnostic report; one unavailable view must not erase the others."""
+
+    queries = build_campaign_detail_queries(
+        customer_id=customer_id,
+        campaign_external_id=campaign_external_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    output: dict[str, list] = {}
+    errors: list[dict[str, str]] = []
+    for name, query in queries.items():
+        try:
+            output[name] = row_searcher(
+                customer_id=customer_id,
+                access_token=access_token,
+                developer_token=developer_token,
+                query=query,
+                login_customer_id=login_customer_id,
+            )
+        except GoogleAdsApiError as exc:
+            output[name] = []
+            errors.append({"report": name, "message": str(exc), "category": exc.category})
+    output["_errors"] = errors
     return output
 
 

@@ -1,5 +1,17 @@
 # TASKBOARD
 
+## 0.2.108 — Camp Doctor + Việt hóa
+
+- [x] Add deterministic diagnoses and persistent diagnosis/change-event history.
+- [x] Add all requested Google Ads detail reports without any write/mutate call.
+- [x] Show Page 3 campaign list, benchmark, ordered actions and detail tables.
+- [x] Keep real ref missing as null and protect new/low-data campaigns from early cuts.
+- [x] Add Vietnamese fields in a rollback-safe migration with old data preserved.
+- [x] Translate inside the same Claude call and verify only the original quote.
+- [x] Force the exact missing-PPC warning and keep PPC summary proposal-only.
+- [x] Show Vietnamese first plus “Xem bản gốc”; preserve Step 2 English ad assets.
+- [x] Add regression, migration, package, updater and rollback verification.
+
 ## 0.2.107 — Claude Terms extraction
 
 - [x] Store the Anthropic key only in macOS Keychain.

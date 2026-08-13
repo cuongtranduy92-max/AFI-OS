@@ -189,6 +189,8 @@ class TermsEvidence(TimestampMixin, Base):
     source_url: Mapped[str] = mapped_column(String(1000))
     source_type: Mapped[str] = mapped_column(String(80), default="TERMS_PAGE")
     excerpt: Mapped[str] = mapped_column(Text)
+    summary_vi: Mapped[str | None] = mapped_column(Text)
+    quote_vi: Mapped[str | None] = mapped_column(Text)
     evidence_hash: Mapped[str] = mapped_column(String(64), unique=True)
     checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -229,6 +231,8 @@ class CommissionFact(TimestampMixin, Base):
         Enum(SourceAuthority, native_enum=False), default=SourceAuthority.UNKNOWN
     )
     excerpt: Mapped[str] = mapped_column(Text)
+    summary_vi: Mapped[str | None] = mapped_column(Text)
+    quote_vi: Mapped[str | None] = mapped_column(Text)
     checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     commission_type: Mapped[CommissionType] = mapped_column(
@@ -307,6 +311,8 @@ class CommercialProposal(TimestampMixin, Base):
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     source_url: Mapped[str] = mapped_column(String(1000))
     excerpt: Mapped[str] = mapped_column(Text)
+    summary_vi: Mapped[str | None] = mapped_column(Text)
+    quote_vi: Mapped[str | None] = mapped_column(Text)
     source_authority: Mapped[SourceAuthority] = mapped_column(
         Enum(SourceAuthority, native_enum=False), default=SourceAuthority.UNKNOWN
     )
@@ -736,6 +742,12 @@ class Campaign(TimestampMixin, Base):
     daily_stats: Mapped[list[CampaignDailyStat]] = relationship(
         back_populates="campaign", cascade="all, delete-orphan"
     )
+    diagnoses: Mapped[list[CampDiagnosis]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan"
+    )
+    change_events: Mapped[list[CampaignChangeEvent]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("ads_account_id", "external_id", name="uq_campaign_account_external"),
@@ -786,6 +798,40 @@ class CampaignDailyStat(TimestampMixin, Base):
             "campaign_id", "metric_date", "source", name="uq_campaign_daily_stats_source"
         ),
     )
+
+
+class CampDiagnosis(TimestampMixin, Base):
+    """Immutable Camp Doctor history; payload keeps the evidence shown to the operator."""
+
+    __tablename__ = "camp_diagnoses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(
+        ForeignKey("campaigns.id", ondelete="CASCADE"), index=True
+    )
+    run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+    campaign: Mapped[Campaign] = relationship(back_populates="diagnoses")
+
+
+class CampaignChangeEvent(TimestampMixin, Base):
+    """Read-only Google Ads change history normalized for the 20%/24h rule."""
+
+    __tablename__ = "change_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(
+        ForeignKey("campaigns.id", ondelete="CASCADE"), index=True
+    )
+    external_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    field_name: Mapped[str] = mapped_column(String(120), index=True)
+    old_value: Mapped[str | None] = mapped_column(Text)
+    new_value: Mapped[str | None] = mapped_column(Text)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+    campaign: Mapped[Campaign] = relationship(back_populates="change_events")
 
 
 class Click(TimestampMixin, Base):

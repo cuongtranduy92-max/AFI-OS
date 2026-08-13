@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Update 0.2.108 — Camp Doctor và điều khoản tiếng Việt
+
+1. Chạy `UPDATE-AFI-OS-0.2.108.command` một lần.
+2. Nếu Claude đã kết nối ở bản 0.2.107, không cần nhập lại API key.
+3. Vào **Tìm dự án**, chạy kiểm tra tự động rồi đọc tóm tắt tiếng Việt; dùng
+   **Xem bản gốc** để đối chiếu câu nguồn trước khi chấp nhận.
+4. Vào **Bước 3 · Chẩn đoán campaign**, mở từng campaign để xem benchmark,
+   việc cần làm, cảnh báo 20% và các bảng chi tiết Google Ads.
+5. `$ / ref` chỉ hiện khi dữ liệu ref NET/dashboard nối đúng campaign; thiếu thì
+   hiện “Chưa có dữ liệu ref”, không giả bằng 0.
+
+Tóm tắt PPC không tự mở quyền. Camp Doctor và mọi truy vấn Google Ads đều chỉ đọc.
+Rollback bằng `ROLLBACK-AFI-OS-0.2.108.command`.
+
 ## Update 0.2.107 — Claude đọc Terms/Pricing/Commission
 
 1. Chạy `UPDATE-AFI-OS-0.2.107.command` một lần.

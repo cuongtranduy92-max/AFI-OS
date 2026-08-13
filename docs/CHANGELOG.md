@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.2.108 — Camp Doctor and Vietnamese Terms summaries
+
+- Add deterministic Camp Doctor diagnoses for CTR, real cost/ref, learning periods,
+  keyword/search-term waste and the 20%/24-hour change rule.
+- Extend Google Ads read-only reporting with keyword, search term, device, geography,
+  demographic, ad and change-event views; no mutate/write operation is introduced.
+- Store diagnosis/change history and expose campaign list/detail APIs plus Page 3 UI.
+- Add Vietnamese summary/quote fields to Terms, commission and commercial proposals;
+  translations are returned inside the existing single Claude call.
+- Keep anti-fabrication verification on original quotes and force the exact support
+  warning when source pages do not disclose PPC policy.
+- Present Vietnamese first with “Xem bản gốc”, localize visible states/enums, and keep
+  all Step 2 ad assets in English.
+
 ## 0.2.107 — Claude Terms extraction with human review
 
 - Add Keychain-only Anthropic setup and a content-addressed Claude extraction cache.

@@ -336,7 +336,7 @@ def test_terms_ui_exposes_evidence_pack_download_for_selected_program() -> None:
     script = client.get("/app.js")
     assert page.status_code == 200
     assert 'id="exportEvidencePack"' in page.text
-    assert "Xuất evidence pack" in page.text
+    assert "Xuất gói bằng chứng" in page.text
     assert "/evidence-pack`" in script.text
     assert 'link.download = ""' in script.text
     assert 'data-evidence-pack-program="${esc(item.program_id)}"' in script.text
