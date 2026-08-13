@@ -11,7 +11,7 @@ from afi_os.enums import (
     DataQuality,
     EvidenceReviewStatus,
 )
-from afi_os.models import CommissionFact, MetricSnapshot, Project
+from afi_os.models import CommercialProposal, CommissionFact, MetricSnapshot, Project
 from afi_os.schemas import (
     ProjectCheckCollectionNeed,
     ProjectCheckCommission,
@@ -51,9 +51,11 @@ FIELD_LABELS = {
     "payout_methods": "Cổng rút hoa hồng",
     "minimum_payout": "Mức rút tối thiểu",
     "payout_timing_days": "Thời gian thanh toán",
+    "cookie_days": "Thời hạn cookie",
     "independent_advertisers": "Nhà quảng cáo độc lập",
     "active_advertisers_30d": "Nhà quảng cáo hoạt động 30 ngày",
     "accepted_commission_rate": "Hoa hồng đã xác minh",
+    "accepted_commission_flat": "Hoa hồng cố định đã xác minh",
     "accepted_commission_type": "Loại hoa hồng đã xác minh",
     "average_package_price": "Giá gói trung bình",
     "clicks_per_buyer": "Click trung bình cho một người mua",
@@ -79,9 +81,11 @@ SNAPSHOT_ALIASES = {
     "top_traffic_countries": ("top_traffic_countries",),
     "affiliate_ref_url": ("affiliate_ref_url",),
     "affiliate_contact_channel": ("affiliate_contact_channel",),
+    "affiliate_network": ("affiliate_network",),
     "payout_methods": ("payout_methods",),
     "minimum_payout": ("minimum_payout",),
     "payout_timing_days": ("payout_timing_days",),
+    "cookie_days": ("cookie_days",),
     "financial_license": ("financial_license",),
     "average_package_price": ("average_package_price",),
 }
@@ -214,7 +218,7 @@ def _accepted_commission(facts: list[CommissionFact]) -> CommissionFact | None:
         for fact in facts
         if fact.review_status == EvidenceReviewStatus.ACCEPTED
         and fact.confidence >= 0.8
-        and fact.commission_rate is not None
+        and (fact.commission_rate is not None or fact.commission_flat is not None)
         and not fact.rate_is_maximum
     ]
     return max(
@@ -239,7 +243,7 @@ def _offer_average(project: Project) -> ProjectCheckValue | None:
     ) / Decimal(len(priced))
     sources = {offer.source_url for offer in priced if offer.source_url}
     source_url = next(iter(sources)) if len(sources) == 1 else None
-    complete = len(priced) >= 3 and all(offer.source_url for offer in priced)
+    complete = all(offer.source_url for offer in priced)
     return _value(
         "average_package_price",
         float(average),
@@ -250,7 +254,10 @@ def _offer_average(project: Project) -> ProjectCheckValue | None:
         observed_at=max(offer.updated_at for offer in priced),
         confidence=0.9 if complete else 0.7,
         collection_state="AVAILABLE" if complete else "PARTIAL",
-        note="Công thức lấy giá trung bình các gói, không giả định một khách mua ba gói.",
+        note=(
+            "Công thức lấy giá trung bình tất cả gói giá đã được xác nhận, "
+            "không giả định một khách mua ba gói."
+        ),
     )
 
 
@@ -322,7 +329,9 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     }
 
     for key in SNAPSHOT_ALIASES:
-        fields[key] = _snapshot_field(key, latest)
+        snapshot = _snapshot_field(key, latest)
+        if key not in fields or snapshot.value is not None:
+            fields[key] = snapshot
 
     if fields["primary_keyword"].value is None:
         keyword = project.brand_name or project.domain.split(".", 1)[0]
@@ -363,6 +372,9 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
 
     evidence = list(program.terms_evidence) if program else []
     facts = list(program.commission_facts) if program else []
+    commercial_proposals: list[CommercialProposal] = (
+        list(program.commercial_proposals) if program else []
+    )
     permissions = {
         scope: resolved_permission_for_scope(evidence, scope)
         for scope in (
@@ -377,14 +389,31 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     commission_state = commission_resolution_status(facts)
     accepted = _accepted_commission(facts)
     if accepted is not None:
-        fields["accepted_commission_rate"] = _value(
-            "accepted_commission_rate",
-            float(accepted.commission_rate * 100),
-            unit="%",
-            source_name="Commission Fact đã chấp nhận",
-            source_url=accepted.source_url,
-            observed_at=accepted.checked_at,
-            confidence=accepted.confidence,
+        fields["accepted_commission_rate"] = (
+            _value(
+                "accepted_commission_rate",
+                float(accepted.commission_rate * 100),
+                unit="%",
+                source_name="Commission Fact đã chấp nhận",
+                source_url=accepted.source_url,
+                observed_at=accepted.checked_at,
+                confidence=accepted.confidence,
+            )
+            if accepted.commission_rate is not None
+            else _missing("accepted_commission_rate", "Fact đã xác nhận dùng mức cố định.")
+        )
+        fields["accepted_commission_flat"] = (
+            _value(
+                "accepted_commission_flat",
+                float(accepted.commission_flat),
+                unit="USD",
+                source_name="Commission Fact đã chấp nhận",
+                source_url=accepted.source_url,
+                observed_at=accepted.checked_at,
+                confidence=accepted.confidence,
+            )
+            if accepted.commission_flat is not None
+            else _missing("accepted_commission_flat", "Fact đã xác nhận dùng tỷ lệ phần trăm.")
         )
         fields["accepted_commission_type"] = _value(
             "accepted_commission_type",
@@ -398,6 +427,10 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
         fields["accepted_commission_rate"] = _missing(
             "accepted_commission_rate",
             "Chỉ dùng fact ACCEPTED, confidence ≥80%, không phải mức 'up to' và không có conflict.",
+        )
+        fields["accepted_commission_flat"] = _missing(
+            "accepted_commission_flat",
+            "Chưa có mức hoa hồng cố định được xác nhận và đủ điều kiện.",
         )
         fields["accepted_commission_type"] = _missing(
             "accepted_commission_type",
@@ -416,22 +449,34 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
 
     avg_price = _number(fields["average_package_price"])
     rate_percent = _number(fields["accepted_commission_rate"])
+    commission_flat = _number(fields["accepted_commission_flat"])
     low_bid = _number(fields["primary_keyword_bid_low"])
     high_bid = _number(fields["primary_keyword_bid_high"])
     estimated_commission: Decimal | None = None
-    if avg_price is not None and rate_percent is not None:
+    if commission_flat is not None:
+        estimated_commission = commission_flat
+    elif avg_price is not None and rate_percent is not None:
         estimated_commission = avg_price * rate_percent / Decimal("100")
+    if estimated_commission is not None:
         fields["estimated_commission_per_buyer"] = _value(
             "estimated_commission_per_buyer",
             float(estimated_commission),
-            unit=fields["average_package_price"].unit,
+            unit="USD" if commission_flat is not None else fields["average_package_price"].unit,
             quality=DataQuality.MODELED,
             source_name="Công thức AFI hoàn vốn v1",
-            confidence=min(
-                fields["average_package_price"].confidence,
-                fields["accepted_commission_rate"].confidence,
+            confidence=(
+                fields["accepted_commission_flat"].confidence
+                if commission_flat is not None
+                else min(
+                    fields["average_package_price"].confidence,
+                    fields["accepted_commission_rate"].confidence,
+                )
             ),
-            note="Giá gói trung bình × % hoa hồng đã xác minh.",
+            note=(
+                "Mức hoa hồng cố định đã xác minh."
+                if commission_flat is not None
+                else "Giá gói trung bình × % hoa hồng đã xác minh."
+            ),
         )
     else:
         fields["estimated_commission_per_buyer"] = _missing(
@@ -439,7 +484,11 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
             "Thiếu giá gói trung bình hoặc commission đã xác minh.",
         )
 
-    price_currency = (fields["average_package_price"].unit or "").upper()[:3]
+    price_currency = (
+        "USD"
+        if commission_flat is not None
+        else (fields["average_package_price"].unit or "").upper()[:3]
+    )
 
     def _scenario_bid(
         bid: Decimal | None,
@@ -486,10 +535,14 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
             unit="ngày",
             quality=DataQuality.MODELED,
             source_name="Công thức AFI hoàn vốn v1",
-            confidence=min(
-                fields["average_package_price"].confidence,
-                fields["accepted_commission_rate"].confidence,
-                bid_field.confidence,
+            confidence=(
+                min(fields["accepted_commission_flat"].confidence, bid_field.confidence)
+                if commission_flat is not None
+                else min(
+                    fields["average_package_price"].confidence,
+                    fields["accepted_commission_rate"].confidence,
+                    bid_field.confidence,
+                )
             ),
             note=(
                 "30 × 150 × (hệ số×bid ÷ 26.000) ÷ "
@@ -574,7 +627,6 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
         "primary_keyword_bid_low",
         "primary_keyword_bid_high",
         "average_package_price",
-        "accepted_commission_rate",
         "estimated_payback_days_high_bid",
         "independent_advertisers",
     ]
@@ -589,6 +641,11 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
         )
 
     blocking_fields = [FIELD_LABELS[key] for key in core_fields if not field_is_decision_ready(key)]
+    commission_ready = field_is_decision_ready(
+        "accepted_commission_rate"
+    ) or field_is_decision_ready("accepted_commission_flat")
+    if not commission_ready:
+        blocking_fields.append(FIELD_LABELS["accepted_commission_rate"])
     decision_ready = not blocking_fields
 
     missing_by_group: dict[str, list[str]] = defaultdict(list)
@@ -616,9 +673,10 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     ):
         if fields[key].value is None:
             missing_by_group["Affiliate account"].append(FIELD_LABELS[key])
-    for key in ("average_package_price", "accepted_commission_rate"):
-        if not field_is_decision_ready(key):
-            missing_by_group["Economics"].append(FIELD_LABELS[key])
+    if not field_is_decision_ready("average_package_price"):
+        missing_by_group["Economics"].append(FIELD_LABELS["average_package_price"])
+    if not commission_ready:
+        missing_by_group["Economics"].append(FIELD_LABELS["accepted_commission_rate"])
     if not field_is_decision_ready("independent_advertisers"):
         missing_by_group["Quảng cáo thị trường"].append(FIELD_LABELS["independent_advertisers"])
     if fields["category"].value is None or fields["financial_license"].value is None:
@@ -659,6 +717,7 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     readiness = "READY_FOR_STEP_2" if decision_ready else "DATA_INCOMPLETE"
     return ProjectStepOneResponse(
         project_id=project.id,
+        program_id=program.id if program else None,
         project_name=project.brand_name,
         domain=project.domain,
         stage=project.stage,
@@ -688,6 +747,8 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
                 commission_fact_id=item.id,
                 commission_type=item.commission_type,
                 commission_rate=item.commission_rate,
+                commission_flat=item.commission_flat,
+                recurring_months=item.recurring_months,
                 rate_is_maximum=item.rate_is_maximum,
                 applies_to=item.applies_to,
                 review_status=item.review_status,
@@ -701,6 +762,11 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
                 facts, key=lambda entry: (_aware(entry.checked_at), entry.id), reverse=True
             )
         ],
+        commercial_proposals=sorted(
+            commercial_proposals,
+            key=lambda entry: (_aware(entry.created_at), entry.id),
+            reverse=True,
+        ),
         criteria=criteria,
         passed_criteria=passed,
         known_criteria=known,

@@ -535,21 +535,54 @@ function projectCheckSection(title, subtitle, fields) {
   return `<section class="step-one-section"><div class="step-one-section-head"><div><h3>${esc(title)}</h3><p>${esc(subtitle)}</p></div></div><div class="step-one-field-grid">${fields.map(projectCheckFieldCard).join("")}</div></section>`;
 }
 
+function proposalReviewActions(type, item, check) {
+  if (item.review_status !== "PROPOSED") return "";
+  const attributes = type === "commercial"
+    ? `data-step-commercial-id="${item.id}" data-project-id="${check.project_id}"`
+    : type === "commission"
+    ? `data-step-commission-id="${item.commission_fact_id}" data-project-id="${check.project_id}" data-program-id="${check.program_id}"`
+    : `data-step-evidence-id="${item.evidence_id}" data-project-id="${check.project_id}" data-program-id="${check.program_id}"`;
+  return `<div class="review-actions proposal-actions"><button type="button" class="button primary" ${attributes} data-action="ACCEPT">✓ Chấp nhận</button><button type="button" class="button secondary" ${attributes} data-action="REJECT">✗ Bỏ</button></div>`;
+}
+
+function commercialProposalValue(item) {
+  if (item.scope === "PACKAGES") {
+    return (item.payload_json.packages || []).map((pkg) => `${pkg.name}: $${Number(pkg.price_usd).toLocaleString("vi-VN")}/${pkg.period || "kỳ"}`).join(" · ") || "Chưa có gói hợp lệ";
+  }
+  const payload = item.payload_json || {};
+  return [
+    (payload.gateways || []).join(", "),
+    payload.min_payment_usd == null ? null : `min $${payload.min_payment_usd}`,
+    payload.clear_days == null ? null : `${payload.clear_days} ngày thanh toán`,
+    payload.cookie_days == null ? null : `cookie ${payload.cookie_days} ngày`,
+    payload.net_platform || null,
+  ].filter(Boolean).join(" · ") || "Chưa có giá trị hợp lệ";
+}
+
 function projectStepOneHtml(check) {
   const f = check.fields;
   const identityKeys = ["project_name", "category", "website_url", "website_traffic_monthly", "google_search_traffic_monthly", "top_traffic_countries", "financial_license"];
-  const affiliateKeys = ["affiliate_signup_url", "affiliate_login_url", "affiliate_ref_url", "affiliate_contact_channel", "affiliate_network", "payout_methods", "minimum_payout", "payout_timing_days"];
+  const affiliateKeys = ["affiliate_signup_url", "affiliate_login_url", "affiliate_ref_url", "affiliate_contact_channel", "affiliate_network", "payout_methods", "minimum_payout", "payout_timing_days", "cookie_days"];
   const marketKeys = ["independent_advertisers", "active_advertisers_30d", "primary_keyword", "primary_keyword_search_volume", "primary_keyword_bid_low", "primary_keyword_bid_high"];
-  const economicsKeys = ["average_package_price", "accepted_commission_rate", "accepted_commission_type", "clicks_per_buyer", "estimated_commission_per_buyer", "estimated_payback_days_low_bid", "estimated_payback_days_high_bid"];
+  const economicsKeys = ["average_package_price", "accepted_commission_rate", "accepted_commission_flat", "accepted_commission_type", "clicks_per_buyer", "estimated_commission_per_buyer", "estimated_payback_days_low_bid", "estimated_payback_days_high_bid"];
   const permissionCards = Object.entries(check.permissions).map(([scope, value]) =>
     `<div class="permission-card ${["PROHIBITED", "CONFLICT"].includes(value) ? "danger" : value === "NOT_CHECKED" ? "pending" : ""}"><span>${esc(scope)}</span><strong>${esc(permissionLabels[value] || value)}</strong></div>`
   ).join("");
   const evidence = check.terms_evidence.length
-    ? check.terms_evidence.map((item) => `<article class="evidence-card"><div><span>${esc(item.scope)} · ${esc(item.review_status)}</span><strong>${esc(permissionLabels[item.decision] || item.decision)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small></article>`).join("")
+    ? check.terms_evidence.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.scope)} · ${esc(item.review_status)}</span><strong>${esc(permissionLabels[item.decision] || item.decision)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("evidence", item, check)}</article>`).join("")
     : '<div class="step-one-empty">Chưa có bằng chứng điều khoản PPC công khai. Trạng thái giữ NOT_CHECKED và chỉ cảnh báo.</div>';
   const commissions = check.commission_facts.length
-    ? check.commission_facts.map((item) => `<article class="evidence-card"><div><span>${esc(item.review_status)}${item.rate_is_maximum ? " · UP TO" : ""}</span><strong>${item.commission_rate == null ? "Chưa rõ tỷ lệ" : `${(Number(item.commission_rate) * 100).toLocaleString("vi-VN")}%`} · ${esc(item.commission_type)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small></article>`).join("")
+    ? check.commission_facts.map((item) => {
+      const value = item.commission_rate != null
+        ? `${(Number(item.commission_rate) * 100).toLocaleString("vi-VN")}%`
+        : item.commission_flat != null ? `$${Number(item.commission_flat).toLocaleString("vi-VN")}` : "Chưa rõ mức";
+      const cadence = item.recurring_months ? `${item.commission_type} · ${item.recurring_months} tháng` : item.commission_type;
+      return `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.review_status)}${item.rate_is_maximum ? " · UP TO · KHÔNG TÍNH PAYBACK" : ""}</span><strong>${esc(value)} · ${esc(cadence)}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${new Date(item.checked_at).toLocaleDateString("vi-VN")} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commission", item, check)}</article>`;
+    }).join("")
     : '<div class="step-one-empty">Chưa có commission fact có nguồn. Hệ thống không tính hoàn vốn.</div>';
+  const commercial = check.commercial_proposals?.length
+    ? check.commercial_proposals.map((item) => `<article class="evidence-card${item.review_status === "PROPOSED" ? " proposal-card" : ""}"><div><span>${esc(item.scope)} · ${esc(item.review_status)}</span><strong>${esc(commercialProposalValue(item))}</strong></div><p>${esc(item.excerpt)}</p><small>${safeExternalHostLink(item.source_url)} · ${Math.round(Number(item.confidence) * 100)}%</small>${proposalReviewActions("commercial", item, check)}</article>`).join("")
+    : '<div class="step-one-empty">Chưa có đề xuất gói giá hoặc thanh toán từ Claude.</div>';
   const criteria = check.criteria.map((item) => `<article class="criterion-card criterion-${item.status.toLowerCase()}"><span>${esc(item.label)}</span><strong>${esc(item.status)}</strong><b>${esc(item.value ?? "Chưa có số")}</b><small>Ngưỡng: ${esc(item.threshold)} · ${esc(item.explanation)}</small></article>`).join("");
   const needs = check.collection_needs.length
     ? check.collection_needs.map((item) => `<article class="collection-need"><div><strong>${esc(item.group)}</strong><span>${esc(item.status)}</span></div><p>Thiếu: ${item.fields.map(esc).join(" · ")}</p><b>Cần: ${esc(item.source_required)}</b></article>`).join("")
@@ -561,13 +594,14 @@ function projectStepOneHtml(check) {
     </div>
     <section class="step-one-section auto-check-section"><div class="step-one-section-head"><div><h3>Thu thập tự động từ domain</h3><p>Anh chỉ nhập tên website. AFI-OS tự gọi các nguồn đã kết nối, lưu số liệu kèm nguồn và nói rõ kết nối còn thiếu.</p></div><span class="badge">MỘT Ô DOMAIN</span></div>
       <div id="projectAutoCheckSources" class="auto-check-sources"><div class="step-one-empty">Bấm “Kiểm tra lại tự động” để làm mới toàn bộ nguồn của ${esc(check.domain)}.</div></div>
-      <div class="form-actions"><button type="button" class="button primary" data-project-auto-check="${check.project_id}" data-domain="${esc(check.domain)}">Kiểm tra lại tự động</button><span id="projectAutoCheckMessage" class="form-message">Không cần nhập traffic, ngày hay URL nguồn.</span></div>
+      <div class="form-actions"><button type="button" class="button primary" data-project-auto-check="${check.project_id}" data-domain="${esc(check.domain)}">Kiểm tra lại tự động</button><button type="button" class="button secondary" data-project-extract-terms="${check.project_id}">Trích Terms bằng Claude</button><span id="projectAutoCheckMessage" class="form-message">Không cần nhập traffic, ngày hay URL nguồn.</span></div>
     </section>
     ${projectCheckSection("Hồ sơ & thị trường", "Thông tin dự án, traffic và yêu cầu pháp lý.", identityKeys.map((key) => f[key]))}
     ${projectCheckSection("Affiliate & thanh toán", "Link đăng ký/đăng nhập/ref cùng cách và thời gian nhận tiền.", affiliateKeys.map((key) => f[key]))}
     ${projectCheckSection("Nhà quảng cáo, từ khóa & CPC", "Sức cầu và cạnh tranh quốc tế bằng tiếng Anh.", marketKeys.map((key) => f[key]))}
     <section class="step-one-section"><div class="step-one-section-head"><div><h3>Điều khoản PPC</h3><p>Cảnh báo đi cùng dự án nhưng không tự loại hoặc dừng campaign.</p></div><span class="gate gate-pending">${esc(termsGateLabels[check.terms_gate_status] || check.terms_gate_status)}</span></div><div class="permission-grid">${permissionCards}</div><div class="evidence-list">${evidence}</div></section>
     <section class="step-one-section"><div class="step-one-section-head"><div><h3>Commission đã xác minh</h3><p>Tách khỏi quyền PPC. Proposal, “up to” và nguồn mâu thuẫn không được dùng làm sự thật để tính tiền.</p></div><span class="gate ${check.commission_state === "RESOLVED" ? "gate-ready" : "gate-blocked"}">${esc(check.commission_state)}</span></div><div class="evidence-list">${commissions}</div></section>
+    <section class="step-one-section"><div class="step-one-section-head"><div><h3>Gói giá & thanh toán do Claude đề xuất</h3><p>Chữ mờ là proposal. Bấm ✓ sau khi đọc đúng trích dẫn; lúc đó dữ liệu mới vào công thức.</p></div><span class="badge">HUMAN REVIEW</span></div><div class="evidence-list">${commercial}</div><span id="proposalReviewMessage" class="form-message"></span></section>
     ${projectCheckSection("Hoàn vốn ước tính", "30 × (150 click × bid) ÷ (giá gói trung bình × % hoa hồng đã xác minh).", economicsKeys.map((key) => f[key]))}
     <section class="step-one-section"><div class="step-one-section-head"><div><h3>Bảng chấm điểm</h3><p>Điểm giúp quyết định; cảnh báo Terms không xóa dự án.</p></div></div><div class="criteria-grid">${criteria}</div></section>
     <section class="step-one-section api-needs"><div class="step-one-section-head"><div><h3>Nguồn/API cần triển khai</h3><p>Danh sách hành động cụ thể để lần check sau không còn dữ liệu rỗng.</p></div></div><div class="collection-needs">${needs}</div></section>
@@ -708,6 +742,55 @@ async function runProjectAutoCheck(button) {
     message.textContent = `Không thể kiểm tra tự động: ${error.message}`;
     button.disabled = false;
     button.textContent = original;
+  }
+}
+
+async function extractProjectTerms(button) {
+  const projectId = button.dataset.projectExtractTerms;
+  const message = document.getElementById("projectAutoCheckMessage");
+  button.disabled = true;
+  if (message) message.textContent = "Đang đọc trang Terms/Pricing và trích dẫn bằng Claude…";
+  try {
+    const result = await request(`/projects/${projectId}/extract-terms`, {method: "POST"});
+    await openProjectDetail(projectId);
+    const current = document.getElementById("projectAutoCheckMessage");
+    if (current) current.textContent = `${result.cached ? "Đã dùng cache" : "Đã trích xuất"}: ${result.commission_facts.length} commission · ${result.terms_evidence.length} terms · ${result.commercial_proposals.length} gói/thanh toán. Hãy đọc nguồn rồi bấm ✓.`;
+  } catch (error) {
+    button.disabled = false;
+    if (message) message.textContent = `Chưa trích được: ${error.message}`;
+  }
+}
+
+async function reviewStepOneProposal(button) {
+  const action = button.dataset.action;
+  const projectId = button.dataset.projectId;
+  const programId = button.dataset.programId;
+  const message = document.getElementById("proposalReviewMessage") || document.getElementById("projectAutoCheckMessage");
+  if (action === "ACCEPT" && !window.confirm("Chỉ bấm Chấp nhận khi trích dẫn và link nguồn đúng. Tiếp tục?")) return;
+  button.disabled = true;
+  if (message) message.textContent = action === "ACCEPT" ? "Đang xác nhận dữ kiện…" : "Đang bỏ đề xuất…";
+  let path;
+  if (button.dataset.stepCommercialId) {
+    path = `/projects/${projectId}/commercial-proposals/${button.dataset.stepCommercialId}/review`;
+  } else if (button.dataset.stepCommissionId) {
+    path = `/programs/${programId}/commission-facts/${button.dataset.stepCommissionId}/review`;
+  } else {
+    path = `/programs/${programId}/evidence/${button.dataset.stepEvidenceId}/review`;
+  }
+  try {
+    await request(path, {
+      method: "POST",
+      body: JSON.stringify({action, reviewed_by: "Tran"}),
+    });
+    await Promise.all([loadPortfolio(), loadPrograms(), loadOperations()]);
+    await openProjectDetail(projectId);
+    const current = document.getElementById("proposalReviewMessage") || document.getElementById("projectAutoCheckMessage");
+    if (current) current.textContent = action === "ACCEPT"
+      ? "Đã xác nhận và tính lại Bước 1. PPC/campaign không bị tự thay đổi ngoài đúng evidence anh vừa duyệt."
+      : "Đã loại đề xuất; dữ liệu này không được dùng tính hoàn vốn.";
+  } catch (error) {
+    button.disabled = false;
+    if (message) message.textContent = `Không xử lý được: ${error.message}`;
   }
 }
 
@@ -2629,6 +2712,16 @@ document.getElementById("campPlanStepThree").addEventListener("click", (event) =
   if (button) switchView(button.dataset.switchView);
 });
 document.getElementById("truthDrawerBody").addEventListener("click", (event) => {
+  const proposalButton = event.target.closest("button[data-step-commercial-id], button[data-step-commission-id], button[data-step-evidence-id]");
+  if (proposalButton) {
+    reviewStepOneProposal(proposalButton);
+    return;
+  }
+  const extractTermsButton = event.target.closest("button[data-project-extract-terms]");
+  if (extractTermsButton) {
+    extractProjectTerms(extractTermsButton);
+    return;
+  }
   const decisionButton = event.target.closest("button[data-step-one-decision]");
   if (decisionButton) {
     saveProjectStepOneDecision(decisionButton);

@@ -283,6 +283,10 @@ tr:last-child td { border-bottom: 0; }
 .evidence-card a { color: var(--accent); }
 .step-one-empty, .step-one-complete { padding: 12px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 10px; }
 .step-one-complete { border-style: solid; border-color: #bce3d6; background: var(--accent-soft); color: var(--accent); }
+.proposal-card { border-style: dashed; background: #fbfaf6; color: #64706b; }
+.proposal-card > div > strong, .proposal-card > p { opacity: .78; }
+.proposal-actions { margin-top: 9px; }
+.proposal-actions .button { min-height: 30px; padding: 6px 9px; font-size: 9px; }
 .auto-check-sources { display: grid; gap: 8px; margin-bottom: 10px; }
 .auto-check-source { display: grid; gap: 5px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #f8fcfa; }
 .auto-check-source > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

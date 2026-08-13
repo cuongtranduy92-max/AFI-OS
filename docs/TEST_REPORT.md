@@ -1,4 +1,34 @@
-# TEST REPORT — AFI-OS 0.2.106
+# TEST REPORT — AFI-OS 0.2.107
+
+## 0.2.107 — Claude Terms extraction
+
+- Full application regression before packaging: 412 passed, 1 skipped
+  (413 tests collected).
+- Focused tests verify quote anti-fabrication, 15,000-character page bounds,
+  upper-bound exclusion, exact Anthropic HTTP/model configuration, Keychain
+  argument secrecy and unchanged-content cache.
+- Human-review tests prove proposal data cannot affect payback or PPC before accept;
+  accepted package/payment/commission data is then reflected in Step 1.
+- SQLite migration round-trip preserves existing merchant/program data and adds
+  content-addressed extraction runs plus package/payment proposal review records.
+- Checksum validation passed for all 39 payload files. A production-data copy
+  update `0.2.106 → 0.2.107` and rollback `0.2.107 → 0.2.106` preserved nine
+  Projects, three Programs, five commission facts and six Terms evidence rows;
+  SQLite integrity stayed `ok` with zero foreign-key errors.
+- Live update completed with rollback point
+  `update-0.2.107-20260813-124701`; API health reports `0.2.107`, runtime is
+  `HEALTHY`, both LaunchAgents are loaded and Google Ads API remains read-only.
+- Live database retains nine Projects, three Programs, five commission facts and
+  six Terms evidence rows on schema `4f7c2a91d5e0`; SQLite integrity is `ok`
+  with zero foreign-key errors. Scheduled maintenance completed `SUCCESS`.
+- Browser QA verified the Claude action, faded proposal presentation, exact
+  source excerpts, accept/reject controls and zero console warnings/errors.
+- Post-install backup `manual-20260813-125225` is `OK` on version `0.2.107`,
+  schema `4f7c2a91d5e0`, SHA-256
+  `8aa5d0be2de7bd97158d7ea5f191cb0462cef7a151461fe2ebb8ed865bd59c6e`.
+- Anthropic readiness is `CONNECTION_REQUIRED` until the operator stores one API
+  key through `SETUP-LLM.command`; no key is stored in the repo, environment or
+  database.
 
 ## 0.2.106 — Tài nguyên
 

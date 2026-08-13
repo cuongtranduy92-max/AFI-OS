@@ -1123,7 +1123,11 @@ def _find_or_create_fixture_program(db: Session, fixture: dict) -> Program:
     )
 
 
-AUTOMATED_EVIDENCE_COLLECTORS = {"AUTOMATED_FIXTURE", "AUTOMATED_WEB"}
+AUTOMATED_EVIDENCE_COLLECTORS = {
+    "AUTOMATED_FIXTURE",
+    "AUTOMATED_WEB",
+    "ANTHROPIC_LLM",
+}
 
 
 def _semantic_evidence_candidate(
@@ -1283,7 +1287,11 @@ def _import_permission_specs(
     return evidence_items, imported, duplicates, refreshed
 
 
-AUTOMATED_FACT_COLLECTORS = {"AUTOMATED_FIXTURE", "AUTOMATED_WEB"}
+AUTOMATED_FACT_COLLECTORS = {
+    "AUTOMATED_FIXTURE",
+    "AUTOMATED_WEB",
+    "ANTHROPIC_LLM",
+}
 RECURRING_COMMISSION_TYPES = {
     CommissionType.RECURRING_UNSPECIFIED,
     CommissionType.RECURRING_LIMITED,
@@ -1325,6 +1333,10 @@ def _semantic_fact_candidate(
             continue
         if fact.commission_rate != spec["commission_rate"]:
             continue
+        if fact.commission_flat != spec.get("commission_flat"):
+            continue
+        if fact.recurring_months != spec.get("recurring_months"):
+            continue
         if fact.rate_is_maximum != spec["rate_is_maximum"]:
             continue
         if not _commission_types_compatible(
@@ -1352,6 +1364,10 @@ def _refresh_automated_fact(
         "commission_rate": (
             str(fact.commission_rate) if fact.commission_rate is not None else None
         ),
+        "commission_flat": (
+            str(fact.commission_flat) if fact.commission_flat is not None else None
+        ),
+        "recurring_months": fact.recurring_months,
         "rate_is_maximum": fact.rate_is_maximum,
         "applies_to": fact.applies_to,
         "collected_by": fact.collected_by,
@@ -1364,6 +1380,8 @@ def _refresh_automated_fact(
     fact.confidence = spec["confidence"]
     fact.commission_type = spec["commission_type"]
     fact.commission_rate = spec["commission_rate"]
+    fact.commission_flat = spec.get("commission_flat")
+    fact.recurring_months = spec.get("recurring_months")
     fact.rate_is_maximum = spec["rate_is_maximum"]
     fact.applies_to = spec["applies_to"]
     fact.collected_by = "AUTOMATED_WEB"
@@ -1391,6 +1409,12 @@ def _refresh_automated_fact(
                         if fact.commission_rate is not None
                         else None
                     ),
+                    "commission_flat": (
+                        str(fact.commission_flat)
+                        if fact.commission_flat is not None
+                        else None
+                    ),
+                    "recurring_months": fact.recurring_months,
                     "rate_is_maximum": fact.rate_is_maximum,
                     "applies_to": fact.applies_to,
                     "collected_by": fact.collected_by,
@@ -1419,6 +1443,8 @@ def _import_commission_specs(
             spec["excerpt"],
             spec["commission_type"].value,
             str(spec["commission_rate"]),
+            str(spec.get("commission_flat")),
+            str(spec.get("recurring_months")),
             spec["applies_to"],
         ]
         source_authority = _spec_source_authority(spec)
@@ -1445,6 +1471,8 @@ def _import_commission_specs(
                     confidence=spec["confidence"],
                     commission_type=spec["commission_type"],
                     commission_rate=spec["commission_rate"],
+                    commission_flat=spec.get("commission_flat"),
+                    recurring_months=spec.get("recurring_months"),
                     rate_is_maximum=spec["rate_is_maximum"],
                     applies_to=spec["applies_to"],
                     review_status=EvidenceReviewStatus.PROPOSED,
@@ -1480,6 +1508,7 @@ def _manual_result(
     source_authorities: dict[str, str] | None = None,
     source_change_status: str = "INITIAL",
     source_changes: list[dict[str, str]] | None = None,
+    pages: list[dict] | None = None,
 ) -> dict:
     checked_at = datetime.now(UTC)
     source_urls = source_urls or []
@@ -1571,6 +1600,7 @@ def _manual_result(
         "source_authorities": source_authorities,
         "source_change_status": source_change_status,
         "source_changes": source_changes,
+        "pages": pages or [],
     }
 
 
@@ -1742,6 +1772,7 @@ def collect_domain_proposal(db: Session, domain: str, *, fetcher=None) -> dict:
             source_authorities=source_authorities,
             source_change_status=source_change_status,
             source_changes=source_changes,
+            pages=pages,
         )
 
     signup_url = (
@@ -1873,4 +1904,5 @@ def collect_domain_proposal(db: Session, domain: str, *, fetcher=None) -> dict:
         "source_changes": source_changes,
         "signup_url_discovered": signup_url_discovered,
         "gate_status": program_gate_status(program, list(program.terms_evidence)),
+        "pages": pages,
     }

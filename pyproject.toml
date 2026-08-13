@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "afi-os"
-version = "0.2.106"
+version = "0.2.107"
 description = "Local-first affiliate operations platform for Google Ads and affiliate program governance"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -47,3 +47,6 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/afi_os/services/llm_extractor.py" = ["E501"]

@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Tỷ giá quy đổi bid VND→USD cho công thức hoàn vốn.
 # Người vận hành chỉnh tay giá trị này khi tỷ giá quy ước thay đổi.
 PAYBACK_FX_VND_PER_USD = Decimal("26000")
+LLM_MODEL = "claude-haiku-4-5"
 
 
 class Settings(BaseSettings):
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     terms_evidence_max_age_days: int = 90
     allow_demo_seed: bool = True
+    llm_model: str = LLM_MODEL
 
     model_config = SettingsConfigDict(
         env_file=".env",

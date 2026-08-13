@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Update 0.2.107 — Claude đọc Terms/Pricing/Commission
+
+1. Chạy `UPDATE-AFI-OS-0.2.107.command` một lần.
+2. Chạy `SETUP-LLM.command`, dán Anthropic API key khi Terminal hỏi rồi Enter.
+3. Vào **Tìm dự án**, nhập domain và bấm **Kiểm tra lại tự động**.
+4. Các dữ kiện Claude trích hiện chữ mờ cùng trích dẫn/link nguồn. Đọc nguồn rồi
+   bấm ✓ Chấp nhận hoặc ✗ Bỏ.
+5. Chỉ dữ kiện đã chấp nhận mới vào payback/score. `Up to` chỉ tham khảo.
+
+Key chỉ nằm trong macOS Keychain. Update không tự mở PPC, không loại Project,
+không dừng campaign và không ghi Google Ads. Rollback bằng
+`ROLLBACK-AFI-OS-0.2.107.command`.
+
 ## Update 0.2.106 — Tài nguyên
 
 1. Chạy `UPDATE-AFI-OS-0.2.106.command` một lần.

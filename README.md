@@ -16,6 +16,9 @@ Repository này là bản triển khai mới, giữ sản phẩm cũ trong `lega
 - Browser-assisted capture, không crawler hàng loạt.
 - Audit log, idempotency constraints và automated tests.
 - Terms Evidence automation nhận domain, lưu proposal có nguồn và không tự mở permission.
+- Claude tự trích commission, gói giá, thanh toán, cookie và quy định Ads từ các
+  trang đã crawl; mọi kết quả là proposal có quote nguyên văn và chỉ được dùng sau
+  khi người vận hành chấp nhận.
 - Generic Terms collector chỉ đọc một tập nhỏ trang HTTPS chính thức cùng domain, chặn private host/redirect ngoài domain và tự trích proposal PPC/commission để xét duyệt.
 - Trang chính thức lớn được đọc tối đa 1 MB thay vì bị bỏ toàn bộ; audit và Evidence Pack ghi rõ URL nào bị cắt ngắn.
 - URL nguồn bỏ riêng tham số navigation/tracking đã biết (`nav`, `utm_*`, click IDs), nhưng giữ query nghiệp vụ và chữ ký; cùng một trang không còn chiếm nhiều slot rà Terms.
@@ -94,7 +97,12 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.106**. Tab **Tài nguyên** theo dõi kho email, lịch nuôi thủ công,
+Đây là **v0.2.107**. Bước 1 có thể gọi Claude để trích Terms/Pricing/Commission
+có trích dẫn, cache theo nội dung và chống bịa bằng kiểm tra quote. API key chỉ nằm
+trong macOS Keychain. Proposal chưa được chấp nhận không vào payback, không đổi PPC
+và không chạm Google Ads.
+
+Tab **Tài nguyên** tiếp tục theo dõi kho email, lịch nuôi thủ công,
 tài khoản Ads và tài nguyên thanh toán. Bước 2 chỉ cho chọn tài khoản READY có email
 chín, sạch và đang rảnh; triển khai nội bộ sẽ khóa tài khoản vào đúng một dự án.
 Ứng dụng không lưu mật khẩu, không chạy bot nuôi tài khoản và không tạo hoặc sửa

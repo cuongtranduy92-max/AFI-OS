@@ -1,5 +1,16 @@
 # TASKBOARD
 
+## 0.2.107 — Claude Terms extraction
+
+- [x] Store the Anthropic key only in macOS Keychain.
+- [x] Crawl bounded source pages and call Claude with deterministic settings.
+- [x] Reject fabricated/short quotes and keep unknown values null.
+- [x] Persist commission, package, payment, cookie and Terms as proposals.
+- [x] Require human accept/reject before applying facts or recalculating payback.
+- [x] Cache unchanged source content and exclude `up to` commission from payback.
+- [x] Preserve warning-only Projects, campaigns and Google Ads read-only behavior.
+- [x] Add migration, regression, package, updater and rollback verification.
+
 ## 0.2.106 — Tài nguyên
 
 - [x] Add email, resource, nurture-log and account-assignment schema with rollback.

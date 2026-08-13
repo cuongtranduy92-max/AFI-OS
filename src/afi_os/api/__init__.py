@@ -16,6 +16,7 @@ from afi_os.api import (
     programs,
     resources,
     system,
+    term_extraction,
 )
 
 api_router = APIRouter()
@@ -34,3 +35,4 @@ api_router.include_router(programs.router)
 api_router.include_router(resources.router)
 api_router.include_router(finance.router)
 api_router.include_router(system.router)
+api_router.include_router(term_extraction.router)

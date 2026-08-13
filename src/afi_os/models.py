@@ -140,6 +140,12 @@ class Program(TimestampMixin, Base):
     terms_research_runs: Mapped[list[TermsResearchRun]] = relationship(
         back_populates="program", cascade="all, delete-orphan"
     )
+    llm_extraction_runs: Mapped[list[LLMExtractionRun]] = relationship(
+        back_populates="program", cascade="all, delete-orphan"
+    )
+    commercial_proposals: Mapped[list[CommercialProposal]] = relationship(
+        back_populates="program", cascade="all, delete-orphan"
+    )
     projects: Mapped[list[Project]] = relationship(back_populates="program")
     campaign_links: Mapped[list[CampaignProgramLink]] = relationship(back_populates="program")
 
@@ -229,6 +235,8 @@ class CommissionFact(TimestampMixin, Base):
         Enum(CommissionType, native_enum=False)
     )
     commission_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    commission_flat: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    recurring_months: Mapped[int | None] = mapped_column(Integer)
     rate_is_maximum: Mapped[bool] = mapped_column(Boolean, default=False)
     applies_to: Mapped[str] = mapped_column(String(120), default="UNKNOWN")
     review_status: Mapped[EvidenceReviewStatus] = mapped_column(
@@ -264,6 +272,60 @@ class TermsResearchRun(TimestampMixin, Base):
     summary: Mapped[str | None] = mapped_column(Text)
 
     program: Mapped[Program | None] = relationship(back_populates="terms_research_runs")
+
+
+class LLMExtractionRun(TimestampMixin, Base):
+    """Content-addressed Claude result; contains no API credential or full page text."""
+
+    __tablename__ = "llm_extraction_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    program_id: Mapped[int] = mapped_column(
+        ForeignKey("programs.id", ondelete="CASCADE"), index=True
+    )
+    domain: Mapped[str] = mapped_column(String(255), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    model_name: Mapped[str] = mapped_column(String(120))
+    source_urls: Mapped[list[str]] = mapped_column(JSON, default=list)
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    rejected_json: Mapped[list[str]] = mapped_column(JSON, default=list)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    program: Mapped[Program] = relationship(back_populates="llm_extraction_runs")
+
+
+class CommercialProposal(TimestampMixin, Base):
+    """Operator-review queue for package and payment facts extracted by Claude."""
+
+    __tablename__ = "commercial_proposals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    program_id: Mapped[int] = mapped_column(
+        ForeignKey("programs.id", ondelete="CASCADE"), index=True
+    )
+    scope: Mapped[str] = mapped_column(String(24), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    source_url: Mapped[str] = mapped_column(String(1000))
+    excerpt: Mapped[str] = mapped_column(Text)
+    source_authority: Mapped[SourceAuthority] = mapped_column(
+        Enum(SourceAuthority, native_enum=False), default=SourceAuthority.UNKNOWN
+    )
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    review_status: Mapped[EvidenceReviewStatus] = mapped_column(
+        Enum(EvidenceReviewStatus, native_enum=False), default=EvidenceReviewStatus.PROPOSED
+    )
+    proposal_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    collected_by: Mapped[str] = mapped_column(String(80), default="ANTHROPIC_LLM")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(String(120))
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    program: Mapped[Program] = relationship(back_populates="commercial_proposals")
+
+    __table_args__ = (
+        CheckConstraint("scope IN ('PACKAGES','PAYMENT')", name="ck_commercial_scope"),
+        Index("ix_commercial_program_status", "program_id", "review_status"),
+    )
 
 
 class Advertiser(TimestampMixin, Base):

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.2.107 — Claude Terms extraction with human review
+
+- Add Keychain-only Anthropic setup and a content-addressed Claude extraction cache.
+- Extract commission, packages, payment, cookie and Ads terms only from bounded
+  crawler text; reject every quote that is not present in the source text.
+- Persist all extracted facts as proposals and require explicit operator review
+  before economics or canonical permissions can use them.
+- Keep upper-bound commission out of payback and preserve warning-only Projects,
+  campaign state and Google Ads read-only behavior.
+- Add migration, extraction, cache, anti-fabrication and updater/rollback coverage.
+
 ## 0.2.106 — Resource management and guarded Step 2 binding
 
 - Add the Tài nguyên tab with email nurture stages, rotating manual checklists,

@@ -33,6 +33,7 @@ from afi_os.schemas import (
     ProjectWorkflowUpdate,
 )
 from afi_os.services.google_ads_keyword_check import collect_project_keyword_metrics
+from afi_os.services.llm_terms import LLMExtractionError, extract_terms_from_pages
 from afi_os.services.portfolio import (
     build_portfolio_item,
     load_portfolio_project,
@@ -193,6 +194,11 @@ def run_auto_check_portfolio_project(
     source_results: list[ProjectCheckSourceResult] = []
     try:
         terms = collect_domain_proposal(db, payload.domain)
+        if (
+            not terms.get("pages")
+            and getattr(terms.get("run"), "fixture_version", "") != "official-web-v9"
+        ):
+            terms = collect_domain_proposal(db, payload.domain)
         program = terms.get("program")
         if program is not None:
             ensure_project_for_program(db, program)
@@ -209,6 +215,60 @@ def run_auto_check_portfolio_project(
                 source_urls=list(terms.get("source_urls", [])),
             )
         )
+        project = db.scalar(select(Project).where(Project.domain == payload.domain)) or project
+        loaded_for_llm = load_portfolio_project(db, project.id) or project
+        try:
+            llm = extract_terms_from_pages(
+                db,
+                loaded_for_llm,
+                list(terms.get("pages") or []),
+            )
+            proposal_count = (
+                len(llm["commission_facts"])
+                + len(llm["terms_evidence"])
+                + len(llm["commercial_proposals"])
+            )
+            source_results.append(
+                ProjectCheckSourceResult(
+                    source="Claude · Terms/Pricing/Commission",
+                    status=str(llm["status"]),
+                    detail=(
+                        f"{proposal_count} đề xuất có trích dẫn; "
+                        + (
+                            "dùng cache, không tốn lượt gọi mới. "
+                            if llm["cached"]
+                            else "đã trích xuất mới. "
+                        )
+                        + "Chỉ dùng sau khi anh xác nhận."
+                    ),
+                    fields=[
+                        "accepted_commission_rate",
+                        "average_package_price",
+                        "payout_methods",
+                        "ppc_permissions",
+                    ],
+                    source_urls=list(llm["source_urls"]),
+                )
+            )
+        except LLMExtractionError as exc:
+            source_results.append(
+                ProjectCheckSourceResult(
+                    source="Claude · Terms/Pricing/Commission",
+                    status=exc.status,
+                    detail=exc.detail,
+                    requires_user=exc.status in {"CONNECTION_REQUIRED", "AUTH_FAILED"},
+                    fields=[
+                        "accepted_commission_rate",
+                        "average_package_price",
+                        "payout_methods",
+                        "ppc_permissions",
+                    ],
+                    source_urls=list(terms.get("source_urls", [])),
+                    setup_command=(
+                        "SETUP-LLM.command" if exc.status == "CONNECTION_REQUIRED" else None
+                    ),
+                )
+            )
     except Exception as exc:
         source_results.append(
             ProjectCheckSourceResult(

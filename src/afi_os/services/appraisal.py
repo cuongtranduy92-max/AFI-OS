@@ -181,7 +181,10 @@ def _commission_display(
     )
 
 
-def _cookie_days(project: Project) -> int | None:
+def _cookie_days(project: Project, fields: dict) -> int | None:  # type: ignore[type-arg]
+    extracted = _integer(fields.get("cookie_days"))
+    if extracted is not None:
+        return extracted
     if project.program is None:
         return None
     values = [
@@ -421,8 +424,8 @@ def build_appraisal_contract(
             gateways=_text_list(fields.get("payout_methods")),
             min_payment=_number(fields.get("minimum_payout")),
             clear_days=payout_days,
-            cookie_days=_cookie_days(project),
-            net=_payment_net(project),
+            cookie_days=_cookie_days(project, fields),
+            net=_text(fields.get("affiliate_network")) or _payment_net(project),
         ),
         terms=terms,
         payback=payback,

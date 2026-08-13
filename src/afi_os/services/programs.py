@@ -387,7 +387,9 @@ def commission_resolution_status(facts: list[CommissionFact]) -> str:
         return "NOT_CHECKED"
 
     distinct_addon_scopes = {"LINKEDIN_AUTOMATION_SLOT"}
-    signatures_by_subject: dict[str, set[tuple[str, str | None, bool]]] = {}
+    signatures_by_subject: dict[
+        str, set[tuple[str, str | None, str | None, int | None, bool]]
+    ] = {}
     for fact in qualified:
         subject = (
             fact.applies_to
@@ -398,6 +400,8 @@ def commission_resolution_status(facts: list[CommissionFact]) -> str:
             (
                 fact.commission_type.value,
                 str(fact.commission_rate) if fact.commission_rate is not None else None,
+                str(fact.commission_flat) if fact.commission_flat is not None else None,
+                fact.recurring_months,
                 fact.rate_is_maximum,
             )
         )

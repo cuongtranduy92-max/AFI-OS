@@ -401,6 +401,8 @@ class ProjectCheckCommission(BaseModel):
     commission_fact_id: int
     commission_type: CommissionType
     commission_rate: Decimal | None
+    commission_flat: Decimal | None = None
+    recurring_months: int | None = None
     rate_is_maximum: bool
     applies_to: str
     review_status: EvidenceReviewStatus
@@ -409,6 +411,38 @@ class ProjectCheckCommission(BaseModel):
     source_authority: SourceAuthority
     checked_at: datetime
     confidence: float = Field(default=0.0, ge=0, le=1)
+
+
+class CommercialProposalRead(ORMModel):
+    id: int
+    program_id: int
+    scope: str
+    payload_json: dict[str, Any]
+    source_url: str
+    excerpt: str
+    source_authority: SourceAuthority
+    confidence: float = Field(ge=0, le=1)
+    review_status: EvidenceReviewStatus
+    collected_by: str
+    reviewed_at: datetime | None
+    reviewed_by: str | None
+    notes: str | None
+
+
+class ProjectTermsExtractionResponse(BaseModel):
+    project_id: int
+    program_id: int
+    status: str
+    cached: bool = False
+    model: str
+    source_urls: list[str] = Field(default_factory=list)
+    commission_facts: list[ProjectCheckCommission] = Field(default_factory=list)
+    terms_evidence: list[ProjectCheckEvidence] = Field(default_factory=list)
+    commercial_proposals: list[CommercialProposalRead] = Field(default_factory=list)
+    rejected: list[str] = Field(default_factory=list)
+    permissions_changed: bool = False
+    campaign_state_changed: bool = False
+    google_ads_write: bool = False
 
 
 class ProjectCheckCriterion(BaseModel):
@@ -429,6 +463,7 @@ class ProjectCheckCollectionNeed(BaseModel):
 
 class ProjectStepOneResponse(BaseModel):
     project_id: int
+    program_id: int | None = None
     project_name: str
     domain: str
     stage: ProjectStage
@@ -439,6 +474,7 @@ class ProjectStepOneResponse(BaseModel):
     commission_state: str
     terms_evidence: list[ProjectCheckEvidence] = Field(default_factory=list)
     commission_facts: list[ProjectCheckCommission] = Field(default_factory=list)
+    commercial_proposals: list[CommercialProposalRead] = Field(default_factory=list)
     criteria: list[ProjectCheckCriterion] = Field(default_factory=list)
     passed_criteria: int = Field(ge=0)
     known_criteria: int = Field(ge=0)
@@ -449,6 +485,15 @@ class ProjectStepOneResponse(BaseModel):
     collection_needs: list[ProjectCheckCollectionNeed] = Field(default_factory=list)
     warning_only: bool = True
     project_included: bool = True
+
+
+class CommercialProposalReviewResponse(BaseModel):
+    proposal: CommercialProposalRead
+    applied_fields: list[str] = Field(default_factory=list)
+    step_one: ProjectStepOneResponse
+    permissions_changed: bool = False
+    campaign_state_changed: bool = False
+    google_ads_write: bool = False
 
 
 class ProjectCheckSourceResult(BaseModel):
@@ -1483,6 +1528,8 @@ class CommissionFactRead(ORMModel):
     confidence: float
     commission_type: CommissionType
     commission_rate: Decimal | None
+    commission_flat: Decimal | None = None
+    recurring_months: int | None = None
     rate_is_maximum: bool
     applies_to: str
     review_status: EvidenceReviewStatus
