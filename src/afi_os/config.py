@@ -9,6 +9,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Không lấy giá trị này từ FX ledger: ledger chỉ đối soát tiền thật ở Trang 4.
 PAYBACK_FX_VND_PER_USD = Decimal("26000")
 LLM_MODEL = "claude-haiku-4-5"
+ADVERTISER_PROVIDER = "SERPAPI"
+ADVERTISER_CACHE_DAYS = 7
+ADVERTISER_ACTIVE_DAYS = 7
+ADVERTISER_GOLDMINE_MIN = 15
+ADVERTISER_MONTHLY_QUOTA = 250
 
 
 class Settings(BaseSettings):

@@ -392,6 +392,21 @@ tr:last-child td { border-bottom: 0; }
 .relationship-count strong { display: block; color: var(--accent); font-size: 20px; }
 .relationship-source { padding: 7px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font-size: 9px; }
 .relationship-source a, .related-project-node i a { color: var(--accent); }
+.advertiser-actions { display: flex; align-items: center; gap: 8px; padding: 9px 12px; flex-wrap: wrap; }
+.advertiser-actions > span { margin-left: auto; color: var(--muted); font-size: 9px; }
+.advertiser-expansion { display: grid; gap: 7px; padding: 10px 12px; border-top: 1px solid var(--line); background: #f8fffc; }
+.advertiser-expansion[hidden] { display: none; }
+.expansion-summary { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.expansion-summary > span:last-child { width: 100%; color: var(--muted); font-size: 9px; }
+.discovered-domain { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.discovered-domain > div { display: flex; align-items: center; gap: 6px; }
+.goldmine-badge, .new-domain-badge { display: inline-flex; width: fit-content; margin-top: 4px; padding: 3px 6px; border-radius: 999px; font-size: 8px; font-weight: 850; }
+.goldmine-badge { color: #77550b; background: #fff0bd; }
+.new-domain-badge { color: #176e54; background: #dff6ec; }
+.advertiser-watch-head { margin-top: 18px; }
+.quota-warning { color: #77550b; background: #fff0bd; }
+.quota-blocked { color: #9a4337; background: #ffe4df; }
+.appraisal-network-button { margin-top: 8px; }
 .related-project-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; }
 .related-project-node { min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
 .related-project-node:hover { border-color: var(--accent); }

@@ -117,6 +117,7 @@ function switchView(name, {loadData = true} = {}) {
   if (name === "resources") loadResources();
   if (name === "programs") loadPrograms();
   if (name === "intelligence") {
+    loadAdvertiserSource();
     loadCaptureReviewQueue();
     loadCaptures();
   }
@@ -149,6 +150,7 @@ const riskLabels = {
 };
 
 const projectStageLabels = {
+  DISCOVERED: "Mới phát hiện",
   INTAKE: "Tiếp nhận",
   RESEARCH: "Kiểm chứng",
   EVALUATION: "Chấm điểm",
@@ -288,7 +290,7 @@ async function loadPortfolio() {
       <td class="portfolio-workflow">${portfolioBadge(item.stage, projectStageLabels, ["CLOSED"])}<span class="next-action">${esc(nextAction)}</span></td>
       <td>${portfolioBadge(item.registration_status, registrationLabels, ["BLOCKED_REGISTRATION", "REJECTED", "CLOSED"])}${item.owner ? `<br><span class="small">${esc(item.owner)}</span>` : ""}</td>
       <td>${portfolioBadge(item.terms_gate_status, termsGateLabels, ["WARNING_TERMS_CONFLICT", "WARNING_TERMS_PROHIBITED"])}<br><button type="button" class="portfolio-metric${commission.value == null ? " missing" : ""}" data-truth-project="${item.id}" data-truth-metric="commission">${esc(commissionLabel)}</button><br><span class="small">${esc(commissionContext(commission, item.commission_state))}</span></td>
-      <td><strong>${advertiser}</strong><br><span class="small">Active 30d: ${activeAdvertiser}</span></td>
+      <td><strong>${advertiser}</strong><br><span class="small">Đang chạy 7 ngày: ${activeAdvertiser}</span></td>
       <td>${campaign}<br><span class="small">${ctr} · Cost ${cost}</span></td>
       <td><div class="portfolio-confidence"><strong>${esc(potential)}</strong><span class="small">Tin cậy ${item.evidence_confidence}/100</span><div class="confidence-bar"><span style="width:${item.evidence_confidence}%"></span></div></div></td>
       <td><div class="risk-stack">${riskChips(item.risk_badges)}</div></td>
@@ -364,7 +366,7 @@ function appraisalStatusHtml(result, sourceName, fieldValues = []) {
   const dateValue = state.cache_date || state.checked_at;
   const dateLabel = dateValue ? ` · dữ liệu ngày ${new Date(dateValue).toLocaleDateString("vi-VN")}` : "";
   const sourceLink = state.source_urls?.length ? ` · ${safeExternalLink(state.source_urls[0], "Mở nguồn gốc")}` : "";
-  const retry = state.retryable && result.job_id && ["keyword", "traffic", "terms"].includes(sourceName)
+  const retry = state.retryable && result.job_id && ["keyword", "traffic", "terms", "advertisers"].includes(sourceName)
     ? `<button type="button" class="appraisal-retry" data-appraisal-retry="${esc(sourceName)}" data-job-id="${result.job_id}">Thử lại nguồn này</button>`
     : "";
   return `<div class="appraisal-source-state state-${esc(state.color)}"><strong>${esc(state.label)}</strong><span>${esc(state.detail || "")}${esc(dateLabel)}</span>${sourceLink}${retry}</div>`;
@@ -397,7 +399,7 @@ function renderAppraisal(result) {
   const packages = result.commission.packages?.map(([name, percent]) => `${name}: ${percent}%`) || null;
   const flags = (result.score.flags || []).map((item) => `<li class="flag-${esc(item.level)}">${esc(item.msg)}</li>`).join("");
   const cards = [
-    appraisalCard(1, "Nhà quảng cáo", `<strong>${appraisalDisplay(result.advertisers.count)}</strong><p>Cùng chạy dự án khác: ${appraisalDisplay(result.advertisers.also_running)}</p>`, result.advertisers.source, appraisalStatusHtml(result, "advertisers", [result.advertisers.count])),
+    appraisalCard(1, "Nhà quảng cáo", `<strong>Đang chạy 7 ngày: ${appraisalDisplay(result.advertisers.active_count ?? result.advertisers.count)}</strong><p>Tổng từng thấy: ${appraisalDisplay(result.advertisers.total_ever)}</p><p>Cùng chạy dự án khác: ${appraisalDisplay(result.advertisers.also_running)}</p><button type="button" class="button secondary appraisal-network-button" data-appraisal-network-domain="${esc(result.domain)}">Xem chi tiết</button>`, result.advertisers.source, appraisalStatusHtml(result, "advertisers", [result.advertisers.total_ever])),
     appraisalCard(2, "Traffic website", `<strong>${appraisalDisplay(result.traffic.monthly, " visit/tháng")}</strong><p>Top quốc gia: ${appraisalDisplay(countries)}</p>`, result.traffic.source, appraisalStatusHtml(result, "traffic", [result.traffic.monthly, countries])),
     appraisalCard(3, "Affiliate link", `<strong>${appraisalKnown(result.affiliate_link) ? safeExternalLink(result.affiliate_link, result.affiliate_link) : appraisalDisplay(null)}</strong>`, result.affiliate_link, appraisalStatusHtml(result, "terms", [result.affiliate_link])),
     appraisalCard(4, "Điều khoản PPC", `<strong>Ads: ${appraisalDisplay(result.terms.ads_allowed)}</strong><p>Hạn chế brand bid: ${appraisalDisplay(result.terms.brand_bid_restricted)}</p><p>${appraisalDisplay(result.terms.summary)}</p>`, result.terms.source, appraisalStatusHtml(result, "terms", [result.terms.ads_allowed, result.terms.brand_bid_restricted, result.terms.summary])),
@@ -854,7 +856,7 @@ function projectDetailHtml(item, check) {
     </section>
     <div class="truth-metric-grid">${metrics}</div>
     <form id="projectWorkflowForm" class="form-grid workflow-form" data-project-id="${item.id}">
-      <label>Giai đoạn<select name="stage"><option value="INTAKE">Tiếp nhận</option><option value="RESEARCH">Kiểm chứng</option><option value="EVALUATION">Chấm điểm</option><option value="PREP">Chuẩn bị</option><option value="LIVE">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="CLOSED">Đã đóng</option></select></label>
+      <label>Giai đoạn<select name="stage"><option value="DISCOVERED">Mới phát hiện</option><option value="INTAKE">Tiếp nhận</option><option value="RESEARCH">Kiểm chứng</option><option value="EVALUATION">Chấm điểm</option><option value="PREP">Chuẩn bị</option><option value="LIVE">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="CLOSED">Đã đóng</option></select></label>
       <label>Trạng thái đăng ký<select name="registration_status"><option value="NOT_STARTED">Chưa đăng ký</option><option value="APPLYING">Đang đăng ký</option><option value="PENDING_APPROVAL">Chờ duyệt</option><option value="APPROVED">Đã duyệt</option><option value="BLOCKED_REGISTRATION">Không đăng ký được</option><option value="REJECTED">Bị từ chối</option><option value="CLOSED">Đã đóng</option></select></label>
       <label class="span-2">Người phụ trách<input name="owner" value="${esc(item.owner || "")}" placeholder="Tran"></label>
       <label class="span-2">Việc tiếp theo<textarea name="next_action" rows="3" placeholder="Bước cụ thể tiếp theo">${esc(item.next_action || "")}</textarea></label>
@@ -893,16 +895,24 @@ function projectNetworkHtml(data) {
         <i>Nguồn: ${projectSource}</i>
       </div>`;
     }).join("");
-    return `<article class="advertiser-branch">
+    const goldmine = advertiser.is_goldmine ? `<span class="goldmine-badge">🏆 MỎ VÀNG · ${advertiser.domain_count} domain</span>` : "";
+    const watchLabel = advertiser.is_watchlisted ? "Bỏ theo dõi" : "Theo dõi";
+    return `<article class="advertiser-branch" data-advertiser-branch="${advertiser.advertiser_id}">
       <div class="advertiser-branch-head">
-        <div><span>Nhà quảng cáo</span><strong>${esc(advertiser.advertiser_name)}</strong><small>${esc(advertiser.advertiser_location || "Chưa có vị trí")} · ${esc(advertiser.classification)}</small></div>
-        <div class="relationship-count"><strong>${advertiser.projects.length}</strong><span>dự án đã biết</span></div>
+        <div><span>Nhà quảng cáo</span><strong>${esc(advertiser.advertiser_name)}</strong><small>${esc(advertiser.advertiser_location || "Chưa có vị trí")} · ${esc(advertiser.classification)}</small>${goldmine}</div>
+        <div class="relationship-count"><strong>${advertiser.domain_count || advertiser.projects.length}</strong><span>domain đã biết</span></div>
       </div>
       <div class="relationship-source">Nguồn quan hệ: ${source} · kiểm tra ${esc(relationshipDate(advertiser.observed_at))}</div>
+      <div class="advertiser-actions"><button type="button" class="button secondary" data-advertiser-expand="${advertiser.advertiser_id}">Còn chạy gì nữa</button><button type="button" class="button secondary" data-advertiser-watch="${advertiser.advertiser_id}" data-watch="${advertiser.is_watchlisted ? "false" : "true"}">${watchLabel}</button><span>${advertiser.reported_ads ?? advertiser.observation_count} quảng cáo · ${advertiser.last_seen_at ? `lần cuối ${esc(relationshipDate(advertiser.last_seen_at))}` : "chưa có ngày hoạt động"}</span></div>
+      <div class="advertiser-expansion" data-advertiser-expansion="${advertiser.advertiser_id}" hidden></div>
       <div class="related-project-list">${projects || '<span class="empty">Chưa thu thập dự án liên quan.</span>'}</div>
     </article>`;
   }).join("");
-  return `<div class="network-summary"><strong>${data.advertisers.length} nhà quảng cáo đã biết</strong><span>Các dự án dưới mỗi nhà quảng cáo tự hiện. Bấm một dự án ngoài để lấy nó làm trung tâm và bung tiếp.</span></div>${branches}`;
+  const batchIds = data.advertisers.slice(0, 5).map((item) => item.advertiser_id).join(",");
+  const batchButton = data.advertisers.length > 1
+    ? `<button type="button" class="button secondary" data-advertiser-expand-batch="${batchIds}">Quét nhóm ${Math.min(5, data.advertisers.length)} advertiser</button>`
+    : "";
+  return `<div class="network-summary"><div><strong>${data.advertisers.length} nhà quảng cáo đã biết</strong><span>Các dự án dưới mỗi nhà quảng cáo tự hiện. Bấm một dự án ngoài để lấy nó làm trung tâm và bung tiếp.</span></div>${batchButton}</div>${branches}`;
 }
 
 async function loadProjectNetwork(projectId) {
@@ -917,6 +927,129 @@ async function loadProjectNetwork(projectId) {
     const currentTarget = document.getElementById("projectNetworkBody");
     if (currentTarget) currentTarget.innerHTML = `<div class="notice warning">Không tải được mạng lưới: ${esc(error.message)}</div>`;
   }
+}
+
+function expansionHtml(data, advertiserId) {
+  const advertiser = data.advertisers.find((item) => Number(item.id) === Number(advertiserId));
+  const goldmine = advertiser?.is_goldmine ? `<span class="goldmine-badge">🏆 MỎ VÀNG · ${advertiser.domain_count} domain</span>` : "";
+  const domains = (advertiser?.domains || data.domains).map((domain) => {
+    const isNew = data.new_domains.includes(domain);
+    return `<div class="discovered-domain"><div><strong>${esc(domain)}</strong>${isNew ? '<span class="new-domain-badge">MỚI</span>' : ""}</div><button type="button" class="button secondary" data-queue-domain="${esc(domain)}" data-queue-advertiser="${advertiserId}">Đưa vào hàng đợi kiểm tra</button></div>`;
+  }).join("");
+  return `<div class="expansion-summary"><strong>${esc(data.detail)}</strong>${goldmine}<span>${data.cache_hit ? "Dùng cache 7 ngày · không tốn lượt" : "Đã gọi nguồn mới"} · ${esc(data.quota.message)}</span></div>${domains || '<div class="empty">Không tìm thấy domain nào.</div>'}`;
+}
+
+async function expandAdvertiserBatch(button) {
+  const advertiserIds = String(button.dataset.advertiserExpandBatch || "")
+    .split(",").map(Number).filter((value) => Number.isInteger(value) && value > 0).slice(0, 5);
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = "Đang quét nhóm…";
+  try {
+    const data = await request("/ad-intelligence/advertisers/expand", {
+      method: "POST",
+      body: JSON.stringify({advertiser_ids: advertiserIds, force_refresh: false}),
+    });
+    advertiserIds.forEach((advertiserId) => {
+      const target = document.querySelector(`[data-advertiser-expansion="${advertiserId}"]`);
+      if (target) {
+        target.hidden = false;
+        target.innerHTML = expansionHtml(data, advertiserId);
+      }
+    });
+    await loadAdvertiserSource();
+  } catch (error) {
+    window.alert(`Không thể quét nhóm advertiser: ${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+async function expandAdvertiser(button, {forceRefresh = false} = {}) {
+  const advertiserId = Number(button.dataset.advertiserExpand || button.dataset.watchRescan);
+  const target = document.querySelector(`[data-advertiser-expansion="${advertiserId}"]`) || button.closest("tr")?.querySelector("[data-watch-result]");
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = "Đang quét…";
+  try {
+    const data = await request("/ad-intelligence/advertisers/expand", {
+      method: "POST",
+      body: JSON.stringify({advertiser_ids: [advertiserId], force_refresh: forceRefresh}),
+    });
+    if (target) {
+      target.hidden = false;
+      target.innerHTML = expansionHtml(data, advertiserId);
+    }
+    await loadAdvertiserSource();
+  } catch (error) {
+    if (target) {
+      target.hidden = false;
+      target.innerHTML = `<div class="notice warning">${esc(error.message)}</div>`;
+    } else window.alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+async function updateAdvertiserWatch(button) {
+  const advertiserId = Number(button.dataset.advertiserWatch);
+  await request(`/ad-intelligence/advertisers/${advertiserId}/watch`, {
+    method: "POST",
+    body: JSON.stringify({watch: button.dataset.watch === "true"}),
+  });
+  const projectId = document.getElementById("projectNetworkBody")?.dataset.centerProject;
+  if (projectId) await loadProjectNetwork(projectId);
+  await loadAdvertiserSource();
+}
+
+async function queueDiscoveredDomain(button) {
+  const original = button.textContent;
+  button.disabled = true;
+  try {
+    const data = await request("/ad-intelligence/discovered-domains/queue", {
+      method: "POST",
+      body: JSON.stringify({
+        domain: button.dataset.queueDomain,
+        advertiser_id: Number(button.dataset.queueAdvertiser),
+      }),
+    });
+    button.textContent = "Đã vào hàng đợi";
+    button.title = data.message;
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = original;
+    window.alert(`Không thể đưa vào hàng đợi: ${error.message}`);
+  }
+}
+
+async function loadAdvertiserSource() {
+  const [status, watchlist] = await Promise.all([
+    request("/ad-intelligence/provider-status"),
+    request("/ad-intelligence/watchlist"),
+  ]);
+  const quota = document.getElementById("advertiserQuota");
+  quota.textContent = status.quota.message;
+  quota.className = `badge quota-${String(status.quota.state).toLowerCase()}`;
+  const message = document.getElementById("advertiserProviderMessage");
+  if (status.status === "READY") {
+    message.textContent = "SerpApi đã kết nối trong Keychain. Cache được ưu tiên trước mọi lượt gọi.";
+    message.className = "notice success";
+  } else {
+    message.textContent = `Chưa kết nối SerpApi. Nhấp đúp ${status.setup_command}, dán API key rồi bấm Enter.`;
+    message.className = "notice warning";
+  }
+  document.getElementById("advertiserWatchCount").textContent = `${watchlist.length} advertiser`;
+  const rows = document.getElementById("advertiserWatchRows");
+  rows.innerHTML = watchlist.length ? watchlist.map((item) => `<tr><td><strong>${esc(item.verified_name)}</strong>${item.is_goldmine ? `<br><span class="goldmine-badge">🏆 MỎ VÀNG</span>` : ""}<div data-watch-result hidden></div></td><td>${item.domain_count}</td><td>${esc(relationshipDate(item.last_expanded_at))}</td><td><button type="button" class="button secondary" data-watch-rescan="${item.id}">Quét lại</button> <button type="button" class="button secondary" data-advertiser-watch="${item.id}" data-watch="false">Bỏ theo dõi</button></td></tr>`).join("") : '<tr><td colspan="4" class="empty">Chưa theo dõi advertiser nào.</td></tr>';
+}
+
+async function openAppraisalAdvertiserDetail(domain) {
+  const items = await request(`/portfolio/projects?query=${encodeURIComponent(domain)}&limit=10`);
+  const item = items.find((candidate) => candidate.domain === domain);
+  if (!item) throw new Error("Chưa tìm thấy hồ sơ dự án");
+  await openProjectDetail(item.id);
 }
 
 function autoCheckSourcesHtml(sources) {
@@ -2993,6 +3126,11 @@ document.getElementById("appraisalBatchResults").addEventListener("click", (even
   if (result) renderAppraisal(result);
 });
 document.getElementById("appraisalResult").addEventListener("click", (event) => {
+  const networkButton = event.target.closest("[data-appraisal-network-domain]");
+  if (networkButton) {
+    openAppraisalAdvertiserDetail(networkButton.dataset.appraisalNetworkDomain).catch((error) => window.alert(error.message));
+    return;
+  }
   const retryButton = event.target.closest("[data-appraisal-retry]");
   if (retryButton) {
     retryAppraisalSource(retryButton).catch((error) => {
@@ -3015,6 +3153,18 @@ document.getElementById("appraisalResult").addEventListener("click", (event) => 
     button.disabled = false;
     window.alert(`Không thể lưu Bước 2: ${error.message}`);
   });
+});
+document.addEventListener("click", (event) => {
+  const batchExpandButton = event.target.closest("[data-advertiser-expand-batch]");
+  if (batchExpandButton) { expandAdvertiserBatch(batchExpandButton); return; }
+  const expandButton = event.target.closest("[data-advertiser-expand]");
+  if (expandButton) { expandAdvertiser(expandButton); return; }
+  const rescanButton = event.target.closest("[data-watch-rescan]");
+  if (rescanButton) { expandAdvertiser(rescanButton, {forceRefresh: true}); return; }
+  const watchButton = event.target.closest("[data-advertiser-watch]");
+  if (watchButton) { updateAdvertiserWatch(watchButton).catch((error) => window.alert(error.message)); return; }
+  const queueButton = event.target.closest("[data-queue-domain]");
+  if (queueButton) queueDiscoveredDomain(queueButton);
 });
 document.getElementById("portfolioFilters").addEventListener("submit", (event) => {
   event.preventDefault();

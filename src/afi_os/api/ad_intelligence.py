@@ -14,15 +14,34 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from afi_os.db import get_db
-from afi_os.enums import AuditAction, CaptureStatus
-from afi_os.models import AdObservation, Advertiser, AuditLog, Project, RawCapture
+from afi_os.enums import (
+    AppraisalJobStatus,
+    AuditAction,
+    CaptureStatus,
+    ProjectStage,
+    RegistrationStatus,
+    WatchStatus,
+)
+from afi_os.models import (
+    AdObservation,
+    Advertiser,
+    AppraisalJob,
+    AuditLog,
+    Project,
+    RawCapture,
+)
 from afi_os.schemas import (
     AdvertiserCreate,
+    AdvertiserExpandRequest,
+    AdvertiserExpansionResponse,
     AdvertiserProjectLink,
     AdvertiserProjectsResponse,
+    AdvertiserProviderStatusResponse,
     AdvertiserRead,
     AdvertiserSnapshotImport,
     AdvertiserSnapshotImportResponse,
+    AdvertiserWatchRequest,
+    DiscoveredDomainQueueRequest,
     GraphEdge,
     GraphNode,
     GraphResponse,
@@ -39,6 +58,12 @@ from afi_os.schemas import (
     RawCaptureReviewRequest,
 )
 from afi_os.services.ad_intelligence import AdvertiserScoreInput, independent_advertiser_score
+from afi_os.services.advertiser_provider import (
+    AdvertiserProviderError,
+    expand_advertisers,
+    provider_status,
+    quota_status,
+)
 
 router = APIRouter(prefix="/api/ad-intelligence", tags=["ad-intelligence"])
 
@@ -783,6 +808,177 @@ def list_advertisers(
     )
 
 
+@router.get(
+    "/provider-status", response_model=AdvertiserProviderStatusResponse
+)
+def advertiser_source_status(
+    db: Session = Depends(get_db),
+) -> AdvertiserProviderStatusResponse:
+    return AdvertiserProviderStatusResponse.model_validate(provider_status(db))
+
+
+@router.get("/watchlist", response_model=list[AdvertiserRead])
+def advertiser_watchlist(db: Session = Depends(get_db)) -> list[Advertiser]:
+    return list(
+        db.scalars(
+            select(Advertiser)
+            .where(Advertiser.is_watchlisted.is_(True))
+            .order_by(Advertiser.is_goldmine.desc(), Advertiser.verified_name.asc())
+        ).all()
+    )
+
+
+@router.post(
+    "/advertisers/expand", response_model=AdvertiserExpansionResponse
+)
+def expand_advertiser_domains(
+    payload: AdvertiserExpandRequest,
+    db: Session = Depends(get_db),
+) -> AdvertiserExpansionResponse:
+    try:
+        result = expand_advertisers(
+            db,
+            payload.advertiser_ids,
+            force_refresh=payload.force_refresh,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AdvertiserProviderError as exc:
+        code = 429 if exc.status in {"QUOTA_EXHAUSTED", "RATE_LIMITED"} else 503
+        raise HTTPException(
+            status_code=code,
+            detail={"status": exc.status, "message": exc.detail},
+        ) from exc
+    return AdvertiserExpansionResponse.model_validate(
+        {**result, "quota": quota_status(db)}
+    )
+
+
+@router.post("/advertisers/{advertiser_id}/watch", response_model=AdvertiserRead)
+def update_advertiser_watchlist(
+    advertiser_id: int,
+    payload: AdvertiserWatchRequest,
+    db: Session = Depends(get_db),
+) -> Advertiser:
+    advertiser = db.get(Advertiser, advertiser_id)
+    if advertiser is None:
+        raise HTTPException(status_code=404, detail="advertiser not found")
+    advertiser.is_watchlisted = payload.watch
+    _audit(
+        db,
+        "Advertiser",
+        str(advertiser.id),
+        AuditAction.UPDATE,
+        {
+            "is_watchlisted": payload.watch,
+            "automatic_scan": False,
+            "google_ads_write": False,
+        },
+    )
+    db.commit()
+    db.refresh(advertiser)
+    return advertiser
+
+
+@router.post("/discovered-domains/queue", response_model=dict)
+def queue_discovered_domain(
+    payload: DiscoveredDomainQueueRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    advertiser = db.get(Advertiser, payload.advertiser_id)
+    if advertiser is None:
+        raise HTTPException(status_code=404, detail="advertiser not found")
+    project = db.scalar(select(Project).where(Project.domain == payload.domain))
+    created = project is None
+    if project is None:
+        now = datetime.now(UTC)
+        project = Project(
+            domain=payload.domain,
+            brand_name=payload.domain.split(".", 1)[0].replace("-", " ").title(),
+            affiliate_program_found=False,
+            watch_status=WatchStatus.NEW,
+            stage=ProjectStage.DISCOVERED,
+            registration_status=RegistrationStatus.NOT_STARTED,
+            next_action="DISCOVERED · Chờ người vận hành chạy kiểm tra Bước 1",
+            first_seen_at=now,
+            last_seen_at=now,
+        )
+        db.add(project)
+        db.flush()
+    existing_job = db.scalar(
+        select(AppraisalJob).where(
+            AppraisalJob.project_id == project.id,
+            AppraisalJob.status == AppraisalJobStatus.QUEUED,
+        )
+    )
+    if existing_job is None:
+        existing_job = AppraisalJob(
+            project_id=project.id,
+            domain=project.domain,
+            status=AppraisalJobStatus.QUEUED,
+            per_source_json={},
+            force_refresh=False,
+        )
+        db.add(existing_job)
+        db.flush()
+    content_hash = _hash(
+        "SERPAPI_DISCOVERY_QUEUE", str(advertiser.id), str(project.id)
+    )
+    observation = db.scalar(
+        select(AdObservation).where(
+            AdObservation.advertiser_id == advertiser.id,
+            AdObservation.project_id == project.id,
+            AdObservation.content_hash == content_hash,
+            AdObservation.snapshot_date == datetime.now(UTC).date(),
+        )
+    )
+    if observation is None:
+        db.add(
+            AdObservation(
+                advertiser_id=advertiser.id,
+                project_id=project.id,
+                source_url=advertiser.source_url or "https://adstransparency.google.com/",
+                landing_domain=project.domain,
+                snapshot_date=datetime.now(UTC).date(),
+                content_hash=content_hash,
+                metadata_json={
+                    "evidence_type": "SERPAPI_EXPANSION_DISCOVERY",
+                    "source_name": "SerpApi Google Ads Transparency Center",
+                    "result_set_complete": False,
+                    "confidence": 0.8,
+                    "queued_only": True,
+                    "auto_started": False,
+                },
+            )
+        )
+    _audit(
+        db,
+        "project_discovery",
+        str(project.id),
+        AuditAction.CREATE if created else AuditAction.UPDATE,
+        {
+            "domain": project.domain,
+            "discovered_by_advertiser_id": advertiser.id,
+            "appraisal_job_id": existing_job.id,
+            "auto_started": False,
+            "google_ads_write": False,
+        },
+    )
+    db.commit()
+    return {
+        "project_id": project.id,
+        "domain": project.domain,
+        "project_state": "DISCOVERED",
+        "job_id": existing_job.id,
+        "job_status": "QUEUED",
+        "created": created,
+        "auto_started": False,
+        "message": "Đã đưa vào hàng đợi; chỉ chạy khi anh mở dự án hoặc bấm kiểm tra.",
+    }
+
+
 @router.post("/projects", response_model=ProjectRead)
 def create_project(payload: ProjectCreate, db: Session = Depends(get_db)) -> Project:
     existing = db.scalar(select(Project).where(Project.domain == payload.domain))
@@ -846,6 +1042,10 @@ def project_advertisers(
                 classification=advertiser.classification,
                 confidence=advertiser.confidence,
                 related_project_count=max(1, related_counts[advertiser.id]),
+                domain_count=advertiser.domain_count,
+                is_goldmine=advertiser.is_goldmine,
+                is_watchlisted=advertiser.is_watchlisted,
+                last_expanded_at=advertiser.last_expanded_at,
                 **summary,
             )
         )

@@ -1,4 +1,19 @@
-# TEST REPORT — AFI-OS 0.2.110
+# TEST REPORT — AFI-OS 0.2.111
+
+## 0.2.111 — Advertiser discovery and propagation
+
+- Full regression: 453 passed, 1 skipped (454 collected).
+- Provider tests cover SerpApi request contracts, parser, seven-day active filtering,
+  total unique advertisers, sourced zero results and seven-day cache reuse.
+- Expansion tests cover pagination, max-five request validation, 15-domain goldmine,
+  manual watchlist, DISCOVERED queue and queued-job reuse.
+- Quota tests cover warning at 200/250, block at 250/250 and cache-before-quota.
+- Migration upgrade/downgrade/re-upgrade reaches `93d7e5a2b1c4`, keeps SQLite
+  integrity `ok`, zero foreign-key violations and existing production rows.
+- Release checksum verifies all 51 payload files. A production-data copy completed
+  update, rollback and re-update; it returned to `82c6d4f1a9b7` on rollback and
+  reached `93d7e5a2b1c4` again with integrity `ok` and zero foreign-key violations.
+- Google Ads remains read-only; no Terms/commission fact is accepted automatically.
 
 ## 0.2.110 — Fixed modeled FX boundary
 

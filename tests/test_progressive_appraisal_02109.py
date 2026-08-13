@@ -77,7 +77,9 @@ def test_fast_path_returns_job_and_independent_source_states(monkeypatch) -> Non
     assert fields["traffic"]["label"] == "Chưa nối nguồn dữ liệu"
     assert fields["terms"]["color"] == "yellow"
     assert "cần đọc tay" in fields["terms"]["label"]
-    assert fields["advertisers"]["detail"] == "Tính năng sẽ có khi nối minhbach/SerpApi."
+    assert fields["advertisers"]["detail"] == (
+        "Chưa kết nối SerpApi. Chạy SETUP-ADVERTISER.command một lần."
+    )
     assert fields["niche"]["label"] == "Chưa nối nguồn dữ liệu"
 
 

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.2.111 — Advertiser discovery and project propagation
+
+- Connect SerpApi Google Ads Transparency Center through macOS Keychain only.
+- Count active advertisers in the latest seven days and total advertisers ever seen,
+  cache each domain for seven days and preserve truthful sourced zero results.
+- Expand up to five advertiser IDs per request with pagination, show all target domains
+  and mark advertisers with at least 15 domains as `MỎ VÀNG`.
+- Let the operator watch an advertiser, rescan manually and queue newly discovered
+  domains without automatically consuming more quota.
+- Track the 250-call monthly quota, warn at 80% and block cleanly at 100%.
+- Reuse queued appraisal jobs, preserve all existing data, keep Terms warning-only and
+  retain Google Ads read-only behavior.
+
 ## 0.2.110 — Fixed modeled FX boundary
 
 - Convert modeled payback and operational `$/ref` with the single editable

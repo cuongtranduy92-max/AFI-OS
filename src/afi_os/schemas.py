@@ -244,6 +244,10 @@ class AdvertiserRead(ORMModel):
     confidence: float
     first_seen_at: datetime | None
     last_seen_at: datetime | None
+    domain_count: int = 0
+    is_goldmine: bool = False
+    is_watchlisted: bool = False
+    last_expanded_at: datetime | None = None
 
 
 class ProjectCreate(BaseModel):
@@ -565,6 +569,8 @@ class AppraisalKeyword(BaseModel):
 
 class AppraisalAdvertisers(BaseModel):
     count: int | None = None
+    active_count: int | None = None
+    total_ever: int | None = None
     also_running: list[str] | None = None
     source: str | None = None
 
@@ -1287,6 +1293,10 @@ class ProjectAdvertiserLink(BaseModel):
     last_seen_at: datetime | None
     source_urls: list[str] = Field(default_factory=list)
     source_count: int = Field(ge=0)
+    domain_count: int = Field(default=0, ge=0)
+    is_goldmine: bool = False
+    is_watchlisted: bool = False
+    last_expanded_at: datetime | None = None
 
 
 class ProjectAdvertisersResponse(BaseModel):
@@ -1332,6 +1342,64 @@ class ProjectNetworkResponse(BaseModel):
     brand_name: str
     collection_state: str
     advertisers: list[ProjectNetworkAdvertiser] = Field(default_factory=list)
+
+
+class AdvertiserExpandRequest(BaseModel):
+    advertiser_ids: list[int] = Field(min_length=1, max_length=5)
+    force_refresh: bool = False
+
+    @field_validator("advertiser_ids")
+    @classmethod
+    def unique_advertiser_ids(cls, values: list[int]) -> list[int]:
+        unique = list(dict.fromkeys(values))
+        if len(unique) != len(values) or any(value <= 0 for value in values):
+            raise ValueError("advertiser_ids phải là ID dương, không trùng")
+        return unique
+
+
+class AdvertiserExpansionItem(BaseModel):
+    id: int
+    external_key: str
+    name: str
+    domain_count: int = Field(ge=0)
+    is_goldmine: bool = False
+    reported_ads: int = Field(default=0, ge=0)
+    domains: list[str] = Field(default_factory=list)
+
+
+class AdvertiserExpansionResponse(BaseModel):
+    status: str
+    detail: str
+    domains: list[str] = Field(default_factory=list)
+    new_domains: list[str] = Field(default_factory=list)
+    advertisers: list[AdvertiserExpansionItem] = Field(default_factory=list)
+    cache_hit: bool = False
+    checked_at: datetime
+    source_urls: list[str] = Field(default_factory=list)
+    quota: dict[str, Any]
+
+
+class AdvertiserWatchRequest(BaseModel):
+    watch: bool = True
+
+
+class AdvertiserProviderStatusResponse(BaseModel):
+    status: str
+    provider: str
+    api_key_present: bool
+    setup_command: str
+    secret_exposed: bool = False
+    quota: dict[str, Any]
+
+
+class DiscoveredDomainQueueRequest(BaseModel):
+    domain: str = Field(min_length=3, max_length=255)
+    advertiser_id: int = Field(gt=0)
+
+    @field_validator("domain")
+    @classmethod
+    def normalize_discovered_domain(cls, value: str) -> str:
+        return normalize_capture_domain(value)
 
 
 class EconomicsEvaluateRequest(BaseModel):

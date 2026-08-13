@@ -1,5 +1,16 @@
 # TASKBOARD
 
+## 0.2.111 — Advertiser discovery
+
+- [x] Tách advertiser provider và cắm SerpApi Transparency Center.
+- [x] Lưu API key trong Keychain và cung cấp setup một nhấp.
+- [x] Đếm active 7 ngày/tổng từng thấy, lưu nguồn và cache 7 ngày.
+- [x] Mở rộng tối đa năm advertiser, phân trang và gắn `MỎ VÀNG` từ 15 domain.
+- [x] Watchlist/quét lại thủ công và queue domain ở trạng thái DISCOVERED.
+- [x] Theo dõi quota 250 lượt, cảnh báo 80% và chặn 100%.
+- [x] Migration round-trip, regression, checksum, updater và rollback.
+- [x] Không thêm Google Ads write; Terms/PPC vẫn warning-only.
+
 ## 0.2.110 — Fixed modeled FX boundary
 
 - [x] Hoàn vốn và `$/ref` chỉ dùng `PAYBACK_FX_VND_PER_USD = 26000`.

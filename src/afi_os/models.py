@@ -350,9 +350,26 @@ class Advertiser(TimestampMixin, Base):
     source_url: Mapped[str | None] = mapped_column(String(1000))
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    domain_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_goldmine: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_watchlisted: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_expanded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)
 
     observations: Mapped[list[AdObservation]] = relationship(back_populates="advertiser")
+
+
+class AdvertiserApiUsage(TimestampMixin, Base):
+    __tablename__ = "advertiser_api_usage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usage_date: Mapped[date] = mapped_column(Date, index=True)
+    call_count: Mapped[int] = mapped_column(Integer, default=1)
+    endpoint: Mapped[str] = mapped_column(String(80), index=True)
+
+    __table_args__ = (
+        Index("ix_advertiser_usage_date_endpoint", "usage_date", "endpoint"),
+    )
 
 
 class Project(TimestampMixin, Base):

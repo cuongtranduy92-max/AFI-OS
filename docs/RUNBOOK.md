@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Update 0.2.111 — Nhà quảng cáo và lan tỏa dự án
+
+1. Chạy `UPDATE-AFI-OS-0.2.111.command` một lần.
+2. Chạy `SETUP-ADVERTISER.command`, dán SerpApi API key rồi Enter. Key chỉ ở Keychain.
+3. Vào **Bước 1 · Check dự án**, nhập domain; số đang chạy 7 ngày và tổng từng thấy
+   sẽ hiện dần cùng các nguồn khác.
+4. Bấm **Xem chi tiết → Còn chạy gì nữa** để mở rộng advertiser sang domain khác.
+5. Dùng **Theo dõi** và **Quét lại** thủ công; chỉ bấm **Đưa vào hàng đợi kiểm tra**
+   cho domain muốn giữ. Hệ thống không tự quét định kỳ.
+
+UI hiển thị lượt đã dùng trên 250; cảnh báo từ 200 và chặn lượt mới tại 250.
+Rollback bằng `ROLLBACK-AFI-OS-0.2.111.command` trong thư mục AFI-OS.
+
 ## Update 0.2.110 — Tỷ giá mô phỏng cố định
 
 1. Chạy `UPDATE-AFI-OS-0.2.110.command` một lần.

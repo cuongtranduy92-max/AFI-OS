@@ -19,7 +19,7 @@ from afi_os.services.programs import (
 
 METRIC_LABELS = {
     "independent_advertisers": "Nhà quảng cáo độc lập",
-    "active_advertisers_30d": "Nhà quảng cáo hoạt động 30 ngày",
+    "active_advertisers_30d": "Nhà quảng cáo đang chạy 7 ngày",
     "campaigns": "Campaign đã liên kết",
     "impressions": "Lượt hiển thị",
     "clicks": "Lượt nhấp",

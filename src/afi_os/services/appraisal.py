@@ -416,7 +416,9 @@ def build_appraisal_contract(
         traffic=traffic,
         keyword=keyword,
         advertisers=AppraisalAdvertisers(
-            count=_integer(fields.get("independent_advertisers")),
+            count=_integer(fields.get("active_advertisers_30d")),
+            active_count=_integer(fields.get("active_advertisers_30d")),
+            total_ever=_integer(fields.get("independent_advertisers")),
             also_running=_also_running(db, project),
             source=(
                 fields["independent_advertisers"].source_name

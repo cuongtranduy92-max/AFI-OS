@@ -28,6 +28,11 @@ from afi_os.schemas import (
     AppraisalJobResponse,
     AppraisalResponse,
 )
+from afi_os.services.advertiser_provider import (
+    AdvertiserProviderError,
+    cached_project_advertisers,
+    collect_project_advertisers,
+)
 from afi_os.services.appraisal import build_appraisal_contract
 from afi_os.services.google_ads_keyword_check import (
     cached_keyword_result,
@@ -48,7 +53,7 @@ logger = logging.getLogger(__name__)
 APPRAISAL_WORKERS = 4
 FAST_KEYWORD_TIMEOUT_S = 2.5
 STALE_JOB_MINUTES = 10
-EXECUTABLE_SOURCES = ("keyword", "traffic", "terms")
+EXECUTABLE_SOURCES = ("keyword", "traffic", "terms", "advertisers")
 TERMINAL_SOURCE_STATES = {"ready", "pending_source", "blocked", "error"}
 
 _executor = ThreadPoolExecutor(max_workers=APPRAISAL_WORKERS, thread_name_prefix="afi-appraise")
@@ -144,6 +149,9 @@ def _initial_sources(db: Session, project: Project, *, force_refresh: bool) -> d
     loaded = load_portfolio_project(db, project.id) or project
     traffic_cache = None if force_refresh else _cached_traffic_result(db, project, now=now)
     keyword_cache = None if force_refresh else cached_keyword_result(db, project, now=now)
+    advertiser_cache = (
+        None if force_refresh else cached_project_advertisers(db, project, now=now)
+    )
     has_terms = bool(
         loaded.program
         and (
@@ -214,15 +222,34 @@ def _initial_sources(db: Session, project: Project, *, force_refresh: bool) -> d
         "advertisers": (
             _source(
                 "ready",
-                "Nhà quảng cáo đã có",
-                detail="Đã có observation có nguồn trong database.",
-                color="green",
+                (
+                    "Không tìm thấy nhà quảng cáo nào"
+                    if advertiser_cache.get("status") == "NO_DATA"
+                    else "Nhà quảng cáo đã có cache"
+                ),
+                detail=str(advertiser_cache.get("detail")),
+                color=(
+                    "grey"
+                    if advertiser_cache.get("status") == "NO_DATA"
+                    else "green"
+                ),
+                source_urls=list(advertiser_cache.get("source_urls") or []),
+                checked_at=(
+                    datetime.fromisoformat(str(advertiser_cache["checked_at"]))
+                    if advertiser_cache.get("checked_at")
+                    else None
+                ),
+                cache_date=(
+                    datetime.fromisoformat(str(advertiser_cache["checked_at"]))
+                    if advertiser_cache.get("checked_at")
+                    else None
+                ),
             )
-            if loaded.observations
+            if advertiser_cache
             else _source(
-                "pending_source",
-                "Chưa nối nguồn dữ liệu",
-                detail="Tính năng sẽ có khi nối minhbach/SerpApi.",
+                "loading",
+                "Đang lấy nhà quảng cáo…",
+                detail="SerpApi Ads Transparency chạy trong fast path.",
                 color="grey",
             )
         ),
@@ -291,7 +318,11 @@ def _result_source(result: dict[str, Any], *, duration_ms: int) -> dict[str, Any
     if raw in {"NO_DATA", "EMPTY"}:
         return _source(
             "ready",
-            "Không tìm thấy dữ liệu",
+            (
+                "Không tìm thấy nhà quảng cáo nào"
+                if detail == "Không tìm thấy nhà quảng cáo nào"
+                else "Không tìm thấy dữ liệu"
+            ),
             detail=detail,
             color="grey",
             source_urls=urls,
@@ -318,6 +349,16 @@ def _result_source(result: dict[str, Any], *, duration_ms: int) -> dict[str, Any
             color="red",
             source_urls=urls,
             retryable=True,
+            duration_ms=duration_ms,
+        )
+    if raw == "QUOTA_EXHAUSTED":
+        return _source(
+            "blocked",
+            detail or "Hết hạn mức tháng, chờ reset hoặc nâng gói",
+            detail=detail,
+            color="yellow",
+            source_urls=urls,
+            retryable=False,
             duration_ms=duration_ms,
         )
     if raw in {"MANUAL_INPUT_REQUIRED", "BLOCKED"}:
@@ -395,6 +436,21 @@ def _collect_traffic(db: Session, job: AppraisalJob, project: Project) -> dict[s
     return collect_project_traffic(db, project, force_refresh=bool(job.force_refresh))
 
 
+def _collect_advertisers(
+    db: Session, job: AppraisalJob, project: Project
+) -> dict[str, Any]:
+    try:
+        return collect_project_advertisers(
+            db, project, force_refresh=bool(job.force_refresh)
+        )
+    except AdvertiserProviderError as exc:
+        return {
+            "status": exc.status,
+            "detail": exc.detail,
+            "source_urls": [],
+        }
+
+
 def _collect_terms(db: Session, job: AppraisalJob, project: Project) -> dict[str, Any]:
     try:
         terms = collect_domain_proposal(db, project.domain)
@@ -442,6 +498,7 @@ COLLECTORS: dict[str, Callable[[Session, AppraisalJob, Project], dict[str, Any]]
     "keyword": _collect_keyword,
     "traffic": _collect_traffic,
     "terms": _collect_terms,
+    "advertisers": _collect_advertisers,
 }
 
 
@@ -534,15 +591,21 @@ def create_appraisal_job(
 ) -> AppraisalResponse:
     recover_stale_appraisal_jobs(db)
     project = ensure_appraisal_project(db, domain)
-    job = AppraisalJob(
-        project_id=project.id,
-        domain=domain,
-        status=AppraisalJobStatus.QUEUED,
-        per_source_json=_initial_sources(db, project, force_refresh=force_refresh),
-        batch_id=batch_id,
-        force_refresh=force_refresh,
+    job = db.scalar(
+        select(AppraisalJob)
+        .where(
+            AppraisalJob.project_id == project.id,
+            AppraisalJob.status == AppraisalJobStatus.QUEUED,
+        )
+        .order_by(AppraisalJob.id.desc())
     )
-    db.add(job)
+    if job is None:
+        job = AppraisalJob(project_id=project.id, domain=domain)
+        db.add(job)
+    job.per_source_json = _initial_sources(db, project, force_refresh=force_refresh)
+    job.batch_id = batch_id
+    job.force_refresh = force_refresh
+    job.last_error = None
     db.commit()
     db.refresh(job)
 
@@ -554,9 +617,10 @@ def create_appraisal_job(
         job.status = AppraisalJobStatus.RUNNING
         job.started_at = _now()
         db.commit()
-        if wait_for_keyword and "keyword" in futures:
+        fast_future = futures.get("advertisers") or futures.get("keyword")
+        if wait_for_keyword and fast_future is not None:
             try:
-                futures["keyword"].result(timeout=FAST_KEYWORD_TIMEOUT_S)
+                fast_future.result(timeout=FAST_KEYWORD_TIMEOUT_S)
             except TimeoutError:
                 pass
     else:
@@ -677,7 +741,7 @@ def create_appraisal_batch(db: Session, domains: list[str]) -> AppraisalBatchRes
     if traffic_jobs:
         _executor.submit(_batch_traffic_worker, traffic_jobs)
     for job in db.scalars(select(AppraisalJob).where(AppraisalJob.id.in_(job_ids))).all():
-        for source_name in ("keyword", "terms"):
+        for source_name in ("keyword", "terms", "advertisers"):
             if job.per_source_json.get(source_name, {}).get("status") == "loading":
                 _submit_source(job.id, source_name)
         if all(

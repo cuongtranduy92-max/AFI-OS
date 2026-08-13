@@ -118,6 +118,7 @@ class WatchStatus(StrEnum):
 
 
 class ProjectStage(StrEnum):
+    DISCOVERED = "DISCOVERED"
     INTAKE = "INTAKE"
     RESEARCH = "RESEARCH"
     EVALUATION = "EVALUATION"

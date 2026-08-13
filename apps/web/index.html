@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AFI-OS · Vận hành affiliate</title>
-  <link rel="stylesheet" href="/styles.css?v=02110">
+  <link rel="stylesheet" href="/styles.css?v=02111">
 </head>
 <body>
   <div class="app-shell">
@@ -66,7 +66,7 @@
           <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
         </div>
         <div class="top-actions">
-          <span class="badge badge-demo">FX MÔ PHỎNG CỐ ĐỊNH · v0.2.110</span>
+          <span class="badge badge-demo">NHÀ QUẢNG CÁO TỰ ĐỘNG · v0.2.111</span>
           <button id="refreshAll" class="button secondary">Làm mới</button>
         </div>
       </header>
@@ -290,7 +290,7 @@
           </div>
           <form id="portfolioFilters" class="portfolio-filters">
             <label>Lọc hồ sơ đã lưu<input name="query" placeholder="Tên hoặc domain đã lưu"></label>
-            <label>Giai đoạn<select name="stage"><option value="">Tất cả</option><option value="INTAKE">Tiếp nhận</option><option value="RESEARCH">Kiểm chứng</option><option value="EVALUATION">Chấm điểm</option><option value="PREP">Chuẩn bị</option><option value="LIVE">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="CLOSED">Đã đóng</option></select></label>
+            <label>Giai đoạn<select name="stage"><option value="">Tất cả</option><option value="DISCOVERED">Mới phát hiện</option><option value="INTAKE">Tiếp nhận</option><option value="RESEARCH">Kiểm chứng</option><option value="EVALUATION">Chấm điểm</option><option value="PREP">Chuẩn bị</option><option value="LIVE">Đang chạy</option><option value="PAUSED">Tạm dừng</option><option value="CLOSED">Đã đóng</option></select></label>
             <label>Đăng ký<select name="registration_status"><option value="">Tất cả</option><option value="NOT_STARTED">Chưa đăng ký</option><option value="APPLYING">Đang đăng ký</option><option value="PENDING_APPROVAL">Chờ duyệt</option><option value="APPROVED">Đã duyệt</option><option value="BLOCKED_REGISTRATION">Không đăng ký được</option><option value="REJECTED">Bị từ chối</option><option value="CLOSED">Đã đóng</option></select></label>
             <label>Cảnh báo<select name="risk"><option value="">Tất cả</option><option value="REGISTRATION_BLOCKED">Không đăng ký được</option><option value="PPC_NOT_CHECKED">PPC chưa rõ</option><option value="PPC_CONFLICT">PPC mâu thuẫn</option><option value="COMMISSION_CONFLICT">Commission mâu thuẫn</option><option value="COMMISSION_REVIEW_REQUIRED">Commission chờ duyệt</option><option value="ADVERTISER_DATA_MISSING">Thiếu advertiser</option><option value="CAMPAIGN_DATA_MISSING">Thiếu campaign</option><option value="CTR_BELOW_40">CTR dưới 40%</option></select></label>
             <label>Sắp xếp<select name="sort"><option value="updated">Mới cập nhật</option><option value="confidence">Độ tin cậy</option><option value="advertisers">Số advertiser</option><option value="ctr">CTR</option><option value="brand">Tên dự án</option></select></label>
@@ -350,6 +350,25 @@
       </section>
 
       <section id="view-intelligence" class="view">
+        <article class="panel advertiser-source-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Nguồn nhà quảng cáo tự động</h2>
+              <p>SerpApi đọc Google Ads Transparency Center. Chỉ gọi khi anh check domain, mở rộng hoặc bấm quét lại.</p>
+            </div>
+            <span id="advertiserQuota" class="badge">Đang kiểm tra quota…</span>
+          </div>
+          <div id="advertiserProviderMessage" class="notice">Đang kiểm tra kết nối…</div>
+          <div class="panel-head advertiser-watch-head">
+            <div><h2>Advertiser đang theo dõi</h2><p>Không quét định kỳ. “Quét lại” sẽ tốn lượt khi cache bị bỏ qua và chỉ hiện domain mới.</p></div>
+            <span id="advertiserWatchCount" class="badge">0 advertiser</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Advertiser</th><th>Domain đã biết</th><th>Lần quét</th><th></th></tr></thead>
+            <tbody id="advertiserWatchRows"><tr><td colspan="4" class="empty">Chưa theo dõi advertiser nào.</td></tr></tbody>
+          </table></div>
+        </article>
+
         <article class="panel">
           <div class="panel-head">
             <div>
@@ -833,6 +852,6 @@
     </div>
     <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
   </aside>
-  <script src="/app.js?v=02110"></script>
+  <script src="/app.js?v=02111"></script>
 </body>
 </html>

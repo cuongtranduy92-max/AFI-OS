@@ -53,7 +53,7 @@ FIELD_LABELS = {
     "payout_timing_days": "Thời gian thanh toán",
     "cookie_days": "Thời hạn cookie",
     "independent_advertisers": "Nhà quảng cáo độc lập",
-    "active_advertisers_30d": "Nhà quảng cáo hoạt động 30 ngày",
+    "active_advertisers_30d": "Nhà quảng cáo đang chạy 7 ngày",
     "accepted_commission_rate": "Hoa hồng đã xác minh",
     "accepted_commission_flat": "Hoa hồng cố định đã xác minh",
     "accepted_commission_type": "Loại hoa hồng đã xác minh",

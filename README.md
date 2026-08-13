@@ -97,7 +97,7 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.110**. Bước 1 trả kết quả dần ngay lập tức, chạy nguồn chậm ở nền,
+Đây là **v0.2.111**. Bước 1 trả kết quả dần ngay lập tức, chạy nguồn chậm ở nền,
 hiển thị rõ lý do thiếu dữ liệu và cho thử lại riêng từng nguồn. Bước 3 vẫn có
 Camp Doctor chỉ đọc: tự chẩn đoán CTR, chi phí/ref
 thật, từ khóa, cụm từ tìm kiếm, thiết bị, vị trí, nhân khẩu học và quy tắc thay đổi
@@ -123,6 +123,12 @@ Bước 1 tiếp tục tự lấy traffic tháng mới nhất và top 5 quốc g
 Scraper sau một lần lưu token trong macOS Keychain. Cache 45 ngày và batch tối đa 50
 domain giúp tránh gọi lại không cần thiết; domain không có dữ liệu hiện `NO_DATA`,
 không bị biến thành 0.
+
+Nguồn Nhà quảng cáo dùng SerpApi Google Ads Transparency Center qua macOS Keychain.
+Một lượt check domain trả số advertiser đang chạy trong 7 ngày và tổng từng thấy;
+cache 7 ngày tránh tốn lượt. Từ chi tiết dự án có thể mở rộng advertiser sang các
+domain khác, theo dõi và đưa từng domain mới vào hàng đợi. Không có quét định kỳ;
+quota 250 lượt/tháng được cảnh báo ở 80% và chặn rõ ràng khi hết.
 
 Command Center tiếp tục phân biệt lần quét folder với thời điểm file Google Ads thực sự được xuất. Khi snapshot có dữ liệu của hôm nay nhưng file nguồn đã hơn 6 giờ, hệ thống tạo cảnh báo làm mới không chặn và không sửa/dừng campaign.
 
