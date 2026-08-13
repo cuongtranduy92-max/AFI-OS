@@ -111,6 +111,7 @@ def portfolio_query():  # type: ignore[no-untyped-def]
         selectinload(Project.campaigns).selectinload(Campaign.daily_stats),
         selectinload(Project.campaigns).selectinload(Campaign.spends),
         selectinload(Project.metric_snapshots),
+        selectinload(Project.camp_plan),
     )
 
 

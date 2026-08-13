@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS_HEAD = "f21a58d9c341"
-CURRENT_HEAD = "a73c9e15b642"
+CURRENT_HEAD = "b84d0e26c104"
 
 
 def _alembic(database: Path, *arguments: str) -> None:

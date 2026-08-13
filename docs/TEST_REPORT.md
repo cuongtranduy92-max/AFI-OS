@@ -1,4 +1,21 @@
-# TEST REPORT — AFI-OS 0.2.103
+# TEST REPORT — AFI-OS 0.2.104
+
+## 0.2.104 — Dot3 Step 2 campaign content builder
+
+- Focused API/UI regression verifies exact 15/4/4/4 counts, limits, required domain
+  placement, ref-linked sitelinks and public Step 2 controls.
+- Edited `Free Best Fliki` is rejected on the exact headline row; deploy returns 409
+  until the saved draft is re-linted cleanly.
+- A non-PASS Project returns 409; clean deploy writes `DEPLOYED` plus AuditLog and
+  records `google_ads_write=false`.
+- Full application regression: 382 collected, 381 passed, 1 skipped.
+- Touched-file Ruff checks, JavaScript syntax and whitespace checks: passed.
+- Checksum verification passed for all 33 payload files.
+- Temporary production-data copy update `0.2.103 → 0.2.104` and rollback
+  `0.2.104 → 0.2.103` passed. Both directions kept 8 Projects and 3 Programs,
+  SQLite integrity `ok`, zero foreign-key errors and exact migration heads
+  `b84d0e26c104/a73c9e15b642`.
+- Live postchecks are required immediately after installation.
 
 ## 0.2.103 — Dot2 payback and scoring
 

@@ -9,7 +9,7 @@ import pytest
 
 from afi_os.services import backups
 
-CURRENT_HEAD = "a73c9e15b642"
+CURRENT_HEAD = "b84d0e26c104"
 
 
 def _configure(monkeypatch: pytest.MonkeyPatch, root: Path) -> Path:

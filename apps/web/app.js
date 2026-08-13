@@ -81,9 +81,13 @@ async function request(path, options = {}) {
     let detail = `${response.status}`;
     try {
       const body = await response.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = typeof body.detail === "string"
+        ? body.detail
+        : body.detail?.message || JSON.stringify(body.detail || body);
     } catch (_) {}
-    throw new Error(detail);
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -121,6 +125,9 @@ function metric(label, value, note) {
 
 let portfolioCache = [];
 const appraisalCache = new Map();
+let stepTwoProjectCache = [];
+let activeCampPlanProject = null;
+let activeCampPlan = null;
 
 const riskLabels = {
   REGISTRATION_BLOCKED: "Không đăng ký được",
@@ -736,13 +743,174 @@ async function loadStepTwoProjects() {
   const body = document.getElementById("stepTwoProjectRows");
   const summary = document.getElementById("stepTwoProjectSummary");
   if (!body || !summary) return;
-  const [prep, live] = await Promise.all([
-    request("/portfolio/projects?stage=PREP&limit=500"),
-    request("/portfolio/projects?stage=LIVE&limit=500"),
-  ]);
-  const items = [...prep, ...live];
-  summary.textContent = `${items.length} dự án đã được lưu từ Bước 1`;
-  body.innerHTML = items.length ? items.map((item) => `<tr><td><strong>${esc(item.brand_name)}</strong><br><span class="small">${esc(item.domain)}</span></td><td>${portfolioBadge(item.stage, projectStageLabels)}</td><td>${esc(item.next_action || "Chuẩn bị nội dung campaign")}</td><td><div class="risk-stack">${riskChips(item.risk_badges)}</div></td><td><button type="button" class="button secondary" data-project-detail="${item.id}">Mở dữ liệu Bước 1</button></td></tr>`).join("") : '<tr><td colspan="5" class="empty">Chưa có dự án đủ dữ liệu được lưu từ Bước 1.</td></tr>';
+  const items = await request("/projects/camp-plan/eligible");
+  stepTwoProjectCache = items;
+  summary.textContent = `${items.length} dự án PASS sẵn sàng làm nội dung`;
+  body.innerHTML = items.length ? items.map((item) => {
+    const signup = item.signup_url ? safeExternalLink(item.signup_url, "Mở link đăng ký") : '<span class="warning-text">Chưa có link đăng ký</span>';
+    const planStatus = item.camp_plan_status === "DEPLOYED"
+      ? '<span class="gate gate-ready">ĐÃ SANG BƯỚC 3</span>'
+      : item.camp_plan_status === "DRAFT"
+      ? '<span class="gate gate-pending">BẢN NHÁP</span>'
+      : '<span class="gate">CHƯA SINH</span>';
+    return `<tr>
+      <td><strong>${esc(item.brand_name)}</strong><br><span class="small">${esc(item.domain)}</span></td>
+      <td><span class="score">${esc(item.score_total ?? "—")}/100</span><br><span class="small">PASS</span></td>
+      <td>${signup}</td>
+      <td>${planStatus}</td>
+      <td><div class="review-actions"><button type="button" class="button primary" data-camp-plan-project="${item.project_id}">${item.camp_plan_status ? "Mở bộ nội dung" : "Chuẩn bị content"}</button><button type="button" class="button secondary" data-project-detail="${item.project_id}">Xem Bước 1</button></div></td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="5" class="empty">Chưa có dự án PASS. Hãy hoàn tất số liệu và bấm “Lưu và chuyển Bước 2” ở Bước 1.</td></tr>';
+}
+
+function campPlanIssueHtml(issue) {
+  return `<span class="camp-plan-issue ${esc(issue.level)}">${esc(issue.message)}</span>`;
+}
+
+function campPlanLineIssues(issues, section, index) {
+  return issues
+    .filter((item) => item.section === section && item.index === index)
+    .map(campPlanIssueHtml)
+    .join("");
+}
+
+function renderCampPlanTextLines(targetId, field, section, values, maxLength, issues, multiline = false) {
+  const target = document.getElementById(targetId);
+  target.innerHTML = values.map((value, index) => {
+    const input = multiline
+      ? `<textarea rows="2" data-camp-field="${field}" data-camp-section="${section}" data-camp-index="${index}" data-camp-max="${maxLength}">${esc(value)}</textarea>`
+      : `<input type="text" value="${esc(value)}" data-camp-field="${field}" data-camp-section="${section}" data-camp-index="${index}" data-camp-max="${maxLength}">`;
+    return `<div class="camp-plan-line">
+      <span class="camp-plan-line-number">${index + 1}</span>
+      ${input}
+      <span class="camp-plan-char-count ${value.length > maxLength ? "over" : ""}">${value.length}/${maxLength}</span>
+      <div class="camp-plan-line-issues">${campPlanLineIssues(issues, section, index)}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderCampPlanSitelinks(values, issues) {
+  document.getElementById("campPlanSitelinks").innerHTML = values.map((item, index) => `<div class="camp-plan-line sitelink">
+    <span class="camp-plan-line-number">${index + 1}</span>
+    <input type="text" value="${esc(item.label)}" aria-label="Nhãn sitelink ${index + 1}" data-camp-field="sitelink-label" data-camp-index="${index}" data-camp-max="25">
+    <input type="url" value="${esc(item.final_url)}" aria-label="URL sitelink ${index + 1}" data-camp-field="sitelink-url" data-camp-index="${index}">
+    <div class="camp-plan-line-issues">${campPlanLineIssues(issues, "sitelinks", index)}</div>
+  </div>`).join("");
+}
+
+function renderCampPlan(result) {
+  activeCampPlan = result;
+  const issues = result.linter || [];
+  const errors = issues.filter((item) => item.level === "error");
+  const warnings = issues.filter((item) => item.level === "warning");
+  document.getElementById("campPlanEditor").hidden = false;
+  document.getElementById("campPlanStatus").textContent = result.status === "DEPLOYED" ? "ĐÃ TRIỂN KHAI" : "BẢN NHÁP";
+  document.getElementById("campPlanRefUrl").value = result.ref_url;
+  document.getElementById("campPlanPlanIssues").innerHTML = issues
+    .filter((item) => item.section === "plan")
+    .map(campPlanIssueHtml)
+    .join("");
+  renderCampPlanTextLines("campPlanHeadlines", "headline", "headlines", result.plan.headlines, 30, issues);
+  renderCampPlanTextLines("campPlanDescriptions", "description", "descriptions", result.plan.descriptions, 90, issues, true);
+  renderCampPlanSitelinks(result.plan.sitelinks, issues);
+  renderCampPlanTextLines("campPlanCallouts", "callout", "callouts", result.plan.callouts, 25, issues);
+  document.getElementById("campPlanDeploy").disabled = errors.length > 0 || result.status === "DEPLOYED";
+  document.getElementById("campPlanLintSummary").textContent = errors.length
+    ? `${errors.length} lỗi · ${warnings.length} cảnh báo — sửa rồi bấm Kiểm tra lại.`
+    : `Không còn lỗi · ${warnings.length} cảnh báo. Có thể chuyển sang Bước 3.`;
+  const stepThree = document.getElementById("campPlanStepThree");
+  stepThree.hidden = result.status !== "DEPLOYED";
+  if (result.status === "DEPLOYED") {
+    document.getElementById("campPlanStepThreeTitle").textContent = `${result.brand_name} đã sẵn sàng cho Bước 3`;
+  }
+}
+
+function collectCampPlanEditor() {
+  const values = (field) => Array.from(document.querySelectorAll(`[data-camp-field="${field}"]`)).map((input) => input.value);
+  const labels = values("sitelink-label");
+  const urls = values("sitelink-url");
+  return {
+    headlines: values("headline"),
+    descriptions: values("description"),
+    sitelinks: labels.map((label, index) => ({label, final_url: urls[index] || ""})),
+    callouts: values("callout"),
+  };
+}
+
+async function openCampPlanProject(projectId) {
+  activeCampPlanProject = stepTwoProjectCache.find((item) => String(item.project_id) === String(projectId));
+  if (!activeCampPlanProject) return;
+  const workspace = document.getElementById("campPlanWorkspace");
+  workspace.hidden = false;
+  document.getElementById("campPlanProjectTitle").textContent = `${activeCampPlanProject.brand_name} · ${activeCampPlanProject.domain}`;
+  document.getElementById("campPlanProjectMeta").innerHTML = activeCampPlanProject.signup_url
+    ? `Link đăng ký: ${safeExternalLink(activeCampPlanProject.signup_url, "Mở trang đăng ký affiliate")}`
+    : "Chưa có link đăng ký affiliate; vẫn có thể nhập link ref đã được cấp.";
+  document.getElementById("campPlanRefUrl").value = activeCampPlanProject.ref_url || "";
+  document.getElementById("campPlanMessage").textContent = "Đang mở bản đã lưu…";
+  document.getElementById("campPlanEditor").hidden = true;
+  document.getElementById("campPlanStepThree").hidden = true;
+  try {
+    const result = await request(`/projects/${projectId}/camp-plan`);
+    renderCampPlan(result);
+    document.getElementById("campPlanMessage").textContent = "Đã mở bộ nội dung đã lưu.";
+  } catch (error) {
+    if (error.status !== 404) throw error;
+    activeCampPlan = null;
+    document.getElementById("campPlanStatus").textContent = "CHƯA SINH";
+    document.getElementById("campPlanMessage").textContent = "Nhập link ref rồi bấm Sinh content.";
+  }
+  workspace.scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+async function generateActiveCampPlan(useExistingPlan) {
+  if (!activeCampPlanProject) {
+    document.getElementById("campPlanMessage").textContent = "Hãy chọn một dự án PASS trong danh sách.";
+    return;
+  }
+  const refUrl = document.getElementById("campPlanRefUrl").value.trim();
+  if (!safeExternalUrl(refUrl)) {
+    document.getElementById("campPlanMessage").textContent = "Link ref phải là URL đầy đủ bắt đầu bằng http:// hoặc https://";
+    return;
+  }
+  const message = document.getElementById("campPlanMessage");
+  message.textContent = useExistingPlan ? "Đang kiểm tra lại từng dòng…" : "Đang sinh bộ nội dung…";
+  const payload = {ref_url: refUrl};
+  if (useExistingPlan) payload.existing_plan = collectCampPlanEditor();
+  try {
+    const result = await request(`/projects/${activeCampPlanProject.project_id}/camp-plan/generate`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    renderCampPlan(result);
+    message.textContent = result.has_errors
+      ? "Đã lưu bản nháp. Hãy sửa các dòng đỏ rồi kiểm tra lại."
+      : "Đã lưu bản nháp và kiểm tra xong. Không có thao tác ghi Google Ads.";
+    await loadStepTwoProjects();
+  } catch (error) {
+    message.textContent = `Không thể sinh nội dung: ${error.message}`;
+  }
+}
+
+async function deployActiveCampPlan() {
+  if (!activeCampPlanProject || !activeCampPlan) return;
+  const button = document.getElementById("campPlanDeploy");
+  const message = document.getElementById("campPlanMessage");
+  button.disabled = true;
+  message.textContent = "Đang lưu trạng thái và bàn giao sang Bước 3…";
+  try {
+    const result = await request(`/projects/${activeCampPlanProject.project_id}/camp-plan/deploy`, {
+      method: "POST",
+      body: JSON.stringify({actor: "local-user"}),
+    });
+    renderCampPlan(result);
+    await loadStepTwoProjects();
+    message.textContent = "Đã triển khai nội bộ sang Bước 3. Chưa tạo hay sửa Google Ads.";
+    document.getElementById("campPlanStepThree").scrollIntoView({behavior: "smooth", block: "center"});
+  } catch (error) {
+    button.disabled = false;
+    message.textContent = `Chưa thể triển khai: ${error.message}`;
+  }
 }
 
 async function loadHealth() {
@@ -2223,8 +2391,34 @@ document.getElementById("portfolioRows").addEventListener("click", (event) => {
   if (detailButton) openProjectDetail(detailButton.dataset.projectDetail);
 });
 document.getElementById("stepTwoProjectRows").addEventListener("click", (event) => {
+  const campPlanButton = event.target.closest("button[data-camp-plan-project]");
+  if (campPlanButton) {
+    openCampPlanProject(campPlanButton.dataset.campPlanProject).catch((error) => {
+      document.getElementById("stepTwoProjectSummary").textContent = `Lỗi: ${error.message}`;
+    });
+    return;
+  }
   const detailButton = event.target.closest("button[data-project-detail]");
   if (detailButton) openProjectDetail(detailButton.dataset.projectDetail);
+});
+document.getElementById("campPlanGenerate").addEventListener("click", () => generateActiveCampPlan(false));
+document.getElementById("campPlanRelint").addEventListener("click", () => generateActiveCampPlan(true));
+document.getElementById("campPlanDeploy").addEventListener("click", deployActiveCampPlan);
+document.getElementById("campPlanEditor").addEventListener("input", (event) => {
+  const input = event.target.closest("[data-camp-field]");
+  if (!input) return;
+  const max = Number(input.dataset.campMax || 0);
+  const counter = input.parentElement.querySelector(".camp-plan-char-count");
+  if (counter && max) {
+    counter.textContent = `${input.value.length}/${max}`;
+    counter.classList.toggle("over", input.value.length > max);
+  }
+  document.getElementById("campPlanDeploy").disabled = true;
+  document.getElementById("campPlanLintSummary").textContent = "Nội dung đã sửa; bấm Kiểm tra lại trước khi triển khai.";
+});
+document.getElementById("campPlanStepThree").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-switch-view]");
+  if (button) switchView(button.dataset.switchView);
 });
 document.getElementById("truthDrawerBody").addEventListener("click", (event) => {
   const decisionButton = event.target.closest("button[data-step-one-decision]");

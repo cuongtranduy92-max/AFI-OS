@@ -94,7 +94,7 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.103**. Công thức hoàn vốn áp dụng đúng kịch bản sheet `3× bid thấp` và `0,5× bid cao`, quy đổi bid VND sang giá gói USD bằng tỷ giá cố định 26.000 VND/USD. `/api/appraise` trả điểm thật 0–100 và trạng thái đạt/chưa đạt/chờ dữ liệu; điều khoản cấm Ads vẫn chỉ tạo cảnh báo, không tự loại dự án hoặc dừng campaign.
+Đây là **v0.2.104**. Dự án PASS ở Bước 1 có thể sinh và chỉnh sửa bộ nội dung campaign 15 tiêu đề, 4 mô tả, 4 sitelink và 4 callout. Linter chạy offline, chặn deploy khi còn lỗi, lưu bản nháp và chỉ bàn giao nội bộ sang Bước 3; không tạo hoặc sửa Google Ads.
 
 Command Center tiếp tục phân biệt lần quét folder với thời điểm file Google Ads thực sự được xuất. Khi snapshot có dữ liệu của hôm nay nhưng file nguồn đã hơn 6 giờ, hệ thống tạo cảnh báo làm mới không chặn và không sửa/dừng campaign.
 

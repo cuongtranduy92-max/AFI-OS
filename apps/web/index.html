@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AFI-OS · Affiliate Operations</title>
-  <link rel="stylesheet" href="/styles.css?v=02103">
+  <link rel="stylesheet" href="/styles.css?v=02104">
 </head>
 <body>
   <div class="app-shell">
@@ -60,7 +60,7 @@
           <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
         </div>
         <div class="top-actions">
-          <span class="badge badge-demo">DOT2 SCORING · v0.2.103</span>
+          <span class="badge badge-demo">DOT3 CAMP BUILDER · v0.2.104</span>
           <button id="refreshAll" class="button secondary">Làm mới</button>
         </div>
       </header>
@@ -69,15 +69,69 @@
         <article class="panel step-two-panel">
           <div class="panel-head">
             <div>
-              <h2>Bước 2 · Dự án đã lưu để chuẩn bị campaign</h2>
-              <p>Chỉ xuất hiện sau khi Bước 1 đủ đầu vào hoàn vốn và anh bấm “Lưu và chuyển Bước 2”. Toàn bộ nguồn Bước 1 vẫn mở lại được.</p>
+              <h2>Bước 2 · Sinh và kiểm tra nội dung campaign</h2>
+              <p>Chỉ liệt kê dự án đang PASS theo số liệu Bước 1. Chọn dự án, nhập link ref rồi hệ thống sinh bộ 15/4/4/4 để sửa và kiểm tra.</p>
             </div>
             <span id="stepTwoProjectSummary" class="badge">Đang tải…</span>
           </div>
           <div class="table-wrap"><table>
-            <thead><tr><th>Dự án</th><th>Giai đoạn</th><th>Việc tiếp theo</th><th>Cảnh báo đi kèm</th><th></th></tr></thead>
+            <thead><tr><th>Dự án</th><th>Điểm Bước 1</th><th>Link đăng ký</th><th>Trạng thái nội dung</th><th></th></tr></thead>
             <tbody id="stepTwoProjectRows"><tr><td colspan="5" class="empty">Đang tải dự án Bước 2…</td></tr></tbody>
           </table></div>
+        </article>
+
+        <article id="campPlanWorkspace" class="panel camp-plan-workspace" hidden>
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">BỘ SINH 15 / 4 / 4 / 4</span>
+              <h2 id="campPlanProjectTitle">Chọn một dự án PASS</h2>
+              <p id="campPlanProjectMeta">Link đăng ký và bộ nội dung đã lưu sẽ hiện tại đây.</p>
+            </div>
+            <span id="campPlanStatus" class="badge">CHƯA SINH</span>
+          </div>
+          <div class="camp-plan-ref-row">
+            <label>Link ref của anh
+              <input id="campPlanRefUrl" type="url" maxlength="1000" placeholder="https://.../?ref=..." autocomplete="off">
+            </label>
+            <button id="campPlanGenerate" class="button primary" type="button">Sinh content</button>
+          </div>
+          <p id="campPlanMessage" class="form-message">Nhập đúng link affiliate/ref sẽ dùng cho cả 4 sitelink.</p>
+
+          <div id="campPlanEditor" hidden>
+            <div id="campPlanPlanIssues" class="camp-plan-plan-issues"></div>
+            <div class="camp-plan-grid">
+              <section class="camp-plan-section">
+                <div class="camp-plan-section-head"><h2>15 tiêu đề</h2><span>≤ 30 ký tự · 2–3 dòng có domain</span></div>
+                <div id="campPlanHeadlines" class="camp-plan-lines"></div>
+              </section>
+              <section class="camp-plan-section">
+                <div class="camp-plan-section-head"><h2>4 mô tả</h2><span>≤ 90 ký tự · đúng 1 dòng có domain</span></div>
+                <div id="campPlanDescriptions" class="camp-plan-lines"></div>
+              </section>
+              <section class="camp-plan-section">
+                <div class="camp-plan-section-head"><h2>4 sitelink</h2><span>Nhãn ≤ 25 · URL phải là link ref</span></div>
+                <div id="campPlanSitelinks" class="camp-plan-lines"></div>
+              </section>
+              <section class="camp-plan-section">
+                <div class="camp-plan-section-head"><h2>4 chú thích</h2><span>≤ 25 ký tự</span></div>
+                <div id="campPlanCallouts" class="camp-plan-lines"></div>
+              </section>
+            </div>
+            <div class="camp-plan-actions">
+              <button id="campPlanRelint" class="button secondary" type="button">Kiểm tra lại</button>
+              <button id="campPlanDeploy" class="button primary" type="button" disabled>Triển khai sang Bước 3</button>
+              <span id="campPlanLintSummary" class="form-message"></span>
+            </div>
+          </div>
+        </article>
+
+        <article id="campPlanStepThree" class="panel camp-plan-step-three" hidden>
+          <div>
+            <span class="eyebrow">BƯỚC 3 ĐÃ SẴN SÀNG</span>
+            <h2 id="campPlanStepThreeTitle">Bộ nội dung đã được duyệt nội bộ</h2>
+            <p>AFI-OS mới lưu kế hoạch, chưa tạo hay sửa campaign Google Ads. Bước tiếp theo là gắn campaign và theo dõi tối ưu.</p>
+          </div>
+          <button class="button primary" type="button" data-switch-view="exposure">Mở Bước 3 · Theo dõi campaign</button>
         </article>
 
         <div id="summaryCards" class="metrics-grid"></div>
@@ -648,6 +702,6 @@
     </div>
     <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
   </aside>
-  <script src="/app.js?v=02103"></script>
+  <script src="/app.js?v=02104"></script>
 </body>
 </html>

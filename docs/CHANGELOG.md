@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.2.104 — Dot3 Step 2 campaign content builder
+
+- Add one persisted `camp_plans` record per Project with DRAFT/DEPLOYED state,
+  editable plan JSON, deterministic linter results and an audited deploy transition.
+- Generate exactly 15 headlines, 4 descriptions, 4 ref-linked sitelinks and 4
+  callouts for Projects whose current stored Step 1 score has `pass=true`.
+- Re-lint operator edits line by line and block deploy while any error remains;
+  warning-only findings remain visible without mutating Terms or PPC permissions.
+- Expose only PASS Projects in the Step 2 UI, retain drafts, and hand clean plans to
+  Step 3 without creating or changing a Google Ads campaign.
+
 ## 0.2.103 — Dot2 payback formula and appraisal scoring
 
 - Match the operator's original sheet: low scenario `3×L`, high scenario `0.5×M`.

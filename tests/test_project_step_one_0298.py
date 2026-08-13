@@ -329,7 +329,7 @@ def test_step_one_ui_has_numbers_sources_api_needs_and_step_two_queue() -> None:
     page = client.get("/").text
     script = client.get("/app.js").text
 
-    assert "Bước 2 · Dự án đã lưu để chuẩn bị campaign" in page
+    assert "Bước 2 · Sinh và kiểm tra nội dung campaign" in page
     assert 'id="stepTwoProjectRows"' in page
     assert "Hoàn vốn ước tính" in script
     assert "Nguồn/API cần triển khai" in script

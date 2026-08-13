@@ -27,6 +27,7 @@ from afi_os.enums import (
     AuditAction,
     AutomationJobStatus,
     AutomationJobType,
+    CampPlanStatus,
     CaptureStatus,
     CommissionState,
     CommissionType,
@@ -312,6 +313,30 @@ class Project(TimestampMixin, Base):
     metric_snapshots: Mapped[list[MetricSnapshot]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    camp_plan: Mapped[CampPlan | None] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+
+class CampPlan(TimestampMixin, Base):
+    """Editable Step 2 campaign content with its latest deterministic lint report."""
+
+    __tablename__ = "camp_plans"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    ref_url: Mapped[str] = mapped_column(String(1000))
+    plan_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    linter_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    status: Mapped[CampPlanStatus] = mapped_column(
+        Enum(CampPlanStatus, native_enum=False), default=CampPlanStatus.DRAFT
+    )
+
+    project: Mapped[Project] = relationship(back_populates="camp_plan")
 
 
 class MetricSnapshot(TimestampMixin, Base):

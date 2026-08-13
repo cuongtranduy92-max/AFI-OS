@@ -16,7 +16,7 @@ from afi_os.schemas import BackupInfo
 from afi_os.services import backups
 from afi_os.services.runtime_status import runtime_status
 
-CURRENT_HEAD = "a73c9e15b642"
+CURRENT_HEAD = "b84d0e26c104"
 
 
 @pytest.fixture(autouse=True)

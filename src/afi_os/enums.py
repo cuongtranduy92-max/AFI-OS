@@ -127,6 +127,11 @@ class ProjectStage(StrEnum):
     CLOSED = "CLOSED"
 
 
+class CampPlanStatus(StrEnum):
+    DRAFT = "DRAFT"
+    DEPLOYED = "DEPLOYED"
+
+
 class RegistrationStatus(StrEnum):
     NOT_STARTED = "NOT_STARTED"
     APPLYING = "APPLYING"

@@ -22,6 +22,7 @@ from afi_os.schemas import (
     ProjectAutoCheckResponse,
     ProjectCheckValue,
 )
+from afi_os.services.project_check import build_project_step_one
 
 
 def _value(field: ProjectCheckValue | None) -> Any:
@@ -294,14 +295,14 @@ def score_appraisal(
 def build_appraisal_contract(
     db: Session,
     project: Project,
-    auto_check: ProjectAutoCheckResponse,
+    auto_check: ProjectAutoCheckResponse | None = None,
 ) -> AppraisalResponse:
     """Map collected facts into the stable Dot1.1 contract.
 
     Missing providers remain explicit nulls; the score reflects only available facts.
     """
 
-    step = auto_check.step_one
+    step = auto_check.step_one if auto_check is not None else build_project_step_one(project)
     fields = step.fields
     traffic_field = fields.get("website_traffic_monthly")
     countries_field = fields.get("top_traffic_countries")
@@ -313,7 +314,7 @@ def build_appraisal_contract(
     traffic_source = next(
         (
             item.source
-            for item in auto_check.sources
+            for item in (auto_check.sources if auto_check is not None else [])
             if item.source.lower().startswith("traffic website")
         ),
         traffic_field.source_name if traffic_field and traffic_monthly is not None else None,

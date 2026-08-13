@@ -4,6 +4,7 @@ from afi_os.api import (
     ad_intelligence,
     appraisal,
     automation,
+    camp_plans,
     compliance,
     dashboard,
     economics,
@@ -21,6 +22,7 @@ api_router.include_router(health.router)
 api_router.include_router(appraisal.router)
 api_router.include_router(operations.router)
 api_router.include_router(automation.router)
+api_router.include_router(camp_plans.router)
 api_router.include_router(portfolio.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(ad_intelligence.router)

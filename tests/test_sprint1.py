@@ -161,7 +161,7 @@ def test_backup_api_creates_integrity_checked_sqlite_copy() -> None:
         )
         connection.exec_driver_sql("DELETE FROM alembic_version")
         connection.exec_driver_sql(
-            "INSERT INTO alembic_version (version_num) VALUES ('a73c9e15b642')"
+            "INSERT INTO alembic_version (version_num) VALUES ('b84d0e26c104')"
         )
     response = client.post("/api/system/backups", json={})
     assert response.status_code == 200, response.text

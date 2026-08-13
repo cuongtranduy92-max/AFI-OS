@@ -1,5 +1,14 @@
 # TASKBOARD
 
+## 0.2.104 — Dot3 Step 2 content builder
+
+- [x] Add the one-plan-per-Project migration and DRAFT/DEPLOYED lifecycle.
+- [x] Gate generation and deploy on the current stored Step 1 `score.pass`.
+- [x] Generate exact 15/4/4/4 English content without an LLM or network call.
+- [x] Render editable lines with row-level errors and a re-lint action.
+- [x] Block deploy on errors, audit a clean deploy and expose the Step 3 handoff.
+- [x] Keep Google Ads write disabled and preserve Terms/commission decisions.
+
 ## 0.2.103 — Dot2 scoring and sheet payback
 
 - [x] Apply the fixed 26,000 VND/USD rate only to modeled payback.

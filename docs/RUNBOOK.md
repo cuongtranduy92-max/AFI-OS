@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Update 0.2.104 — Bộ sinh content Bước 2
+
+1. Chạy `UPDATE-AFI-OS-0.2.104.command` một lần.
+2. Vào **Bước 2 · Chuẩn bị campaign** và chọn một dự án PASS.
+3. Mở link đăng ký nếu cần lấy link ref, dán link ref rồi bấm **Sinh content**.
+4. Sửa từng dòng. Dòng đỏ phải sửa; sau mỗi lần sửa bấm **Kiểm tra lại**.
+5. Khi không còn lỗi, bấm **Triển khai sang Bước 3**.
+
+Thao tác này chỉ lưu kế hoạch nội bộ và audit; không tạo, sửa, bật hoặc dừng Google Ads.
+Rollback bằng `ROLLBACK-AFI-OS-0.2.104.command`.
+
 ## Update 0.2.103 — Hoàn vốn đúng sheet và chấm điểm
 
 Chạy `UPDATE-AFI-OS-0.2.103.command` một lần. Công thức hoàn vốn dùng `3× bid thấp`,

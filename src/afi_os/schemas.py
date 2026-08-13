@@ -11,6 +11,7 @@ from afi_os.enums import (
     AdvertiserClassification,
     AutomationJobStatus,
     AutomationJobType,
+    CampPlanStatus,
     CommissionState,
     CommissionType,
     DataQuality,
@@ -570,6 +571,78 @@ class ProjectStepOneDecisionResponse(BaseModel):
     campaign_state_changed: bool = False
     permissions_changed: bool = False
     google_ads_write: bool = False
+
+
+class CampPlanSitelink(BaseModel):
+    label: str = Field(max_length=500)
+    final_url: str = Field(max_length=1000)
+
+
+class CampPlanContent(BaseModel):
+    headlines: list[str] = Field(default_factory=list, max_length=50)
+    descriptions: list[str] = Field(default_factory=list, max_length=20)
+    sitelinks: list[CampPlanSitelink] = Field(default_factory=list, max_length=20)
+    callouts: list[str] = Field(default_factory=list, max_length=20)
+
+
+class CampPlanLintIssue(BaseModel):
+    level: Literal["error", "warning"]
+    section: Literal["headlines", "descriptions", "sitelinks", "callouts", "plan"]
+    index: int | None = None
+    message: str
+
+
+class CampPlanGenerateRequest(BaseModel):
+    ref_url: str = Field(min_length=1, max_length=1000)
+    existing_plan: CampPlanContent | None = None
+
+    @field_validator("ref_url")
+    @classmethod
+    def validate_ref_url(cls, value: str) -> str:
+        normalized = validate_source_url(value)
+        parsed = urlsplit(normalized)
+        if parsed.username or parsed.password:
+            raise ValueError("ref_url must not contain credentials")
+        return normalized
+
+
+class CampPlanDeployRequest(BaseModel):
+    actor: str = Field(default="local-user", min_length=1, max_length=120)
+
+    @field_validator("actor")
+    @classmethod
+    def normalize_camp_plan_actor(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("actor cannot be blank")
+        return normalized
+
+
+class CampPlanResponse(BaseModel):
+    id: int
+    project_id: int
+    domain: str
+    brand_name: str
+    signup_url: str | None = None
+    ref_url: str
+    plan: CampPlanContent
+    linter: list[CampPlanLintIssue] = Field(default_factory=list)
+    status: CampPlanStatus
+    has_errors: bool
+    created_at: datetime
+    updated_at: datetime
+    google_ads_write: bool = False
+
+
+class CampPlanEligibleProject(BaseModel):
+    project_id: int
+    domain: str
+    brand_name: str
+    signup_url: str | None = None
+    score_total: int | None = None
+    score_pass: bool = True
+    camp_plan_status: CampPlanStatus | None = None
+    ref_url: str | None = None
 
 
 class ProjectTrafficSnapshotRequest(BaseModel):
