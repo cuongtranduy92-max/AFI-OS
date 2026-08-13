@@ -1,5 +1,14 @@
 # TASKBOARD
 
+## 0.2.105 — Apify traffic automation
+
+- [x] Add APIFY to the Keychain-only traffic seam.
+- [x] Parse latest monthly visits and top-five country shares with source lineage.
+- [x] Cache both metrics for 45 days and skip the paid call on a cache hit.
+- [x] Batch up to 50 domains in one actor run and preserve per-domain NO_DATA.
+- [x] Show sourced traffic and countries in the Step 1 appraisal contract/UI.
+- [x] Keep Terms warning-only, commission operator-controlled and Google Ads read-only.
+
 ## 0.2.104 — Dot3 Step 2 content builder
 
 - [x] Add the one-plan-per-Project migration and DRAFT/DEPLOYED lifecycle.

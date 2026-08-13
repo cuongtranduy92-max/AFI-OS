@@ -7,15 +7,17 @@ PYTHON="$ROOT/.venv/bin/python"
 echo "[AFI-OS] KẾT NỐI TRAFFIC WEBSITE · CHỈ ĐỌC"
 echo "Sau bước này, màn hình Tìm dự án chỉ cần nhập domain."
 echo "Chọn provider:"
-echo "  1) Similarweb API"
-echo "  2) Semrush Trends API"
-read "CHOICE?Nhập 1 hoặc 2: "
+echo "  1) Apify Similarweb Scraper (khuyên dùng)"
+echo "  2) Similarweb API chính chủ"
+echo "  3) Semrush Trends API"
+read "CHOICE?Nhập 1, 2 hoặc 3: "
 case "$CHOICE" in
-  1) PROVIDER="SIMILARWEB" ;;
-  2) PROVIDER="SEMRUSH" ;;
+  1) PROVIDER="APIFY" ;;
+  2) PROVIDER="SIMILARWEB" ;;
+  3) PROVIDER="SEMRUSH" ;;
   *) echo "Lựa chọn không hợp lệ."; read "?Nhấn Enter để đóng..."; exit 1 ;;
 esac
-read -s "API_KEY?API key (sẽ không hiển thị): "
+read -s "API_KEY?API token/key (sẽ không hiển thị): "
 echo
 if [[ -z "$API_KEY" ]]; then
   echo "API key không được để trống."

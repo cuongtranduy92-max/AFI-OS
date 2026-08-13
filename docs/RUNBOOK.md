@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Update 0.2.105 — Traffic tự động bằng Apify
+
+1. Chạy `UPDATE-AFI-OS-0.2.105.command` một lần.
+2. Nếu chưa kết nối traffic, chạy `SETUP-TRAFFIC-DATA.command`, nhập `1`, dán
+   Apify API token rồi nhấn Enter. Token chỉ lưu trong macOS Keychain.
+3. Vào **Bước 1 · Check dự án**, nhập một domain hoặc dán danh sách tối đa 50 domain.
+4. AFI-OS tự lấy traffic tháng mới nhất và top 5 quốc gia. Kết quả còn hạn 45 ngày
+   được dùng lại và không gọi Apify lần nữa.
+5. Domain Apify không có dữ liệu hiện `NO_DATA`; hệ thống không tự điền số 0.
+
+Rollback bằng `ROLLBACK-AFI-OS-0.2.105.command`. Update không thay đổi Terms,
+commission, Project/campaign state và không ghi Google Ads.
+
 ## Update 0.2.104 — Bộ sinh content Bước 2
 
 1. Chạy `UPDATE-AFI-OS-0.2.104.command` một lần.

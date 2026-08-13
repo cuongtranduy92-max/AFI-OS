@@ -242,7 +242,7 @@ def score_appraisal(
 
     if traffic is None:
         flags.append(
-            AppraisalFlag(level="pending", msg="Traffic đang chờ nguồn (Similarweb).")
+            AppraisalFlag(level="pending", msg="Traffic đang chờ nguồn (Apify/Similarweb).")
         )
     elif not traffic_ok:
         flags.append(

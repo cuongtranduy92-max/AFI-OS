@@ -388,22 +388,35 @@ async function runAppraisalBatch() {
   const input = document.getElementById("appraisalBatchInput");
   const button = document.getElementById("appraisalBatchRun");
   const target = document.getElementById("appraisalBatchResults");
-  const domains = [...new Set(input.value.split(/\s+/).map(normalizeProjectDomainCandidate).filter(Boolean))].slice(0, 25);
+  const domains = [...new Set(input.value.split(/\s+/).map(normalizeProjectDomainCandidate).filter(Boolean))].slice(0, 50);
   if (!domains.length) {
     target.textContent = "Hãy dán ít nhất một domain hợp lệ.";
     return;
   }
   button.disabled = true;
   target.innerHTML = domains.map((domain) => `<button type="button" class="batch-result pending" data-appraisal-domain="${esc(domain)}"><strong>${esc(domain)}</strong><span>Đang chờ…</span></button>`).join("");
-  for (const domain of domains) {
-    const row = target.querySelector(`[data-appraisal-domain="${CSS.escape(domain)}"]`);
-    try {
-      const result = await request("/appraise", {method: "POST", body: JSON.stringify({domain})});
+  try {
+    const results = await request("/appraise/batch", {
+      method: "POST",
+      body: JSON.stringify({domains}),
+    });
+    const resultByDomain = new Map(results.map((result) => [result.domain, result]));
+    for (const domain of domains) {
+      const row = target.querySelector(`[data-appraisal-domain="${CSS.escape(domain)}"]`);
+      const result = resultByDomain.get(domain);
+      if (!result) {
+        row.className = "batch-result error";
+        row.querySelector("span").textContent = "Không có dữ liệu trả về";
+        continue;
+      }
       appraisalCache.set(domain, result);
       const pending = appraisalPendingLabels(result).length;
       row.className = `batch-result ${result.score.pass === true ? "pass" : "warning"}`;
       row.querySelector("span").textContent = result.score.pass === true ? "Đạt" : `${pending} nhóm đang chờ`;
-    } catch (error) {
+    }
+  } catch (error) {
+    for (const domain of domains) {
+      const row = target.querySelector(`[data-appraisal-domain="${CSS.escape(domain)}"]`);
       row.className = "batch-result error";
       row.querySelector("span").textContent = `Lỗi: ${error.message}`;
     }

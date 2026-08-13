@@ -629,7 +629,8 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
 
     source_requirements = {
         "Traffic thị trường": (
-            "Kết nối một lần Similarweb API hoặc Semrush Trends API; sau đó AFI-OS "
+            "Kết nối một lần Apify Similarweb Scraper, Similarweb API hoặc Semrush "
+            "Trends API; sau đó AFI-OS "
             "tự lấy theo domain. Cloudflare Radar chỉ bổ sung rank/quốc gia, không thay "
             "được số lượt truy cập tháng."
         ),

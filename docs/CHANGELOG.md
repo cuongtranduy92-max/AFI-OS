@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.2.105 — Apify traffic and top countries
+
+- Add Apify actor `trakk/similarweb-scraper` as the recommended traffic provider;
+  its token stays in macOS Keychain and is absent from source, logs and database.
+- Store monthly visits and top-five country shares as separate source-aware snapshots
+  with observation period, 0.75 confidence and a 45-day validity window.
+- Send up to 50 appraisal domains in one actor run (`maxConcurrency=10`) and reuse
+  valid cache entries without reading the credential or making a paid request.
+- Treat unsupported/junk domains as explicit `NO_DATA`, never a fabricated zero.
+
 ## 0.2.104 — Dot3 Step 2 campaign content builder
 
 - Add one persisted `camp_plans` record per Project with DRAFT/DEPLOYED state,

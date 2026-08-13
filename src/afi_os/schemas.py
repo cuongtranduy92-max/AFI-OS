@@ -477,6 +477,22 @@ class AppraiseRequest(BaseModel):
         return normalize_capture_domain(value)
 
 
+class AppraiseBatchRequest(BaseModel):
+    domains: list[str] = Field(min_length=1, max_length=50)
+
+    @field_validator("domains")
+    @classmethod
+    def normalize_appraise_domains(cls, values: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for value in values:
+            domain = normalize_capture_domain(value)
+            if domain not in normalized:
+                normalized.append(domain)
+        if not normalized:
+            raise ValueError("Cần ít nhất một domain hợp lệ")
+        return normalized
+
+
 class AppraisalTraffic(BaseModel):
     monthly: int | float | None = None
     top_countries: list[tuple[str, float]] | None = None

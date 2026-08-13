@@ -1,4 +1,34 @@
-# TEST REPORT — AFI-OS 0.2.104
+# TEST REPORT — AFI-OS 0.2.105
+
+## 0.2.105 — Apify traffic automation
+
+- Full application regression: 393 passed, 1 skipped.
+- Apify parser regression verifies latest valid month, sorted top-five countries,
+  `confidence=0.75`, exact actor ID and absence of tokens from stored/source data.
+- Junk/missing domains return `NO_DATA`, never zero; traffic and country snapshots
+  remain separate, source-aware and valid for 45 days.
+- Cache regression proves a second check inside 45 days does not read the credential
+  or call Apify; stale data after day 45 triggers a fresh collection.
+- Ten-domain batch regression proves one actor invocation and isolated per-domain
+  failures; the UI/API accept up to 50 deduplicated domains.
+- Application/new release-builder Ruff checks, JavaScript syntax, shell syntax and
+  whitespace checks passed; the inherited standard-library updater passed its own tests.
+- All 25 payload checksums passed. A production-data copy update `0.2.104 → 0.2.105`
+  and rollback `0.2.105 → 0.2.104` both preserved 8 Projects and 3 Programs,
+  SQLite integrity `ok`, zero foreign-key errors and migration head `b84d0e26c104`.
+- Live update completed with rollback point
+  `update-0.2.105-20260813-100236`. API health reports `0.2.105`, runtime is
+  `HEALTHY`, the latest maintenance result is `SUCCESS`, and both LaunchAgents
+  are loaded.
+- Live data remained intact: 8 Projects, 3 Programs, SQLite integrity `ok`, zero
+  foreign-key errors and migration head `b84d0e26c104`. Google Ads remains
+  read-only and its latest sync is `SUCCESS`; Terms remain warning-only.
+- Post-update manual backup `manual-20260813-100353` is `OK`, schema head
+  `b84d0e26c104`, SHA-256
+  `cd923a6fe23d135a83b70fd171291d74aa59f3aa979f1410bb6817c177e48c22`.
+- Live traffic readiness returns `CONNECTION_REQUIRED` without exposing a secret.
+  Real-domain acceptance remains pending only until the operator stores an Apify
+  token through `SETUP-TRAFFIC-DATA.command`.
 
 ## 0.2.104 — Dot3 Step 2 campaign content builder
 

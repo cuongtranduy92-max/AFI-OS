@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 KEYCHAIN_SERVICE = "com.afi-os.traffic-data"
-SUPPORTED_PROVIDERS = {"SIMILARWEB", "SEMRUSH"}
+SUPPORTED_PROVIDERS = {"SIMILARWEB", "SEMRUSH", "APIFY"}
 ALLOWED_LABELS = ("provider", "api-key")
 
 
@@ -23,7 +23,7 @@ def _validated(label: str, value: str) -> str:
     if label == "provider":
         normalized = normalized.upper()
         if normalized not in SUPPORTED_PROVIDERS:
-            raise ValueError("Provider phải là SIMILARWEB hoặc SEMRUSH")
+            raise ValueError("Provider phải là SIMILARWEB, SEMRUSH hoặc APIFY")
     return normalized
 
 

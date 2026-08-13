@@ -149,10 +149,11 @@ def intake_portfolio_project(
     )
 
 
-@router.post("/projects/auto-check", response_model=ProjectAutoCheckResponse)
-def auto_check_portfolio_project(
+def run_auto_check_portfolio_project(
     payload: ProjectIntakeRequest,
-    db: Session = Depends(get_db),
+    db: Session,
+    *,
+    traffic_override: dict | None = None,
 ) -> ProjectAutoCheckResponse:
     """Run one source-aware check from a domain without asking for metric inputs."""
 
@@ -220,7 +221,7 @@ def auto_check_portfolio_project(
         )
 
     project = db.scalar(select(Project).where(Project.domain == payload.domain)) or project
-    traffic = collect_project_traffic(db, project)
+    traffic = traffic_override or collect_project_traffic(db, project)
     source_results.append(
         ProjectCheckSourceResult(
             source=f"Traffic website · {traffic.get('provider') or 'chưa kết nối'}",
@@ -288,6 +289,14 @@ def auto_check_portfolio_project(
         decision_ready=step_one.decision_ready,
         blocking_fields=step_one.blocking_fields,
     )
+
+
+@router.post("/projects/auto-check", response_model=ProjectAutoCheckResponse)
+def auto_check_portfolio_project(
+    payload: ProjectIntakeRequest,
+    db: Session = Depends(get_db),
+) -> ProjectAutoCheckResponse:
+    return run_auto_check_portfolio_project(payload, db)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectPortfolioItem)

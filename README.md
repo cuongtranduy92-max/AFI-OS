@@ -94,7 +94,7 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.104**. Dự án PASS ở Bước 1 có thể sinh và chỉnh sửa bộ nội dung campaign 15 tiêu đề, 4 mô tả, 4 sitelink và 4 callout. Linter chạy offline, chặn deploy khi còn lỗi, lưu bản nháp và chỉ bàn giao nội bộ sang Bước 3; không tạo hoặc sửa Google Ads.
+Đây là **v0.2.105**. Bước 1 có thể tự lấy traffic tháng mới nhất và top 5 quốc gia qua Apify Similarweb Scraper sau một lần lưu token trong macOS Keychain. Cache 45 ngày và batch tối đa 50 domain giúp tránh gọi lại không cần thiết; domain không có dữ liệu hiện `NO_DATA`, không bị biến thành 0. Hệ thống vẫn không tạo hoặc sửa Google Ads.
 
 Command Center tiếp tục phân biệt lần quét folder với thời điểm file Google Ads thực sự được xuất. Khi snapshot có dữ liệu của hôm nay nhưng file nguồn đã hơn 6 giờ, hệ thống tạo cảnh báo làm mới không chặn và không sửa/dừng campaign.
 
