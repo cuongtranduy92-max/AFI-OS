@@ -1,5 +1,13 @@
 # TASKBOARD
 
+## 0.2.103 — Dot2 scoring and sheet payback
+
+- [x] Apply the fixed 26,000 VND/USD rate only to modeled payback.
+- [x] Apply `3× low bid` and `0.5× high bid` scenarios.
+- [x] Return real score total/pass/flags from `/api/appraise`.
+- [x] Keep PPC prohibition warning-only.
+- [x] Add regression, updater and rollback coverage.
+
 ## 0.2.102 — Commission truth hotfix
 
 - [x] Show accepted maximum commission without treating it as guaranteed economics.

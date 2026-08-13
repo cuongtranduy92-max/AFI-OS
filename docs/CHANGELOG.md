@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.2.103 — Dot2 payback formula and appraisal scoring
+
+- Match the operator's original sheet: low scenario `3×L`, high scenario `0.5×M`.
+- Convert VND bids to USD package economics with the fixed `26,000 VND/USD` payback rate.
+- Replace the `/api/appraise` score placeholder with a deterministic 0–100 engine.
+- Preserve warning-only behavior for prohibited Ads, brand bidding restrictions and one-time commission.
+- Add exact regression coverage for `170.4 / 126.5` day sheet results.
+
 ## 0.2.102 — Accepted maximum commission visibility
 
 - Show an operator-accepted commission fact in the appraisal contract even when its

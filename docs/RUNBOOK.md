@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Update 0.2.103 — Hoàn vốn đúng sheet và chấm điểm
+
+Chạy `UPDATE-AFI-OS-0.2.103.command` một lần. Công thức hoàn vốn dùng `3× bid thấp`,
+`0,5× bid cao` và tỷ giá cố định `26.000 VND/USD`. Khi tỷ giá quy ước đổi, sửa
+`PAYBACK_FX_VND_PER_USD` trong `src/afi_os/config.py` rồi phát hành update mới.
+
+`POST /api/appraise` trả `score.total` 0–100, `score.pass` và flags thật. Cấm Ads,
+cấm brand và one-time vẫn chỉ cảnh báo. Rollback bằng
+`ROLLBACK-AFI-OS-0.2.103.command`.
+
 ## Update 0.2.102 — Hiển thị commission đã xác nhận
 
 Chạy `UPDATE-AFI-OS-0.2.102.command` một lần. Pictory sẽ hiện `50% recurring`

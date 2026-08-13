@@ -30,6 +30,7 @@ from afi_os.models import (
     Project,
     TermsEvidence,
 )
+from afi_os.services import project_check
 
 client = TestClient(app)
 
@@ -203,13 +204,47 @@ def test_step_one_returns_source_backed_numbers_and_exact_payback_formula() -> N
     assert body["fields"]["average_package_price"]["value"] == 20.0
     assert body["fields"]["accepted_commission_rate"]["value"] == 50.0
     assert body["fields"]["estimated_commission_per_buyer"]["value"] == 10.0
-    assert body["fields"]["estimated_payback_days_low_bid"]["value"] == 45.0
-    assert body["fields"]["estimated_payback_days_high_bid"]["value"] == 90.0
+    assert body["fields"]["estimated_payback_days_low_bid"]["value"] == 135.0
+    assert body["fields"]["estimated_payback_days_high_bid"]["value"] == 45.0
     assert body["permissions"]["PAID_SEARCH"] == "PROHIBITED"
     assert body["warning_only"] is True
     assert body["project_included"] is True
     assert body["decision_ready"] is True
     assert body["readiness"] == "READY_FOR_STEP_2"
+
+
+def test_step_one_payback_matches_original_sheet_with_fixed_vnd_usd_fx(monkeypatch) -> None:
+    with SessionLocal() as db:
+        project_id = db.scalar(select(Project.id).where(Project.domain == "step-one.example"))
+    assert project_id is not None
+    with SessionLocal() as db:
+        project = db.get(Project, project_id)
+        assert project is not None
+        snapshots = {item.metric_key: item for item in project.metric_snapshots}
+        snapshots["primary_keyword_bid_low"].numeric_value = Decimal("11000")
+        snapshots["primary_keyword_bid_low"].unit = "VND/click"
+        snapshots["primary_keyword_bid_high"].numeric_value = Decimal("49000")
+        snapshots["primary_keyword_bid_high"].unit = "VND/click"
+        offers = list(project.program.offers)
+        for offer in offers:
+            offer.price = Decimal("111.7")
+        fact = project.program.commission_facts[0]
+        fact.commission_rate = Decimal("0.30")
+        db.commit()
+
+    response = client.get(f"/api/portfolio/projects/{project_id}/step-one")
+
+    assert response.status_code == 200, response.text
+    fields = response.json()["fields"]
+    assert fields["estimated_commission_per_buyer"]["value"] == 33.51
+    assert fields["estimated_payback_days_low_bid"]["value"] == 170.4
+    assert fields["estimated_payback_days_high_bid"]["value"] == 126.5
+    assert "26.000" in fields["estimated_payback_days_low_bid"]["note"]
+
+    monkeypatch.setattr(project_check, "PAYBACK_FX_VND_PER_USD", Decimal("13000"))
+    changed = client.get(f"/api/portfolio/projects/{project_id}/step-one").json()["fields"]
+    assert changed["estimated_payback_days_low_bid"]["value"] == 340.9
+    assert changed["estimated_payback_days_high_bid"]["value"] == 253.1
 
 
 def test_step_one_missing_project_lists_exact_api_needs_and_blocks_transition() -> None:

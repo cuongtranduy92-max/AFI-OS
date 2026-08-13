@@ -37,18 +37,19 @@ nối. Không nhận traffic, ngày kiểm tra hoặc URL nguồn do người d�
 | `payment.*` | snapshot payment, `offers.cookie_days`, affiliate network |
 | `terms.*` | `terms_evidence` đã ACCEPTED và permission resolver |
 | `payback.*` | trường dẫn xuất của Step 1 từ snapshot có nguồn |
-| `score.*` | điểm nối engine Dot1.1; hiện trả `null` và flag `pending` |
+| `score.*` | engine Dot2: điểm 0–100, `pass` ba tiêu chí lõi và warning/pending flags |
 
 Không thêm các cột appraisal chi tiết vào `projects`. Bảng `projects` chỉ giữ
 identity và workflow; số liệu biến động phải tiếp tục vào `metric_snapshots` để
 có source, ngày quan sát, confidence và lịch sử.
 
-## Điểm nối engine
+## Engine chấm điểm Dot2
 
-`afi_os.services.appraisal.build_appraisal_contract()` là adapter duy nhất. Engine
-chấm điểm của Claude có thể thay phần tạo `score` hoặc bổ sung lớp engine trước
-adapter, nhưng không được đổi shape JSON, không tự điền số thiếu và không mở PPC
-permission.
+`afi_os.services.appraisal.score_appraisal()` chấm 25 điểm traffic >20.000, 35 điểm
+search >2.000, 30 điểm khi kịch bản payback tốt nhất ≤120 ngày và 10 điểm cho
+recurring. `pass=true` chỉ khi ba tiêu chí lõi đều đạt; thiếu dữ liệu trả `null`, một
+tiêu chí lõi rớt trả `false`. Cấm PPC/cấm brand và one-time chỉ thêm warning, không
+tự loại Project, không dừng campaign và không mở permission.
 
 ## Trạng thái Page 2 và Google Ads
 

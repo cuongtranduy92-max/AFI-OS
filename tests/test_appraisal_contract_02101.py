@@ -10,7 +10,19 @@ from afi_os.api import portfolio
 from afi_os.db import Base, engine
 from afi_os.enums import CommissionType, EvidenceReviewStatus, ResearchStatus
 from afi_os.main import app
-from afi_os.services.appraisal import _commission_display, _offer_packages
+from afi_os.schemas import (
+    AppraisalCommission,
+    AppraisalFlag,
+    AppraisalKeyword,
+    AppraisalPayback,
+    AppraisalTerms,
+    AppraisalTraffic,
+)
+from afi_os.services.appraisal import (
+    _commission_display,
+    _offer_packages,
+    score_appraisal,
+)
 
 client = TestClient(app)
 
@@ -88,9 +100,45 @@ def test_appraise_returns_exact_contract_and_explicit_pending_sources(monkeypatc
     assert body["advertisers"]["count"] is None
     assert body["commission"]["percent"] is None
     assert body["payback"]["days_high"] is None
-    assert body["score"]["total"] is None
+    assert body["score"]["total"] == 0
     assert body["score"]["pass"] is None
     assert any(item["level"] == "pending" for item in body["score"]["flags"])
+
+
+def test_score_appraisal_applies_exact_thresholds_and_warning_only_terms() -> None:
+    score = score_appraisal(
+        AppraisalTraffic(monthly=25_000),
+        AppraisalKeyword(search_volume=3_000),
+        AppraisalPayback(days_low=170.4, days_high=119.9),
+        AppraisalCommission(type="recurring", percent=30),
+        AppraisalTerms(ads_allowed=False, brand_bid_restricted=True),
+        [AppraisalFlag(level="warning", msg="Nguồn terms cần theo dõi.")],
+    )
+
+    assert score.total == 100
+    assert score.pass_ is True
+    assert any("CẤM chạy Google Ads" in item.msg for item in score.flags)
+    assert any("Cấm bid" in item.msg for item in score.flags)
+
+
+def test_score_appraisal_fails_core_but_never_excludes_for_terms_or_one_time() -> None:
+    score = score_appraisal(
+        AppraisalTraffic(monthly=20_000),
+        AppraisalKeyword(search_volume=2_000),
+        AppraisalPayback(days_low=120.1, days_high=140),
+        AppraisalCommission(type="one_time", percent=40),
+        AppraisalTerms(ads_allowed=False),
+        [],
+    )
+
+    assert score.total == 0
+    assert score.pass_ is False
+    messages = [item.msg for item in score.flags]
+    assert any(message.startswith("Traffic") for message in messages)
+    assert any(message.startswith("Search") for message in messages)
+    assert "Hoàn vốn > 120 ngày." in messages
+    assert any("chỉ cảnh báo" in message for message in messages)
+    assert any("one-time" in message for message in messages)
 
 
 def test_appraise_rejects_non_domain_input() -> None:

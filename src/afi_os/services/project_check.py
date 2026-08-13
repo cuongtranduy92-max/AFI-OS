@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from afi_os.config import PAYBACK_FX_VND_PER_USD
 from afi_os.enums import (
     CommissionType,
     DataQuality,
@@ -438,22 +439,47 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
             "Thiếu giá gói trung bình hoặc commission đã xác minh.",
         )
 
-    def add_payback(key: str, bid: Decimal | None, bid_field: ProjectCheckValue) -> None:
-        price_currency = (fields["average_package_price"].unit or "").upper()[:3]
+    price_currency = (fields["average_package_price"].unit or "").upper()[:3]
+
+    def _scenario_bid(
+        bid: Decimal | None,
+        factor: str,
+        bid_field: ProjectCheckValue,
+    ) -> Decimal | None:
+        """Apply the operator's sheet scenario and its fixed VND/USD conversion."""
+        if bid is None:
+            return None
+        effective_bid = Decimal(factor) * bid
         bid_currency = (bid_field.unit or "").upper()[:3]
-        currencies_match = bool(price_currency and bid_currency and price_currency == bid_currency)
-        if (
-            bid is None
-            or estimated_commission is None
-            or estimated_commission <= 0
-            or not currencies_match
-        ):
+        if not bid_currency or not price_currency:
+            return None
+        if bid_currency == price_currency:
+            return effective_bid
+        if bid_currency == "VND" and price_currency == "USD":
+            return effective_bid / PAYBACK_FX_VND_PER_USD
+        if bid_currency == "USD" and price_currency == "VND":
+            return effective_bid * PAYBACK_FX_VND_PER_USD
+        return None
+
+    def add_payback(
+        key: str,
+        bid: Decimal | None,
+        factor: str,
+        bid_field: ProjectCheckValue,
+    ) -> None:
+        effective_bid = _scenario_bid(bid, factor, bid_field)
+        if effective_bid is None or estimated_commission is None or estimated_commission <= 0:
             fields[key] = _missing(
                 key,
-                "Cần CPC cùng tiền tệ với giá gói và commission đã xác minh để tính.",
+                "Thiếu giá thầu hoặc commission đã xác minh để tính hoàn vốn.",
             )
             return
-        days = PAYBACK_MONTH_DAYS * CLICKS_PER_BUYER * bid / estimated_commission
+        days = (
+            PAYBACK_MONTH_DAYS
+            * CLICKS_PER_BUYER
+            * effective_bid
+            / estimated_commission
+        )
         fields[key] = _value(
             key,
             round(float(days), 1),
@@ -465,11 +491,25 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
                 fields["accepted_commission_rate"].confidence,
                 bid_field.confidence,
             ),
-            note="30 × (150 click × bid) ÷ (giá gói trung bình × % hoa hồng).",
+            note=(
+                "30 × 150 × (hệ số×bid ÷ 26.000) ÷ "
+                "(giá gói TB × %hoa hồng). Hệ số 3× bid thấp, 0,5× bid cao — "
+                "theo sheet gốc. Tỷ giá cố định, sửa tay khi đổi."
+            ),
         )
 
-    add_payback("estimated_payback_days_low_bid", low_bid, fields["primary_keyword_bid_low"])
-    add_payback("estimated_payback_days_high_bid", high_bid, fields["primary_keyword_bid_high"])
+    add_payback(
+        "estimated_payback_days_low_bid",
+        low_bid,
+        "3",
+        fields["primary_keyword_bid_low"],
+    )
+    add_payback(
+        "estimated_payback_days_high_bid",
+        high_bid,
+        "0.5",
+        fields["primary_keyword_bid_high"],
+    )
 
     traffic = _number(fields["website_traffic_monthly"])
     volume = _number(fields["primary_keyword_search_volume"])

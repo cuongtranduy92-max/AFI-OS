@@ -1,4 +1,14 @@
-# TEST REPORT — AFI-OS 0.2.102
+# TEST REPORT — AFI-OS 0.2.103
+
+## 0.2.103 — Dot2 payback and scoring
+
+- Full application regression: 373 passed, 1 skipped.
+- Sheet fixture `L=11,000 VND`, `M=49,000 VND`, `$111.70`, `30%`, FX `26,000`
+  returns `170.4 / 126.5` days.
+- `/api/appraise` returns deterministic score total/pass/flags and keeps prohibited
+  Google Ads plus brand restrictions warning-only.
+- Package verification and temporary-target update/rollback preserve database row
+  counts, SQLite integrity, foreign keys and migration head.
 
 ## 0.2.102 — Commission truth hotfix
 

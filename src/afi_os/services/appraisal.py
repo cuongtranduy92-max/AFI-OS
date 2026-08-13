@@ -205,6 +205,92 @@ def _permission_boolean(value: PermissionStatus) -> bool | None:
     return None
 
 
+def score_appraisal(
+    resp_traffic: AppraisalTraffic,
+    resp_keyword: AppraisalKeyword,
+    resp_payback: AppraisalPayback,
+    resp_commission: AppraisalCommission,
+    resp_terms: AppraisalTerms,
+    base_flags: list[AppraisalFlag],
+) -> AppraisalScore:
+    """Score source-backed appraisal facts without turning warnings into exclusions."""
+    traffic_min, search_min, payback_max = 20_000, 2_000, 120
+    flags = list(base_flags)
+
+    traffic = resp_traffic.monthly
+    search_volume = resp_keyword.search_volume
+    paybacks = [
+        days
+        for days in (resp_payback.days_low, resp_payback.days_high)
+        if days is not None
+    ]
+    commission_type = resp_commission.type or ""
+
+    traffic_ok = traffic is not None and traffic > traffic_min
+    search_ok = search_volume is not None and search_volume > search_min
+    payback_known = bool(paybacks)
+    payback_ok = payback_known and min(paybacks) <= payback_max
+    recurring = commission_type.startswith("recurring")
+
+    total = (
+        (25 if traffic_ok else 0)
+        + (35 if search_ok else 0)
+        + (30 if payback_ok else 0)
+        + (10 if recurring else 0)
+    )
+
+    if traffic is None:
+        flags.append(
+            AppraisalFlag(level="pending", msg="Traffic đang chờ nguồn (Similarweb).")
+        )
+    elif not traffic_ok:
+        flags.append(
+            AppraisalFlag(level="warning", msg=f"Traffic {int(traffic):,} < 20.000.")
+        )
+    if search_volume is None:
+        flags.append(
+            AppraisalFlag(level="pending", msg="Chưa có lượt tìm kiếm từ khoá chính.")
+        )
+    elif not search_ok:
+        flags.append(
+            AppraisalFlag(level="warning", msg=f"Search {int(search_volume):,} < 2.000.")
+        )
+    if not payback_known:
+        flags.append(AppraisalFlag(level="pending", msg="Chưa tính được hoàn vốn."))
+    elif not payback_ok:
+        flags.append(AppraisalFlag(level="warning", msg="Hoàn vốn > 120 ngày."))
+    if resp_terms.ads_allowed is False:
+        flags.append(
+            AppraisalFlag(
+                level="warning",
+                msg="Điều khoản CẤM chạy Google Ads — rủi ro quỵt tiền (chỉ cảnh báo).",
+            )
+        )
+    if resp_terms.brand_bid_restricted:
+        flags.append(AppraisalFlag(level="warning", msg="Cấm bid từ khoá thương hiệu."))
+    if commission_type == "one_time":
+        flags.append(
+            AppraisalFlag(
+                level="warning",
+                msg="Hoa hồng one-time — hoàn vốn kém tin cậy, tính NET/chu kỳ.",
+            )
+        )
+
+    core: list[bool | None] = [
+        traffic_ok if traffic is not None else None,
+        search_ok if search_volume is not None else None,
+        payback_ok if payback_known else None,
+    ]
+    if any(item is False for item in core):
+        passed = False
+    elif any(item is None for item in core):
+        passed = None
+    else:
+        passed = True
+
+    return AppraisalScore(total=int(total), pass_=passed, flags=flags)
+
+
 def build_appraisal_contract(
     db: Session,
     project: Project,
@@ -212,8 +298,7 @@ def build_appraisal_contract(
 ) -> AppraisalResponse:
     """Map collected facts into the stable Dot1.1 contract.
 
-    This is intentionally a contract adapter, not the appraisal/scoring engine.
-    Missing providers and the future Claude scoring engine remain explicit nulls.
+    Missing providers remain explicit nulls; the score reflects only available facts.
     """
 
     step = auto_check.step_one
@@ -254,12 +339,7 @@ def build_appraisal_contract(
     )
     terms_source = evidence[0].source_url if evidence else None
 
-    score_flags = [
-        AppraisalFlag(
-            level="pending",
-            msg="Chờ Claude appraisal engine chấm điểm theo contract Dot1.1.",
-        )
-    ]
+    score_flags: list[AppraisalFlag] = []
     if step.terms_gate_status != "TERMS_OK":
         score_flags.append(
             AppraisalFlag(
@@ -286,27 +366,46 @@ def build_appraisal_contract(
             )
         )
     payout_days = _integer(fields.get("payout_timing_days"))
+    traffic = AppraisalTraffic(
+        monthly=traffic_monthly,
+        top_countries=countries,
+        source=traffic_source,
+        source_status=traffic_state,
+    )
+    keyword = AppraisalKeyword(
+        term=_text(fields.get("primary_keyword")),
+        search_volume=_number(fields.get("primary_keyword_search_volume")),
+        bid_low_vnd=_number(fields.get("primary_keyword_bid_low")),
+        bid_high_vnd=_number(fields.get("primary_keyword_bid_high")),
+        source=(
+            fields["primary_keyword_search_volume"].source_name
+            if _value(fields.get("primary_keyword_search_volume")) is not None
+            else None
+        ),
+    )
+    commission = AppraisalCommission(
+        type=commission_type,
+        percent=commission_percent,
+        packages=_offer_packages(project),
+        avg_package=_number(fields.get("average_package_price")),
+    )
+    terms = AppraisalTerms(
+        ads_allowed=ads_allowed,
+        brand_bid_restricted=brand_restricted,
+        summary=terms_summary,
+        source=terms_source,
+    )
+    payback = AppraisalPayback(
+        days_low=_number(fields.get("estimated_payback_days_low_bid")),
+        days_high=_number(fields.get("estimated_payback_days_high_bid")),
+        mode=("AFI v1 · 150 clicks/buyer" if step.decision_ready else None),
+    )
     return AppraisalResponse(
         domain=project.domain,
         niche=project.category,
         affiliate_link=(project.program.signup_url if project.program else None),
-        traffic=AppraisalTraffic(
-            monthly=traffic_monthly,
-            top_countries=countries,
-            source=traffic_source,
-            source_status=traffic_state,
-        ),
-        keyword=AppraisalKeyword(
-            term=_text(fields.get("primary_keyword")),
-            search_volume=_number(fields.get("primary_keyword_search_volume")),
-            bid_low_vnd=_number(fields.get("primary_keyword_bid_low")),
-            bid_high_vnd=_number(fields.get("primary_keyword_bid_high")),
-            source=(
-                fields["primary_keyword_search_volume"].source_name
-                if _value(fields.get("primary_keyword_search_volume")) is not None
-                else None
-            ),
-        ),
+        traffic=traffic,
+        keyword=keyword,
         advertisers=AppraisalAdvertisers(
             count=_integer(fields.get("independent_advertisers")),
             also_running=_also_running(db, project),
@@ -316,12 +415,7 @@ def build_appraisal_contract(
                 else None
             ),
         ),
-        commission=AppraisalCommission(
-            type=commission_type,
-            percent=commission_percent,
-            packages=_offer_packages(project),
-            avg_package=_number(fields.get("average_package_price")),
-        ),
+        commission=commission,
         payment=AppraisalPayment(
             gateways=_text_list(fields.get("payout_methods")),
             min_payment=_number(fields.get("minimum_payout")),
@@ -329,16 +423,14 @@ def build_appraisal_contract(
             cookie_days=_cookie_days(project),
             net=_payment_net(project),
         ),
-        terms=AppraisalTerms(
-            ads_allowed=ads_allowed,
-            brand_bid_restricted=brand_restricted,
-            summary=terms_summary,
-            source=terms_source,
+        terms=terms,
+        payback=payback,
+        score=score_appraisal(
+            traffic,
+            keyword,
+            payback,
+            commission,
+            terms,
+            score_flags,
         ),
-        payback=AppraisalPayback(
-            days_low=_number(fields.get("estimated_payback_days_low_bid")),
-            days_high=_number(fields.get("estimated_payback_days_high_bid")),
-            mode=("AFI v1 · 150 clicks/buyer" if step.decision_ready else None),
-        ),
-        score=AppraisalScore(total=None, pass_=None, flags=score_flags),
     )

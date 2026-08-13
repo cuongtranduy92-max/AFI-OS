@@ -1,7 +1,12 @@
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Tỷ giá quy đổi bid VND→USD cho công thức hoàn vốn.
+# Người vận hành chỉnh tay giá trị này khi tỷ giá quy ước thay đổi.
+PAYBACK_FX_VND_PER_USD = Decimal("26000")
 
 
 class Settings(BaseSettings):

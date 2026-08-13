@@ -94,7 +94,7 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.102**. Operations Inbox mở thẳng đúng snapshot quảng cáo cũ nhất cần duyệt, cuộn và focus trường còn thiếu; nếu target vừa được xử lý ở tab khác, UI chuyển sang item kế tiếp hoặc báo queue trống. Luồng này chỉ điều hướng và đọc queue, không tự chấp nhận/loại, không tạo graph và không thay đổi PPC, commission hay Google Ads.
+Đây là **v0.2.103**. Công thức hoàn vốn áp dụng đúng kịch bản sheet `3× bid thấp` và `0,5× bid cao`, quy đổi bid VND sang giá gói USD bằng tỷ giá cố định 26.000 VND/USD. `/api/appraise` trả điểm thật 0–100 và trạng thái đạt/chưa đạt/chờ dữ liệu; điều khoản cấm Ads vẫn chỉ tạo cảnh báo, không tự loại dự án hoặc dừng campaign.
 
 Command Center tiếp tục phân biệt lần quét folder với thời điểm file Google Ads thực sự được xuất. Khi snapshot có dữ liệu của hôm nay nhưng file nguồn đã hơn 6 giờ, hệ thống tạo cảnh báo làm mới không chặn và không sửa/dừng campaign.
 
