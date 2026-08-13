@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AFI-OS · Affiliate Operations</title>
-  <link rel="stylesheet" href="/styles.css?v=02105">
+  <link rel="stylesheet" href="/styles.css?v=02106">
 </head>
 <body>
   <div class="app-shell">
@@ -30,20 +30,23 @@
         <button class="nav-item" data-view="compliance">
           <span class="nav-index">04</span><span>Terms Warning</span>
         </button>
+        <button class="nav-item" data-view="resources">
+          <span class="nav-index">05</span><span>Tài nguyên</span>
+        </button>
         <button class="nav-item" data-view="economics">
-          <span class="nav-index">05</span><span>Economics Lab</span>
+          <span class="nav-index">06</span><span>Economics Lab</span>
         </button>
         <button class="nav-item" data-view="exposure">
-          <span class="nav-index">06</span><span>Risk &amp; Exposure</span>
+          <span class="nav-index">07</span><span>Risk &amp; Exposure</span>
         </button>
         <button class="nav-item" data-view="programs">
-          <span class="nav-index">07</span><span>Terms Evidence</span>
+          <span class="nav-index">08</span><span>Terms Evidence</span>
         </button>
         <button class="nav-item" data-view="finance">
-          <span class="nav-index">08</span><span>Finance &amp; Reconciliation</span>
+          <span class="nav-index">09</span><span>Finance &amp; Reconciliation</span>
         </button>
         <button class="nav-item" data-view="system">
-          <span class="nav-index">09</span><span>Backup & Restore</span>
+          <span class="nav-index">10</span><span>Backup & Restore</span>
         </button>
       </nav>
 
@@ -60,7 +63,7 @@
           <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
         </div>
         <div class="top-actions">
-          <span class="badge badge-demo">APIFY TRAFFIC · v0.2.105</span>
+          <span class="badge badge-demo">TÀI NGUYÊN · v0.2.106</span>
           <button id="refreshAll" class="button secondary">Làm mới</button>
         </div>
       </header>
@@ -92,6 +95,9 @@
           <div class="camp-plan-ref-row">
             <label>Link ref của anh
               <input id="campPlanRefUrl" type="url" maxlength="1000" placeholder="https://.../?ref=..." autocomplete="off">
+            </label>
+            <label>Tài khoản Ads hợp lệ
+              <select id="campPlanAdsAccount"><option value="">Chọn tài khoản đã sẵn sàng</option></select>
             </label>
             <button id="campPlanGenerate" class="button primary" type="button">Sinh content</button>
           </div>
@@ -415,6 +421,87 @@
         </div>
       </section>
 
+      <section id="view-resources" class="view">
+        <article class="panel resource-hero">
+          <div class="panel-head">
+            <div>
+              <h2>Kho tài nguyên vận hành</h2>
+              <p>Theo dõi email, tài khoản Ads và hạ tầng thanh toán. Đây là checklist nhắc việc, không phải bot nuôi tài khoản.</p>
+            </div>
+            <span class="badge">TRACKING ONLY</span>
+          </div>
+          <div class="resource-plan-row">
+            <label>Kế hoạch campaign tháng này<input id="resourcePlannedCamps" type="number" min="0" max="100000" step="1" placeholder="Tự đếm từ Bước 2"></label>
+            <button id="resourcePlanApply" class="button secondary" type="button">Tính cảnh báo</button>
+            <span id="resourcePlanSource" class="form-message">Mặc định tự đếm bộ campaign đã lưu trong tháng.</span>
+          </div>
+          <div id="resourceKpis" class="metrics-grid"></div>
+          <div class="notice warning resource-security-note"><strong>App không lưu mật khẩu — dùng password manager.</strong> Chỉ email, trạng thái và metadata vận hành được lưu.</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Cảnh báo tài nguyên</h2><p>Kiểm tra thiếu email, email bẩn, PayPal tập trung, thẻ nhiều cổng và thông tin không đồng nhất.</p></div><span id="resourceAlertSummary" class="badge">Đang kiểm tra…</span></div>
+          <div id="resourceAlerts" class="resource-alerts"><div class="empty">Đang tải cảnh báo…</div></div>
+        </article>
+
+        <div class="grid two resource-forms">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Thêm email</h2><p>Ngày bắt đầu dùng để tự tính SOAK → CHÍN.</p></div></div>
+            <form id="resourceEmailForm" class="form-grid">
+              <label class="span-2">Địa chỉ email<input name="address" type="email" required placeholder="name@example.com"></label>
+              <label>Nguồn<select name="source"><option value="SELF">Tự tạo</option><option value="BOUGHT">Mua</option></select></label>
+              <label>Ngày bắt đầu nuôi<input name="created_at" type="datetime-local" required></label>
+              <label>Số lần đổi thiết bị<input name="device_changes" type="number" min="0" max="100" value="0"></label>
+              <label class="check"><input name="declared_done" type="checkbox"><span>Đã khai thật + 2FA + payment</span></label>
+              <label class="span-2">Ngách từng dùng, cách nhau dấu phẩy<input name="usage_history" placeholder="software, education"></label>
+              <label class="span-2">Ghi chú<textarea name="note" rows="2"></textarea></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Lưu email</button><span id="resourceEmailMessage" class="form-message"></span></div>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head"><div><h2>Thêm tài khoản Ads</h2><p>Liên kết theo email; chỉ account READY với email chín sạch mới hiện ở Bước 2.</p></div></div>
+            <form id="resourceAdsForm" class="form-grid">
+              <label class="span-2">Email<select id="resourceAdsEmail" name="email_id"><option value="">Chưa gắn email</option></select></label>
+              <label>Loại<select name="type"><option>PERSONAL</option><option>INVOICE</option><option>MCC</option></select></label>
+              <label>Trạng thái<select name="state"><option>DANG_KY</option><option>VERIFY</option><option>DOI_DUYET</option><option>HO_SO</option><option>ADD_PAYMENT</option><option>CHON_DU_AN</option><option>READY</option><option>CHAY</option></select></label>
+              <label class="span-2">Tên hiển thị<input name="display_name" required placeholder="Invoice 01"></label>
+              <label>Phí thuê<input name="rent_cost" type="number" min="0" step="0.01" value="0"></label>
+              <label>Phí spend %<input name="spend_fee_pct" type="number" min="0" max="100" step="0.01" value="0"></label>
+              <label>Sức khỏe<select name="health"><option>OK</option><option>REVIEW</option><option>SPAM</option><option>KHANG</option></select></label>
+              <label>Ghi chú<input name="note"></label>
+              <div class="span-2 form-actions"><button class="button primary" type="submit">Lưu tài khoản</button><span id="resourceAdsMessage" class="form-message"></span></div>
+            </form>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Máy nuôi email</h2><p>Tối đa 3 tác vụ thủ công mỗi ngày. Email bẩn hoặc bị khóa không được chọn cho campaign mới.</p></div><span id="resourceEmailSummary" class="badge">0 EMAIL</span></div>
+          <div class="table-wrap"><table class="resource-email-table"><thead><tr><th>Email</th><th>Giai đoạn</th><th>Tuổi / còn lại</th><th>Lịch sử</th><th>Tác vụ hôm nay</th><th></th></tr></thead><tbody id="resourceEmailRows"><tr><td colspan="6" class="empty">Chưa có email.</td></tr></tbody></table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Lineage email → tài khoản Ads → dự án</h2><p>Nhìn một dòng là biết account đang rảnh hay đã khóa cho dự án nào.</p></div><span id="resourceAccountSummary" class="badge">0 TÀI KHOẢN</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Email</th><th>Tài khoản</th><th>Loại / phí</th><th>State / health</th><th>Bộ campaign</th><th>Dự án hiện tại</th><th>Đủ điều kiện Bước 2</th></tr></thead><tbody id="resourceAccountRows"><tr><td colspan="7" class="empty">Chưa có tài khoản.</td></tr></tbody></table></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Kho tài nguyên khác</h2><p>PayPal, Payoneer, Wise, thẻ, ví crypto, sàn, SIM, thiết bị, website và mạng xã hội.</p></div></div>
+          <div id="resourceTypeChips" class="resource-type-chips"></div>
+          <form id="resourceInventoryForm" class="resource-inventory-form">
+            <label>Loại<select name="type"><option value="paypal">PayPal</option><option value="payoneer">Payoneer</option><option value="wise">Wise</option><option value="card">Thẻ</option><option value="crypto_wallet">Ví crypto</option><option value="exchange">Sàn</option><option value="sim">SIM</option><option value="device">Thiết bị</option><option value="website">Website</option><option value="social">Mạng xã hội</option></select></label>
+            <label>Nhãn<input name="label" required placeholder="PayPal chính"></label>
+            <label>Tiền vào tháng USD<input name="monthly_in_usd" type="number" min="0" step="0.01" value="0"></label>
+            <label>Cổng đã gắn, cách nhau dấu phẩy<input name="linked_gateways" placeholder="PayPal, Wise"></label>
+            <label>Tên chủ<input name="owner_name"></label>
+            <label>Ghi chú<input name="note"></label>
+            <button class="button primary" type="submit">Lưu tài nguyên</button>
+            <span id="resourceInventoryMessage" class="form-message"></span>
+          </form>
+          <div class="table-wrap"><table><thead><tr><th>Loại</th><th>Nhãn</th><th>Tiền vào tháng</th><th>Cổng liên kết</th><th>Tên chủ</th><th>Ghi chú</th></tr></thead><tbody id="resourceInventoryRows"><tr><td colspan="6" class="empty">Chưa có tài nguyên.</td></tr></tbody></table></div>
+        </article>
+      </section>
+
       <section id="view-economics" class="view">
         <div class="grid two uneven">
           <article class="panel">
@@ -702,6 +789,6 @@
     </div>
     <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
   </aside>
-  <script src="/app.js?v=02105"></script>
+  <script src="/app.js?v=02106"></script>
 </body>
 </html>

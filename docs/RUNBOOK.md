@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Update 0.2.106 — Tài nguyên
+
+1. Chạy `UPDATE-AFI-OS-0.2.106.command` một lần.
+2. Mở tab **Tài nguyên**, thêm email và đúng ngày bắt đầu nuôi.
+3. Tick `Đã khai thật + 2FA + payment` khi đã tự hoàn tất; app chỉ nhắc tối đa ba
+   tác vụ thủ công/ngày và không chạy bot.
+4. Thêm tài khoản Ads, chọn email, đặt `READY` khi tài khoản thực sự sẵn sàng.
+5. Vào **Bước 2**, chọn tài khoản hợp lệ, sinh/kiểm tra nội dung rồi triển khai nội bộ.
+6. Mật khẩu luôn nằm trong password manager, không nhập vào AFI-OS.
+
+Rollback bằng `ROLLBACK-AFI-OS-0.2.106.command`. Cả update và rollback đều tạo
+backup database; không thay đổi Terms/commission và không ghi Google Ads.
+
 ## Update 0.2.105 — Traffic tự động bằng Apify
 
 1. Chạy `UPDATE-AFI-OS-0.2.105.command` một lần.

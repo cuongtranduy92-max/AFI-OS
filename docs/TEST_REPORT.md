@@ -1,4 +1,26 @@
-# TEST REPORT — AFI-OS 0.2.105
+# TEST REPORT — AFI-OS 0.2.106
+
+## 0.2.106 — Tài nguyên
+
+- Full application regression before packaging: 400 passed, 1 skipped.
+- Engine boundary tests cover 29-day maturity, device-change penalties, 48-hour
+  SOAK, dirty email rejection, all seven alert families and at most three tasks/day.
+- API tests cover email/account/resource CRUD, secret-field rejection, daily task
+  persistence, PayPal $5,200 error and manual/database campaign plans.
+- Step 2 tests prove only mature clean free accounts are selectable, internal deploy
+  records one current Project plus history, and reuse by another Project is rejected.
+- SQLite migration upgrade/downgrade/upgrade retains the existing Ads account,
+  integrity and migration head `e91f4d7a2c18`.
+- Release package checksum validation plus update/rollback on a production-data copy
+  preserve nine Projects, three Programs and restore the exact prior schema.
+- Live update completed with rollback point `update-0.2.106-20260813-111257`.
+  API health reports `0.2.106`, runtime is `HEALTHY`, maintenance is `SUCCESS`,
+  both LaunchAgents are loaded and Google Ads API remains read-only.
+- Live database retains nine Projects, three Programs and the existing Google Ads
+  account; integrity is `ok`, foreign keys have no errors and schema is `e91f4d7a2c18`.
+- Browser QA opened tab Tài nguyên, verified all four KPIs, alerts, forms, fixed
+  password-manager note and zero console errors. Post-install backup
+  `manual-20260813-111453` is `OK` on schema `e91f4d7a2c18`.
 
 ## 0.2.105 — Apify traffic automation
 

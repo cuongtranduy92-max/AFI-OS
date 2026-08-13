@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -23,6 +24,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from afi_os.db import Base
 from afi_os.enums import (
+    AdsAccountHealth,
+    AdsAccountState,
+    AdsAccountType,
     AdvertiserClassification,
     AuditAction,
     AutomationJobStatus,
@@ -32,6 +36,7 @@ from afi_os.enums import (
     CommissionState,
     CommissionType,
     DataQuality,
+    EmailSource,
     EvidenceReviewStatus,
     FxRateReviewStatus,
     PermissionStatus,
@@ -318,6 +323,11 @@ class Project(TimestampMixin, Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    resource_ads_account: Mapped[AdsAccount | None] = relationship(
+        back_populates="current_project",
+        foreign_keys="AdsAccount.current_project_id",
+        uselist=False,
+    )
 
 
 class CampPlan(TimestampMixin, Base):
@@ -329,6 +339,9 @@ class CampPlan(TimestampMixin, Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), unique=True, index=True
     )
+    ads_account_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ads_accounts.id", ondelete="SET NULL"), unique=True, index=True
+    )
     ref_url: Mapped[str] = mapped_column(String(1000))
     plan_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     linter_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
@@ -337,6 +350,10 @@ class CampPlan(TimestampMixin, Base):
     )
 
     project: Mapped[Project] = relationship(back_populates="camp_plan")
+    ads_account: Mapped[AdsAccount | None] = relationship(
+        back_populates="camp_plan",
+        foreign_keys=[ads_account_id],
+    )
 
 
 class MetricSnapshot(TimestampMixin, Base):
@@ -482,6 +499,36 @@ class AdObservation(TimestampMixin, Base):
     )
 
 
+class Email(TimestampMixin, Base):
+    """Email nurture metadata only; credentials belong in a password manager."""
+
+    __tablename__ = "emails"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    address: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    source: Mapped[EmailSource] = mapped_column(
+        Enum(EmailSource, native_enum=False), default=EmailSource.SELF
+    )
+    declared_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    device_changes: Mapped[int] = mapped_column(Integer, default=0)
+    usage_history: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status_override: Mapped[str | None] = mapped_column(String(40))
+    note: Mapped[str | None] = mapped_column(Text)
+
+    ads_accounts: Mapped[list[AdsAccount]] = relationship(back_populates="email")
+    nurture_logs: Mapped[list[NurtureLog]] = relationship(
+        back_populates="email", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        CheckConstraint("device_changes >= 0", name="ck_emails_device_changes_nonnegative"),
+        CheckConstraint(
+            "status_override IS NULL OR status_override = 'LOCKED'",
+            name="ck_emails_status_override",
+        ),
+    )
+
+
 class AdsAccount(TimestampMixin, Base):
     __tablename__ = "ads_accounts"
 
@@ -492,8 +539,113 @@ class AdsAccount(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(80), default="UNKNOWN")
     time_zone: Mapped[str | None] = mapped_column(String(80))
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_id: Mapped[int | None] = mapped_column(
+        ForeignKey("emails.id", ondelete="SET NULL"), index=True
+    )
+    account_type: Mapped[AdsAccountType | None] = mapped_column(
+        "type", Enum(AdsAccountType, native_enum=False)
+    )
+    rent_cost: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
+    spend_fee_pct: Mapped[Decimal] = mapped_column(Numeric(10, 6), default=Decimal("0"))
+    resource_state: Mapped[AdsAccountState] = mapped_column(
+        "resource_state",
+        Enum(AdsAccountState, native_enum=False),
+        default=AdsAccountState.CHAY,
+    )
+    current_project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), unique=True, index=True
+    )
+    display_name: Mapped[str | None] = mapped_column(String(255))
+    health: Mapped[AdsAccountHealth] = mapped_column(
+        Enum(AdsAccountHealth, native_enum=False), default=AdsAccountHealth.OK
+    )
+    note: Mapped[str | None] = mapped_column(Text)
 
     campaigns: Mapped[list[Campaign]] = relationship(back_populates="ads_account")
+    email: Mapped[Email | None] = relationship(back_populates="ads_accounts")
+    current_project: Mapped[Project | None] = relationship(
+        back_populates="resource_ads_account",
+        foreign_keys=[current_project_id],
+    )
+    camp_plan: Mapped[CampPlan | None] = relationship(
+        back_populates="ads_account",
+        foreign_keys="CampPlan.ads_account_id",
+        uselist=False,
+    )
+    project_history: Mapped[list[AdsAccountProjectHistory]] = relationship(
+        back_populates="ads_account", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        CheckConstraint("rent_cost >= 0", name="ck_ads_accounts_rent_cost_nonnegative"),
+        CheckConstraint(
+            "spend_fee_pct >= 0 AND spend_fee_pct <= 100",
+            name="ck_ads_accounts_spend_fee_pct_range",
+        ),
+    )
+
+
+class AdsAccountProjectHistory(TimestampMixin, Base):
+    __tablename__ = "ads_account_project_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ads_account_id: Mapped[int] = mapped_column(
+        ForeignKey("ads_accounts.id", ondelete="CASCADE"), index=True
+    )
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    ads_account: Mapped[AdsAccount] = relationship(back_populates="project_history")
+    project: Mapped[Project] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "ads_account_id", "project_id", name="uq_ads_account_project_history"
+        ),
+    )
+
+
+class Resource(TimestampMixin, Base):
+    __tablename__ = "resources"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str] = mapped_column(String(40), index=True)
+    label: Mapped[str] = mapped_column(String(255))
+    monthly_in_usd: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), default=Decimal("0")
+    )
+    linked_gateways: Mapped[list[str]] = mapped_column(JSON, default=list)
+    owner_name: Mapped[str | None] = mapped_column(String(255))
+    note: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint("monthly_in_usd >= 0", name="ck_resources_monthly_nonnegative"),
+        CheckConstraint(
+            "type IN ('paypal','payoneer','wise','card','crypto_wallet','exchange',"
+            "'sim','device','website','social')",
+            name="ck_resources_type",
+        ),
+    )
+
+
+class NurtureLog(TimestampMixin, Base):
+    __tablename__ = "nurture_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email_id: Mapped[int] = mapped_column(
+        ForeignKey("emails.id", ondelete="CASCADE"), index=True
+    )
+    date: Mapped[date] = mapped_column(Date, index=True)
+    tasks_done: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+    email: Mapped[Email] = relationship(back_populates="nurture_logs")
+
+    __table_args__ = (
+        UniqueConstraint("email_id", "date", name="uq_nurture_log_email_date"),
+    )
 
 
 class Campaign(TimestampMixin, Base):

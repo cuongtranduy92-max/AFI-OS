@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.2.106 — Resource management and guarded Step 2 binding
+
+- Add the Tài nguyên tab with email nurture stages, rotating manual checklists,
+  resource KPIs, lineage and deterministic shortage/concentration alerts.
+- Extend existing Google Ads account records with email, type, cost, state, health
+  and one-current-Project binding; preserve historical assignment records.
+- Expose secret-free CRUD APIs for emails, Ads accounts and ten resource types;
+  reject password/token fields rather than silently storing them.
+- Restrict Step 2 account selection to a mature clean email plus a free READY account,
+  and bind it on internal deploy without any Google Ads write operation.
+- Add an SQLite migration round-trip and complete updater/rollback coverage.
+
 ## 0.2.105 — Apify traffic and top countries
 
 - Add Apify actor `trakk/similarweb-scraper` as the recommended traffic provider;

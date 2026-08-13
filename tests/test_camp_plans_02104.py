@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -5,9 +6,16 @@ from sqlalchemy import select
 
 from afi_os.api import camp_plans as camp_plans_api
 from afi_os.db import Base, SessionLocal, engine
-from afi_os.enums import AuditAction, CampPlanStatus, ProjectStage
+from afi_os.enums import (
+    AdsAccountState,
+    AdsAccountType,
+    AuditAction,
+    CampPlanStatus,
+    EmailSource,
+    ProjectStage,
+)
 from afi_os.main import app
-from afi_os.models import AuditLog, CampPlan, Project
+from afi_os.models import AdsAccount, AuditLog, CampPlan, Email, Project
 
 client = TestClient(app)
 
@@ -34,6 +42,31 @@ def _seed_projects() -> tuple[int, int]:
         return passed.id, failed.id
 
 
+def _seed_selectable_account() -> int:
+    with SessionLocal() as db:
+        email = Email(
+            address="clean-account@example.com",
+            source=EmailSource.SELF,
+            created_at=datetime.now(UTC) - timedelta(days=30),
+            declared_done=True,
+            usage_history=["software"],
+        )
+        db.add(email)
+        db.flush()
+        account = AdsAccount(
+            external_id="resource-test-account",
+            name="Tài khoản test",
+            display_name="Tài khoản test",
+            email_id=email.id,
+            account_type=AdsAccountType.PERSONAL,
+            resource_state=AdsAccountState.READY,
+            status="RESOURCE_TRACKING",
+        )
+        db.add(account)
+        db.commit()
+        return account.id
+
+
 def _appraisal(project: Project) -> SimpleNamespace:
     is_pass = project.domain == "fliki.ai"
     return SimpleNamespace(
@@ -47,6 +80,7 @@ def _appraisal(project: Project) -> SimpleNamespace:
 
 def test_generate_relint_deploy_and_audit(monkeypatch) -> None:
     passed_id, _ = _seed_projects()
+    account_id = _seed_selectable_account()
     monkeypatch.setattr(
         camp_plans_api,
         "build_appraisal_contract",
@@ -56,13 +90,14 @@ def test_generate_relint_deploy_and_audit(monkeypatch) -> None:
 
     generated = client.post(
         f"/api/projects/{passed_id}/camp-plan/generate",
-        json={"ref_url": ref_url},
+        json={"ref_url": ref_url, "ads_account_id": account_id},
     )
     assert generated.status_code == 200
     body = generated.json()
     plan = body["plan"]
     assert body["status"] == "DRAFT"
     assert body["google_ads_write"] is False
+    assert body["ads_account_id"] == account_id
     assert len(plan["headlines"]) == 15
     assert len(plan["descriptions"]) == 4
     assert len(plan["sitelinks"]) == 4
@@ -132,6 +167,9 @@ def test_generate_relint_deploy_and_audit(monkeypatch) -> None:
         )
         assert audit is not None
         assert audit.payload_json["google_ads_write"] is False
+        account = db.get(AdsAccount, account_id)
+        assert account is not None
+        assert account.current_project_id == passed_id
 
 
 def test_non_pass_project_is_blocked_and_eligible_list_is_truthful(monkeypatch) -> None:

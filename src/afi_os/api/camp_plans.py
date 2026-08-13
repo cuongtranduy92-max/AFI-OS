@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from afi_os.db import get_db
-from afi_os.enums import AuditAction, CampPlanStatus
-from afi_os.models import AuditLog, CampPlan, Project
+from afi_os.enums import AdsAccountState, AuditAction, CampPlanStatus
+from afi_os.models import AdsAccount, AdsAccountProjectHistory, AuditLog, CampPlan, Project
 from afi_os.schemas import (
     CampPlanDeployRequest,
     CampPlanEligibleProject,
@@ -16,6 +18,7 @@ from afi_os.schemas import (
 from afi_os.services.appraisal import build_appraisal_contract
 from afi_os.services.camp_generator import generate_camp_plan
 from afi_os.services.portfolio import load_portfolio_project, load_portfolio_projects
+from afi_os.services.resources import account_is_selectable
 
 router = APIRouter(prefix="/api/projects", tags=["camp-plans"])
 
@@ -39,6 +42,12 @@ def _response(project: Project, saved: CampPlan) -> CampPlanResponse:
         domain=project.domain,
         brand_name=project.brand_name,
         signup_url=project.program.signup_url if project.program else None,
+        ads_account_id=saved.ads_account_id,
+        ads_account_label=(
+            saved.ads_account.display_name or saved.ads_account.name
+            if saved.ads_account
+            else None
+        ),
         ref_url=saved.ref_url,
         plan=saved.plan_json or {},
         linter=issues,
@@ -92,6 +101,7 @@ def list_camp_plan_eligible_projects(
                 score_pass=True,
                 camp_plan_status=saved.status if saved else None,
                 ref_url=saved.ref_url if saved else None,
+                ads_account_id=saved.ads_account_id if saved else None,
             )
         )
     return eligible
@@ -105,6 +115,21 @@ def generate_project_camp_plan(
 ) -> CampPlanResponse:
     project = _load_project(db, project_id)
     _assert_step_one_pass(db, project)
+    account = None
+    if payload.ads_account_id is not None:
+        account = db.get(AdsAccount, payload.ads_account_id)
+        if account is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản Ads.")
+        if not account_is_selectable(
+            db, account, project_id=project.id, today=date.today()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Tài khoản Ads chưa sẵn sàng, email chưa chín/sạch "
+                    "hoặc đang gắn dự án khác."
+                ),
+            )
     generated = generate_camp_plan(
         domain=project.domain,
         ref_url=payload.ref_url,
@@ -123,6 +148,8 @@ def generate_project_camp_plan(
     saved.plan_json = generated.as_dict()
     saved.linter_json = generated.issues_dict()
     saved.status = CampPlanStatus.DRAFT
+    if account is not None:
+        saved.ads_account_id = account.id
     db.commit()
     db.refresh(saved)
     return _response(project, saved)
@@ -140,6 +167,7 @@ def get_project_camp_plan(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Dự án chưa có bộ nội dung Bước 2.",
         )
+
     return _response(project, saved)
 
 
@@ -156,6 +184,18 @@ def deploy_project_camp_plan(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Hãy sinh và kiểm tra nội dung trước khi triển khai.",
+        )
+
+    account = saved.ads_account
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Hãy chọn một tài khoản Ads hợp lệ trước khi triển khai.",
+        )
+    if not account_is_selectable(db, account, project_id=project.id, today=date.today()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Tài khoản Ads không còn đủ điều kiện triển khai.",
         )
 
     checked = generate_camp_plan(
@@ -177,6 +217,16 @@ def deploy_project_camp_plan(
         )
 
     saved.status = CampPlanStatus.DEPLOYED
+    account.current_project_id = project.id
+    account.resource_state = AdsAccountState.CHAY
+    history = db.scalar(
+        select(AdsAccountProjectHistory).where(
+            AdsAccountProjectHistory.ads_account_id == account.id,
+            AdsAccountProjectHistory.project_id == project.id,
+        )
+    )
+    if history is None:
+        db.add(AdsAccountProjectHistory(ads_account_id=account.id, project_id=project.id))
     db.add(
         AuditLog(
             entity_type="camp_plan",
@@ -188,6 +238,7 @@ def deploy_project_camp_plan(
                 "domain": project.domain,
                 "status": CampPlanStatus.DEPLOYED.value,
                 "linter_error_count": 0,
+                "ads_account_id": account.id,
                 "campaign_state_changed": False,
                 "google_ads_write": False,
             },

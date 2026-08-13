@@ -132,6 +132,35 @@ class CampPlanStatus(StrEnum):
     DEPLOYED = "DEPLOYED"
 
 
+class EmailSource(StrEnum):
+    SELF = "SELF"
+    BOUGHT = "BOUGHT"
+
+
+class AdsAccountType(StrEnum):
+    PERSONAL = "PERSONAL"
+    INVOICE = "INVOICE"
+    MCC = "MCC"
+
+
+class AdsAccountState(StrEnum):
+    DANG_KY = "DANG_KY"
+    VERIFY = "VERIFY"
+    DOI_DUYET = "DOI_DUYET"
+    HO_SO = "HO_SO"
+    ADD_PAYMENT = "ADD_PAYMENT"
+    CHON_DU_AN = "CHON_DU_AN"
+    CHAY = "CHAY"
+    READY = "READY"
+
+
+class AdsAccountHealth(StrEnum):
+    OK = "OK"
+    REVIEW = "REVIEW"
+    SPAM = "SPAM"
+    KHANG = "KHANG"
+
+
 class RegistrationStatus(StrEnum):
     NOT_STARTED = "NOT_STARTED"
     APPLYING = "APPLYING"

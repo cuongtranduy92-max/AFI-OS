@@ -1,5 +1,15 @@
 # TASKBOARD
 
+## 0.2.106 — Tài nguyên
+
+- [x] Add email, resource, nurture-log and account-assignment schema with rollback.
+- [x] Add deterministic SOAK/DECLARED/INTERACTING/CHÍN and dirty-email rules.
+- [x] Add alerts for capacity, PayPal concentration, cards, owners and bad lineage.
+- [x] Add secret-free CRUD, overview and daily nurture-check endpoints.
+- [x] Add the complete tab 5 interface and Step 2 eligible-account selector.
+- [x] Bind one account to one current Project without writing Google Ads.
+- [x] Add regression, migration, package, updater and rollback verification.
+
 ## 0.2.105 — Apify traffic automation
 
 - [x] Add APIFY to the Keychain-only traffic seam.

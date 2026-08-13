@@ -14,6 +14,7 @@ from afi_os.api import (
     operations,
     portfolio,
     programs,
+    resources,
     system,
 )
 
@@ -30,5 +31,6 @@ api_router.include_router(economics.router)
 api_router.include_router(compliance.router)
 api_router.include_router(exposure.router)
 api_router.include_router(programs.router)
+api_router.include_router(resources.router)
 api_router.include_router(finance.router)
 api_router.include_router(system.router)

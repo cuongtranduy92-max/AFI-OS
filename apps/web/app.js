@@ -5,6 +5,7 @@ const views = {
   command: ["Bước 2 · Chuẩn bị campaign", "Các dự án đã đủ dữ liệu Bước 1 và được lưu để chuẩn bị nội dung, cấu trúc campaign."],
   intelligence: ["Nhà quảng cáo & dự án", "Bổ sung snapshot có nguồn để mạng lưới dự án ↔ nhà quảng cáo ngày càng rộng."],
   compliance: ["Terms Warning", "Cảnh báo theo bằng chứng; không loại dự án khỏi phân tích."],
+  resources: ["Tài nguyên", "Theo dõi email, tài khoản Ads, thanh toán và cảnh báo để chuẩn bị campaign an toàn."],
   economics: ["Economics Lab", "Tính break-even CPC theo loại hoa hồng và độ tin cậy của giả định."],
   exposure: ["Risk & Exposure", "Theo dõi spend và commission cùng cảnh báo terms, nhưng luôn giữ dự án trong hệ thống."],
   programs: ["Terms Evidence Center", "Thu thập proposal có nguồn; commission tách riêng và permission vẫn khóa cho tới khi được xác nhận."],
@@ -109,6 +110,7 @@ function switchView(name, {loadData = true} = {}) {
   if (!loadData) return;
   if (name === "portfolio") loadPortfolio();
   if (name === "command") loadStepTwoProjects();
+  if (name === "resources") loadResources();
   if (name === "programs") loadPrograms();
   if (name === "intelligence") {
     loadCaptureReviewQueue();
@@ -128,6 +130,7 @@ const appraisalCache = new Map();
 let stepTwoProjectCache = [];
 let activeCampPlanProject = null;
 let activeCampPlan = null;
+let resourceOverview = null;
 
 const riskLabels = {
   REGISTRATION_BLOCKED: "Không đăng ký được",
@@ -819,6 +822,11 @@ function renderCampPlan(result) {
   document.getElementById("campPlanEditor").hidden = false;
   document.getElementById("campPlanStatus").textContent = result.status === "DEPLOYED" ? "ĐÃ TRIỂN KHAI" : "BẢN NHÁP";
   document.getElementById("campPlanRefUrl").value = result.ref_url;
+  const accountSelect = document.getElementById("campPlanAdsAccount");
+  if (result.ads_account_id && !Array.from(accountSelect.options).some((item) => item.value === String(result.ads_account_id))) {
+    accountSelect.add(new Option(result.ads_account_label || `Tài khoản #${result.ads_account_id}`, String(result.ads_account_id)));
+  }
+  accountSelect.value = result.ads_account_id ? String(result.ads_account_id) : "";
   document.getElementById("campPlanPlanIssues").innerHTML = issues
     .filter((item) => item.section === "plan")
     .map(campPlanIssueHtml)
@@ -827,15 +835,26 @@ function renderCampPlan(result) {
   renderCampPlanTextLines("campPlanDescriptions", "description", "descriptions", result.plan.descriptions, 90, issues, true);
   renderCampPlanSitelinks(result.plan.sitelinks, issues);
   renderCampPlanTextLines("campPlanCallouts", "callout", "callouts", result.plan.callouts, 25, issues);
-  document.getElementById("campPlanDeploy").disabled = errors.length > 0 || result.status === "DEPLOYED";
+  document.getElementById("campPlanDeploy").disabled = errors.length > 0 || !result.ads_account_id || result.status === "DEPLOYED";
   document.getElementById("campPlanLintSummary").textContent = errors.length
     ? `${errors.length} lỗi · ${warnings.length} cảnh báo — sửa rồi bấm Kiểm tra lại.`
-    : `Không còn lỗi · ${warnings.length} cảnh báo. Có thể chuyển sang Bước 3.`;
+    : result.ads_account_id
+      ? `Không còn lỗi · ${warnings.length} cảnh báo. Có thể chuyển sang Bước 3.`
+      : `Không còn lỗi nội dung, nhưng phải chọn tài khoản Ads hợp lệ.`;
   const stepThree = document.getElementById("campPlanStepThree");
   stepThree.hidden = result.status !== "DEPLOYED";
   if (result.status === "DEPLOYED") {
     document.getElementById("campPlanStepThreeTitle").textContent = `${result.brand_name} đã sẵn sàng cho Bước 3`;
   }
+}
+
+async function loadCampPlanAccountOptions(selectedId = null) {
+  const select = document.getElementById("campPlanAdsAccount");
+  const items = await request("/ads-accounts/selectable");
+  select.innerHTML = '<option value="">Chọn tài khoản đã sẵn sàng</option>' + items.map((item) =>
+    `<option value="${item.id}">${esc(item.display_name)} · ${esc(item.email_address || "chưa có email")}</option>`
+  ).join("");
+  if (selectedId) select.value = String(selectedId);
 }
 
 function collectCampPlanEditor() {
@@ -863,6 +882,7 @@ async function openCampPlanProject(projectId) {
   document.getElementById("campPlanMessage").textContent = "Đang mở bản đã lưu…";
   document.getElementById("campPlanEditor").hidden = true;
   document.getElementById("campPlanStepThree").hidden = true;
+  await loadCampPlanAccountOptions(activeCampPlanProject.ads_account_id);
   try {
     const result = await request(`/projects/${projectId}/camp-plan`);
     renderCampPlan(result);
@@ -889,6 +909,12 @@ async function generateActiveCampPlan(useExistingPlan) {
   const message = document.getElementById("campPlanMessage");
   message.textContent = useExistingPlan ? "Đang kiểm tra lại từng dòng…" : "Đang sinh bộ nội dung…";
   const payload = {ref_url: refUrl};
+  const adsAccountId = Number(document.getElementById("campPlanAdsAccount").value || 0);
+  if (!adsAccountId) {
+    message.textContent = "Hãy chọn tài khoản Ads READY có email chín và sạch.";
+    return;
+  }
+  payload.ads_account_id = adsAccountId;
   if (useExistingPlan) payload.existing_plan = collectCampPlanEditor();
   try {
     const result = await request(`/projects/${activeCampPlanProject.project_id}/camp-plan/generate`, {
@@ -923,6 +949,171 @@ async function deployActiveCampPlan() {
   } catch (error) {
     button.disabled = false;
     message.textContent = `Chưa thể triển khai: ${error.message}`;
+  }
+}
+
+const resourceTypeLabels = {
+  paypal: "PayPal", payoneer: "Payoneer", wise: "Wise", card: "Thẻ",
+  crypto_wallet: "Ví crypto", exchange: "Sàn", sim: "SIM", device: "Thiết bị",
+  website: "Website", social: "Mạng xã hội",
+};
+
+function resourceStageLabel(value) {
+  return {SOAK: "Ngâm 48 giờ", DECLARED: "Cần khai báo", INTERACTING: "Đang nuôi", CHIN: "CHÍN"}[value] || value;
+}
+
+function renderResourceOverview(data) {
+  resourceOverview = data;
+  const kpis = data.kpis || {};
+  document.getElementById("resourceKpis").innerHTML = [
+    metric("Email chín sạch", kpis.chin || 0, "Đủ tuổi và không có lịch sử ngách hạn chế"),
+    metric("Đang nuôi", kpis.nurturing || 0, "Tự tính số ngày còn lại"),
+    metric("Email bẩn", kpis.dirty || 0, "Không dùng cho dự án mới"),
+    metric("TK Ads sẵn sàng", kpis.accounts_ready || 0, "Có thể chọn ở Bước 2"),
+  ].join("");
+  document.getElementById("resourcePlanSource").textContent = data.planned_camps_source === "manual"
+    ? `Đang tính theo kế hoạch nhập tay: ${data.planned_camps_this_month} campaign.`
+    : `Tự đếm ${data.planned_camps_this_month} bộ campaign đã lưu trong tháng.`;
+
+  const alerts = data.alerts || [];
+  document.getElementById("resourceAlertSummary").textContent = `${alerts.length} CẢNH BÁO`;
+  document.getElementById("resourceAlerts").innerHTML = alerts.length ? alerts.map((item) => `
+    <div class="resource-alert ${esc(item.level)}">
+      <div><strong>${esc(item.subject)}</strong><span>${esc(item.code)}</span></div>
+      <p>${esc(item.message)}</p>
+    </div>`).join("") : '<div class="notice">Chưa có cảnh báo tài nguyên.</div>';
+
+  const emails = data.emails || [];
+  document.getElementById("resourceEmailSummary").textContent = `${emails.length} EMAIL`;
+  document.getElementById("resourceEmailRows").innerHTML = emails.length ? emails.map((item) => {
+    const nurture = item.nurture_status;
+    const tasks = nurture.tasks_today || [];
+    const done = new Set(nurture.tasks_done || []);
+    return `<tr data-nurture-email="${item.id}">
+      <td><strong>${esc(item.address)}</strong><br><span class="small">${esc(item.source)}${item.status_override ? ` · ${esc(item.status_override)}` : ""}</span></td>
+      <td><span class="resource-stage stage-${esc(nurture.stage.toLowerCase())}">${esc(resourceStageLabel(nurture.stage))}</span>${nurture.is_dirty ? '<br><span class="resource-dirty">BẨN</span>' : ""}</td>
+      <td>${nurture.age_days} ngày<br><span class="small">${nurture.chin_eta_days ? `còn ${nurture.chin_eta_days} ngày` : "đã đủ tuổi"}</span></td>
+      <td>${esc((item.usage_history || []).join(", ") || "Chưa ghi nhận")}</td>
+      <td><div class="nurture-tasks">${tasks.length ? tasks.map((task) => `<label><input type="checkbox" data-nurture-task value="${esc(task)}" ${done.has(task) ? "checked" : ""}><span>${esc(task)}</span></label>`).join("") : '<span class="small">Không có tác vụ hôm nay.</span>'}</div></td>
+      <td>${tasks.length ? `<button class="button secondary small-button" type="button" data-save-nurture="${item.id}">Lưu tick</button>` : "—"}</td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="6" class="empty">Chưa có email. Thêm email ở biểu mẫu phía trên.</td></tr>';
+
+  const emailSelect = document.getElementById("resourceAdsEmail");
+  const currentEmail = emailSelect.value;
+  emailSelect.innerHTML = '<option value="">Chưa gắn email</option>' + emails.map((item) =>
+    `<option value="${item.id}">${esc(item.address)} · ${esc(resourceStageLabel(item.nurture_status.stage))}${item.nurture_status.is_dirty ? " · BẨN" : ""}</option>`
+  ).join("");
+  emailSelect.value = currentEmail;
+
+  const accounts = data.ads_accounts || [];
+  document.getElementById("resourceAccountSummary").textContent = `${accounts.length} TÀI KHOẢN`;
+  document.getElementById("resourceAccountRows").innerHTML = accounts.length ? accounts.map((item) => `<tr>
+    <td>${esc(item.email_address || "Chưa gắn email")}</td>
+    <td><strong>${esc(item.display_name)}</strong><br><span class="small mono">${esc(item.external_id)}</span></td>
+    <td>${esc(item.type || "—")}<br><span class="small">Thuê $${Number(item.rent_cost).toLocaleString("en-US")} · phí ${Number(item.spend_fee_pct)}%</span></td>
+    <td><span class="badge">${esc(item.state)}</span><br><span class="small">${esc(item.health)}</span></td>
+    <td>${item.camp_plan_id ? `<strong>#${item.camp_plan_id}</strong><br><span class="small">${esc(item.camp_plan_status || "—")}</span>` : "Chưa tạo"}</td>
+    <td>${item.current_project_domain ? `<strong>${esc(item.current_project_domain)}</strong>` : "Đang rảnh"}</td>
+    <td>${item.selectable ? '<span class="risk-green">ĐƯỢC CHỌN</span>' : '<span class="small">Chưa đủ điều kiện</span>'}</td>
+  </tr>`).join("") : '<tr><td colspan="7" class="empty">Chưa có tài khoản Ads.</td></tr>';
+
+  document.getElementById("resourceTypeChips").innerHTML = Object.entries(data.type_counts || {}).map(([key, count]) =>
+    `<span class="resource-type-chip"><strong>${count}</strong>${esc(resourceTypeLabels[key] || key)}</span>`
+  ).join("");
+  const resources = data.resources || [];
+  document.getElementById("resourceInventoryRows").innerHTML = resources.length ? resources.map((item) => `<tr>
+    <td>${esc(resourceTypeLabels[item.type] || item.type)}</td><td><strong>${esc(item.label)}</strong></td>
+    <td>$${Number(item.monthly_in_usd).toLocaleString("en-US", {maximumFractionDigits: 2})}</td>
+    <td>${esc((item.linked_gateways || []).join(", ") || "—")}</td><td>${esc(item.owner_name || "—")}</td><td>${esc(item.note || "—")}</td>
+  </tr>`).join("") : '<tr><td colspan="6" class="empty">Chưa có tài nguyên.</td></tr>';
+}
+
+async function loadResources() {
+  const planned = document.getElementById("resourcePlannedCamps").value;
+  const query = planned === "" ? "" : `?planned_camps=${encodeURIComponent(planned)}`;
+  renderResourceOverview(await request(`/resources/overview${query}`));
+}
+
+async function submitResourceEmail(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = formObject(form);
+  const payload = {
+    address: values.address,
+    source: values.source,
+    created_at: new Date(values.created_at).toISOString(),
+    declared_done: form.elements.declared_done.checked,
+    device_changes: Number(values.device_changes || 0),
+    usage_history: String(values.usage_history || "").split(",").map((item) => item.trim()).filter(Boolean),
+    note: values.note || null,
+  };
+  const message = document.getElementById("resourceEmailMessage");
+  try {
+    await request("/emails", {method: "POST", body: JSON.stringify(payload)});
+    form.reset();
+    setLocalDateTime(form.elements.created_at);
+    form.elements.device_changes.value = "0";
+    message.textContent = "Đã lưu email và tự tính lịch nuôi.";
+    await loadResources();
+  } catch (error) { message.textContent = `Lỗi: ${error.message}`; }
+}
+
+async function submitResourceAdsAccount(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = formObject(form);
+  const payload = {
+    email_id: values.email_id ? Number(values.email_id) : null,
+    type: values.type, display_name: values.display_name,
+    state: values.state, health: values.health,
+    rent_cost: Number(values.rent_cost || 0), spend_fee_pct: Number(values.spend_fee_pct || 0),
+    note: values.note || null,
+  };
+  const message = document.getElementById("resourceAdsMessage");
+  try {
+    await request("/ads-accounts", {method: "POST", body: JSON.stringify(payload)});
+    form.reset();
+    form.elements.rent_cost.value = "0";
+    form.elements.spend_fee_pct.value = "0";
+    message.textContent = "Đã lưu tài khoản. Bước 2 chỉ hiện khi đủ điều kiện.";
+    await loadResources();
+    await loadCampPlanAccountOptions();
+  } catch (error) { message.textContent = `Lỗi: ${error.message}`; }
+}
+
+async function submitResourceInventory(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = formObject(form);
+  const payload = {
+    type: values.type, label: values.label,
+    monthly_in_usd: Number(values.monthly_in_usd || 0),
+    linked_gateways: String(values.linked_gateways || "").split(",").map((item) => item.trim()).filter(Boolean),
+    owner_name: values.owner_name || null, note: values.note || null,
+  };
+  const message = document.getElementById("resourceInventoryMessage");
+  try {
+    await request("/resources", {method: "POST", body: JSON.stringify(payload)});
+    form.reset();
+    form.elements.monthly_in_usd.value = "0";
+    message.textContent = "Đã lưu và tính lại cảnh báo.";
+    await loadResources();
+  } catch (error) { message.textContent = `Lỗi: ${error.message}`; }
+}
+
+async function saveNurtureCheck(button) {
+  const row = button.closest("tr");
+  const tasksDone = Array.from(row.querySelectorAll("[data-nurture-task]:checked")).map((item) => item.value);
+  button.disabled = true;
+  try {
+    await request(`/emails/${button.dataset.saveNurture}/nurture-check`, {
+      method: "POST", body: JSON.stringify({tasks_done: tasksDone}),
+    });
+    await loadResources();
+  } catch (error) {
+    button.disabled = false;
+    window.alert(`Chưa lưu được checklist: ${error.message}`);
   }
 }
 
@@ -1369,7 +1560,7 @@ async function refreshAll() {
       loadHealth(), loadSummary(), loadRadar(), loadGraph(), loadCaptures(),
       loadCaptureReviewQueue(),
       loadPrograms(), loadPortfolio(), loadStepTwoProjects(), loadExposure(), loadFinance(), loadBackups(), loadOperations(),
-      loadRuntimeStatus(), loadAutomationQueue(),
+      loadRuntimeStatus(), loadAutomationQueue(), loadResources(),
     ]);
   } catch (error) {
     setApiStatus(false, `Lỗi dữ liệu: ${error.message}`);
@@ -2417,6 +2608,10 @@ document.getElementById("stepTwoProjectRows").addEventListener("click", (event) 
 document.getElementById("campPlanGenerate").addEventListener("click", () => generateActiveCampPlan(false));
 document.getElementById("campPlanRelint").addEventListener("click", () => generateActiveCampPlan(true));
 document.getElementById("campPlanDeploy").addEventListener("click", deployActiveCampPlan);
+document.getElementById("campPlanAdsAccount").addEventListener("change", () => {
+  document.getElementById("campPlanDeploy").disabled = true;
+  document.getElementById("campPlanLintSummary").textContent = "Tài khoản đã đổi; bấm Kiểm tra lại để lưu trước khi triển khai.";
+});
 document.getElementById("campPlanEditor").addEventListener("input", (event) => {
   const input = event.target.closest("[data-camp-field]");
   if (!input) return;
@@ -2575,9 +2770,20 @@ document.querySelector('#commissionImportForm input[type="file"]').addEventListe
   document.getElementById("importMessage").textContent = "File đã đổi; hãy Preview lại.";
 });
 document.getElementById("createBackup").addEventListener("click", createBackupNow);
+document.getElementById("resourcePlanApply").addEventListener("click", () => loadResources().catch((error) => {
+  document.getElementById("resourcePlanSource").textContent = `Lỗi: ${error.message}`;
+}));
+document.getElementById("resourceEmailForm").addEventListener("submit", submitResourceEmail);
+document.getElementById("resourceAdsForm").addEventListener("submit", submitResourceAdsAccount);
+document.getElementById("resourceInventoryForm").addEventListener("submit", submitResourceInventory);
+document.getElementById("resourceEmailRows").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-save-nurture]");
+  if (button) saveNurtureCheck(button);
+});
 document.querySelector('[name="conversion_basis"]').addEventListener("change", syncEconomicsConversionMode);
 syncEconomicsConversionMode();
 populatePermissionSelects();
 updateCaptureSubmitMode();
 setLocalDateTime(document.getElementById("advertiserSnapshotForm").elements.checked_at);
+setLocalDateTime(document.getElementById("resourceEmailForm").elements.created_at);
 refreshAll();

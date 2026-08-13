@@ -8,6 +8,9 @@ from urllib.parse import urlsplit
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from afi_os.enums import (
+    AdsAccountHealth,
+    AdsAccountState,
+    AdsAccountType,
     AdvertiserClassification,
     AutomationJobStatus,
     AutomationJobType,
@@ -15,6 +18,7 @@ from afi_os.enums import (
     CommissionState,
     CommissionType,
     DataQuality,
+    EmailSource,
     EvidenceReviewStatus,
     FxRateReviewStatus,
     PermissionStatus,
@@ -611,6 +615,7 @@ class CampPlanLintIssue(BaseModel):
 class CampPlanGenerateRequest(BaseModel):
     ref_url: str = Field(min_length=1, max_length=1000)
     existing_plan: CampPlanContent | None = None
+    ads_account_id: int | None = Field(default=None, gt=0)
 
     @field_validator("ref_url")
     @classmethod
@@ -640,6 +645,8 @@ class CampPlanResponse(BaseModel):
     domain: str
     brand_name: str
     signup_url: str | None = None
+    ads_account_id: int | None = None
+    ads_account_label: str | None = None
     ref_url: str
     plan: CampPlanContent
     linter: list[CampPlanLintIssue] = Field(default_factory=list)
@@ -659,6 +666,282 @@ class CampPlanEligibleProject(BaseModel):
     score_pass: bool = True
     camp_plan_status: CampPlanStatus | None = None
     ref_url: str | None = None
+    ads_account_id: int | None = None
+
+
+class SecretFreeModel(BaseModel):
+    """Reject undeclared fields so credentials cannot silently enter resource APIs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class EmailCreate(SecretFreeModel):
+    address: str = Field(min_length=3, max_length=320)
+    source: EmailSource = EmailSource.SELF
+    created_at: datetime | None = None
+    declared_done: bool = False
+    device_changes: int = Field(default=0, ge=0, le=100)
+    usage_history: list[str] = Field(default_factory=list, max_length=100)
+    status_override: Literal["LOCKED"] | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("address")
+    @classmethod
+    def normalize_email_address(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized.count("@") != 1 or "." not in normalized.rsplit("@", 1)[1]:
+            raise ValueError("Địa chỉ email không hợp lệ")
+        return normalized
+
+    @field_validator("usage_history")
+    @classmethod
+    def normalize_usage_history(cls, values: list[str]) -> list[str]:
+        output: list[str] = []
+        for value in values:
+            item = value.strip()
+            if item and item not in output:
+                output.append(item[:120])
+        return output
+
+    @field_validator("note")
+    @classmethod
+    def normalize_email_note(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+
+class EmailUpdate(SecretFreeModel):
+    source: EmailSource | None = None
+    created_at: datetime | None = None
+    declared_done: bool | None = None
+    device_changes: int | None = Field(default=None, ge=0, le=100)
+    usage_history: list[str] | None = Field(default=None, max_length=100)
+    status_override: Literal["LOCKED"] | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("usage_history")
+    @classmethod
+    def normalize_update_usage_history(cls, values: list[str] | None) -> list[str] | None:
+        return EmailCreate.normalize_usage_history(values) if values is not None else None
+
+    @field_validator("note")
+    @classmethod
+    def normalize_update_email_note(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+
+class NurtureCheckRequest(SecretFreeModel):
+    tasks_done: list[str] = Field(default_factory=list, max_length=3)
+
+    @field_validator("tasks_done")
+    @classmethod
+    def normalize_tasks(cls, values: list[str]) -> list[str]:
+        output: list[str] = []
+        for value in values:
+            item = value.strip()
+            if item and item not in output:
+                output.append(item[:300])
+        if len(output) > 3:
+            raise ValueError("Tối đa 3 tác vụ mỗi ngày")
+        return output
+
+
+class NurtureStatusResponse(BaseModel):
+    stage: str
+    age_days: int
+    chin_eta_days: int
+    is_chin: bool
+    is_dirty: bool
+    tasks_today: list[str] = Field(default_factory=list)
+    tasks_done: list[str] = Field(default_factory=list)
+
+
+class EmailResponse(BaseModel):
+    id: int
+    address: str
+    source: EmailSource
+    created_at: datetime
+    declared_done: bool
+    device_changes: int
+    usage_history: list[str] = Field(default_factory=list)
+    status_override: str | None = None
+    note: str | None = None
+    nurture_status: NurtureStatusResponse
+
+
+class AdsAccountCreate(SecretFreeModel):
+    email_id: int | None = Field(default=None, gt=0)
+    type: AdsAccountType
+    external_id: str | None = Field(default=None, max_length=32)
+    display_name: str = Field(min_length=1, max_length=255)
+    rent_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    spend_fee_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    state: AdsAccountState = AdsAccountState.DANG_KY
+    health: AdsAccountHealth = AdsAccountHealth.OK
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_ads_account_name(cls, value: str) -> str:
+        normalized = normalize_optional_text(value)
+        if normalized is None:
+            raise ValueError("Tên tài khoản không được để trống")
+        return normalized
+
+    @field_validator("external_id", "note")
+    @classmethod
+    def normalize_ads_account_text(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+
+class AdsAccountUpdate(SecretFreeModel):
+    email_id: int | None = Field(default=None, gt=0)
+    type: AdsAccountType | None = None
+    display_name: str | None = Field(default=None, max_length=255)
+    rent_cost: Decimal | None = Field(default=None, ge=0)
+    spend_fee_pct: Decimal | None = Field(default=None, ge=0, le=100)
+    state: AdsAccountState | None = None
+    health: AdsAccountHealth | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_update_ads_account_name(cls, value: str | None) -> str | None:
+        normalized = normalize_optional_text(value)
+        if value is not None and normalized is None:
+            raise ValueError("Tên tài khoản không được để trống")
+        return normalized
+
+    @field_validator("note")
+    @classmethod
+    def normalize_update_ads_account_text(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+
+class AdsAccountResponse(BaseModel):
+    id: int
+    external_id: str
+    email_id: int | None = None
+    email_address: str | None = None
+    type: AdsAccountType | None = None
+    display_name: str
+    rent_cost: Decimal
+    spend_fee_pct: Decimal
+    state: AdsAccountState
+    health: AdsAccountHealth
+    current_project_id: int | None = None
+    current_project_domain: str | None = None
+    camp_plan_id: int | None = None
+    camp_plan_status: CampPlanStatus | None = None
+    note: str | None = None
+    selectable: bool = False
+
+
+RESOURCE_TYPES = {
+    "paypal", "payoneer", "wise", "card", "crypto_wallet",
+    "exchange", "sim", "device", "website", "social",
+}
+
+
+class ResourceCreate(SecretFreeModel):
+    type: str
+    label: str = Field(min_length=1, max_length=255)
+    monthly_in_usd: Decimal = Field(default=Decimal("0"), ge=0)
+    linked_gateways: list[str] = Field(default_factory=list, max_length=50)
+    owner_name: str | None = Field(default=None, max_length=255)
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("type")
+    @classmethod
+    def validate_resource_type(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in RESOURCE_TYPES:
+            raise ValueError("Loại tài nguyên không được hỗ trợ")
+        return normalized
+
+    @field_validator("label")
+    @classmethod
+    def normalize_resource_label(cls, value: str) -> str:
+        normalized = normalize_optional_text(value)
+        if normalized is None:
+            raise ValueError("Nhãn tài nguyên không được để trống")
+        return normalized
+
+    @field_validator("owner_name", "note")
+    @classmethod
+    def normalize_resource_text(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+    @field_validator("linked_gateways")
+    @classmethod
+    def normalize_gateways(cls, values: list[str]) -> list[str]:
+        output: list[str] = []
+        for value in values:
+            item = value.strip()
+            if item and item not in output:
+                output.append(item[:120])
+        return output
+
+
+class ResourceUpdate(SecretFreeModel):
+    type: str | None = None
+    label: str | None = Field(default=None, max_length=255)
+    monthly_in_usd: Decimal | None = Field(default=None, ge=0)
+    linked_gateways: list[str] | None = Field(default=None, max_length=50)
+    owner_name: str | None = Field(default=None, max_length=255)
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("type")
+    @classmethod
+    def validate_update_resource_type(cls, value: str | None) -> str | None:
+        return ResourceCreate.validate_resource_type(value) if value is not None else None
+
+    @field_validator("label")
+    @classmethod
+    def normalize_update_resource_label(cls, value: str | None) -> str | None:
+        normalized = normalize_optional_text(value)
+        if value is not None and normalized is None:
+            raise ValueError("Nhãn tài nguyên không được để trống")
+        return normalized
+
+    @field_validator("owner_name", "note")
+    @classmethod
+    def normalize_update_resource_text(cls, value: str | None) -> str | None:
+        return normalize_optional_text(value)
+
+    @field_validator("linked_gateways")
+    @classmethod
+    def normalize_update_gateways(cls, values: list[str] | None) -> list[str] | None:
+        return ResourceCreate.normalize_gateways(values) if values is not None else None
+
+
+class ResourceResponse(BaseModel):
+    id: int
+    type: str
+    label: str
+    monthly_in_usd: Decimal
+    linked_gateways: list[str] = Field(default_factory=list)
+    owner_name: str | None = None
+    note: str | None = None
+
+
+class ResourceAlertResponse(BaseModel):
+    level: Literal["error", "warning", "info"]
+    code: str
+    subject: str
+    message: str
+
+
+class ResourceOverviewResponse(BaseModel):
+    planned_camps_this_month: int
+    planned_camps_source: Literal["database", "manual"]
+    kpis: dict[str, int]
+    type_counts: dict[str, int]
+    alerts: list[ResourceAlertResponse]
+    emails: list[EmailResponse]
+    ads_accounts: list[AdsAccountResponse]
+    resources: list[ResourceResponse]
+    selectable_account_ids: list[int]
+    stores_passwords: bool = False
 
 
 class ProjectTrafficSnapshotRequest(BaseModel):

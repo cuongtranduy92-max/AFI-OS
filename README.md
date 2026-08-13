@@ -94,7 +94,16 @@ docs/                             spec, quyết định, taskboard, runbook
 
 ## Trạng thái
 
-Đây là **v0.2.105**. Bước 1 có thể tự lấy traffic tháng mới nhất và top 5 quốc gia qua Apify Similarweb Scraper sau một lần lưu token trong macOS Keychain. Cache 45 ngày và batch tối đa 50 domain giúp tránh gọi lại không cần thiết; domain không có dữ liệu hiện `NO_DATA`, không bị biến thành 0. Hệ thống vẫn không tạo hoặc sửa Google Ads.
+Đây là **v0.2.106**. Tab **Tài nguyên** theo dõi kho email, lịch nuôi thủ công,
+tài khoản Ads và tài nguyên thanh toán. Bước 2 chỉ cho chọn tài khoản READY có email
+chín, sạch và đang rảnh; triển khai nội bộ sẽ khóa tài khoản vào đúng một dự án.
+Ứng dụng không lưu mật khẩu, không chạy bot nuôi tài khoản và không tạo hoặc sửa
+Google Ads.
+
+Bước 1 tiếp tục tự lấy traffic tháng mới nhất và top 5 quốc gia qua Apify Similarweb
+Scraper sau một lần lưu token trong macOS Keychain. Cache 45 ngày và batch tối đa 50
+domain giúp tránh gọi lại không cần thiết; domain không có dữ liệu hiện `NO_DATA`,
+không bị biến thành 0.
 
 Command Center tiếp tục phân biệt lần quét folder với thời điểm file Google Ads thực sự được xuất. Khi snapshot có dữ liệu của hôm nay nhưng file nguồn đã hơn 6 giờ, hệ thống tạo cảnh báo làm mới không chặn và không sửa/dừng campaign.
 

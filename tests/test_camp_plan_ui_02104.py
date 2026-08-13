@@ -8,9 +8,10 @@ client = TestClient(app)
 def test_step_two_camp_builder_is_exposed_in_local_ui() -> None:
     page = client.get("/")
     assert page.status_code == 200
-    assert "APIFY TRAFFIC · v0.2.105" in page.text
+    assert "TÀI NGUYÊN · v0.2.106" in page.text
     assert 'id="campPlanWorkspace"' in page.text
     assert 'id="campPlanRefUrl"' in page.text
+    assert 'id="campPlanAdsAccount"' in page.text
     assert 'id="campPlanHeadlines"' in page.text
     assert 'id="campPlanDescriptions"' in page.text
     assert 'id="campPlanSitelinks"' in page.text
@@ -18,7 +19,7 @@ def test_step_two_camp_builder_is_exposed_in_local_ui() -> None:
     assert 'id="campPlanRelint"' in page.text
     assert 'id="campPlanDeploy"' in page.text
     assert 'id="campPlanStepThree"' in page.text
-    assert "/app.js?v=02105" in page.text
+    assert "/app.js?v=02106" in page.text
 
 
 def test_step_two_javascript_uses_pass_list_and_safe_deploy_flow() -> None:
@@ -30,4 +31,5 @@ def test_step_two_javascript_uses_pass_list_and_safe_deploy_flow() -> None:
     assert "collectCampPlanEditor" in script.text
     assert "existing_plan" in script.text
     assert "Không có thao tác ghi Google Ads" in script.text
+    assert 'request("/ads-accounts/selectable")' in script.text
     assert "button.disabled = true" in script.text
