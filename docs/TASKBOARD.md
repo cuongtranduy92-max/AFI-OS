@@ -1,5 +1,13 @@
 # TASKBOARD
 
+## 0.2.113 — Project-check country display
+
+- [x] Parse cả mảng và JSON string của `top_traffic_countries`.
+- [x] Hiện tối đa năm tên quốc gia tiếng Việt, cờ và tỷ lệ phần trăm.
+- [x] Việt hóa nhãn market metrics trong truth drawer.
+- [x] Không thay đổi số gốc, nguồn, confidence, Terms/PPC hay Google Ads.
+- [x] Có regression, checksum, updater, rollback và hậu kiểm live.
+
 ## 0.2.112 — Dot8 full
 
 - [x] Thu thập tối đa 12 trang chính thức với vai trò homepage/pricing/affiliate/terms.

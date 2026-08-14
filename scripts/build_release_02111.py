@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = Path(sys.argv[1]).expanduser().resolve()
 VERSION = "0.2.111"
+ALLOWED_FROM_VERSIONS = ["0.2.110", "0.2.111"]
 FILES = (
     "README.md",
     "ROLLBACK-AFI-OS-0.2.111.command",
@@ -102,7 +103,7 @@ def main() -> None:
     manifest = {
         "format_version": 1,
         "update_version": VERSION,
-        "allowed_from_versions": ["0.2.110", "0.2.111"],
+        "allowed_from_versions": ALLOWED_FROM_VERSIONS,
         "expected_migration_head": "93d7e5a2b1c4",
         "files": entries,
     }

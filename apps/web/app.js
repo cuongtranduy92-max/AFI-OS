@@ -194,6 +194,53 @@ function commissionContext(metricItem, state) {
   return "Commission đã xác nhận";
 }
 
+const metricDisplayLabels = {
+  active_advertisers_30d: "Nhà quảng cáo đang chạy 7 ngày",
+  website_traffic_monthly: "Traffic website/tháng",
+  google_search_traffic_monthly: "Traffic Google/tháng",
+  top_traffic_countries: "Quốc gia có traffic cao nhất",
+};
+
+function displayMetricLabel(metricItem) {
+  return metricDisplayLabels[metricItem?.key] || metricItem?.label || metricItem?.key || "Số liệu";
+}
+
+function countryFlag(countryCode) {
+  const code = String(countryCode || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return "";
+  return String.fromCodePoint(...[...code].map((letter) => 127397 + letter.charCodeAt(0)));
+}
+
+function formatTrafficCountries(rawValue) {
+  let countries = rawValue;
+  if (typeof countries === "string") {
+    try {
+      countries = JSON.parse(countries);
+    } catch (_error) {
+      return countries;
+    }
+  }
+  if (!Array.isArray(countries)) return String(rawValue ?? "Chưa có dữ liệu");
+  let regionNames;
+  try {
+    regionNames = new Intl.DisplayNames(["vi"], {type: "region"});
+  } catch (_error) {
+    regionNames = null;
+  }
+  const rows = countries.slice(0, 5).map((entry) => {
+    const code = String(Array.isArray(entry) ? entry[0] : entry?.country || entry?.code || "").toUpperCase();
+    const rawShare = Number(Array.isArray(entry) ? entry[1] : entry?.share ?? entry?.traffic_share);
+    if (!code) return null;
+    const countryName = regionNames?.of(code) || code;
+    const flag = countryFlag(code);
+    const share = Number.isFinite(rawShare)
+      ? `${(rawShare <= 1 ? rawShare * 100 : rawShare).toLocaleString("vi-VN", {maximumFractionDigits: 1})}%`
+      : "Chưa rõ tỷ lệ";
+    return `${flag ? `${flag} ` : ""}${countryName} ${share}`;
+  }).filter(Boolean);
+  return rows.length ? rows.join(" · ") : "Chưa có dữ liệu";
+}
+
 function displayMetricValue(metricItem) {
   if (!metricItem || metricItem.value == null) {
     const missingLabels = {
@@ -208,6 +255,9 @@ function displayMetricValue(metricItem) {
       commission: "Chưa xác nhận",
     };
     return missingLabels[metricItem?.key] || "Chưa có dữ liệu";
+  }
+  if (metricItem.key === "top_traffic_countries") {
+    return formatTrafficCountries(metricItem.value);
   }
   if (metricItem.display_value) {
     return `${metricItem.display_value}${metricItem.unit ? ` ${metricItem.unit}` : ""}`;
@@ -594,7 +644,7 @@ async function openMetricTruth(projectId, metricKey) {
   openTruthDrawer("Đang đọc nguồn…", '<div class="empty">Đang tải dấu vết số liệu…</div>');
   try {
     const metricItem = await request(`/portfolio/projects/${projectId}/truth/${encodeURIComponent(metricKey)}`);
-    openTruthDrawer(metricItem.label, truthMeta(metricItem));
+    openTruthDrawer(displayMetricLabel(metricItem), truthMeta(metricItem));
   } catch (error) {
     openTruthDrawer("Không đọc được nguồn", `<div class="notice warning">${esc(error.message)}</div>`);
   }
@@ -912,7 +962,7 @@ async function saveManualPackage(form) {
 
 function projectDetailHtml(item, check) {
   const metrics = Object.values(item.metrics).map((metricItem) =>
-    `<button type="button" class="truth-metric-card" data-truth-project="${item.id}" data-truth-metric="${esc(metricItem.key)}"><span>${esc(metricItem.label)}</span><strong>${esc(displayMetricValue(metricItem))}</strong><small>${esc(checkStateLabels[metricItem.collection_state] || metricItem.collection_state || "Chưa thu thập")} · ${esc(qualityLabels[metricItem.quality] || metricItem.quality)} · ${Math.round(Number(metricItem.confidence || 0) * 100)}%</small></button>`
+    `<button type="button" class="truth-metric-card" data-truth-project="${item.id}" data-truth-metric="${esc(metricItem.key)}"><span>${esc(displayMetricLabel(metricItem))}</span><strong>${esc(displayMetricValue(metricItem))}</strong><small>${esc(checkStateLabels[metricItem.collection_state] || metricItem.collection_state || "Chưa thu thập")} · ${esc(qualityLabels[metricItem.quality] || metricItem.quality)} · ${Math.round(Number(metricItem.confidence || 0) * 100)}%</small></button>`
   ).join("");
   return `${projectStepOneHtml(check)}<div class="project-journey" aria-label="Luồng truy vết">
       <span class="active">1 · ${esc(item.brand_name)}</span><b>→</b><span>2 · Nhà quảng cáo</span><b>→</b><span>3 · Dự án liên quan</span>

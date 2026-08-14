@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.2.113 — Project-check country display hotfix
+
+- Convert `top_traffic_countries` arrays/JSON into five readable Vietnamese country
+  names, flags and percentages instead of exposing raw technical payloads.
+- Translate the related market metric labels before they reach the Project truth drawer.
+- Keep values, source lineage and confidence unchanged; this release is display-only.
+
 ## 0.2.112 — Dot8 full project truth and true profit
 
 - Crawl a bounded set of up to 12 official homepage, pricing, affiliate and Terms

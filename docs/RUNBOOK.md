@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Update 0.2.113 — Hiển thị quốc gia traffic dễ đọc
+
+1. Chạy `UPDATE-AFI-OS-0.2.113.command` một lần.
+2. Mở **Bước 1 · Check dự án**, mở một dự án có dữ liệu traffic.
+3. Trường quốc gia phải hiện tên nước và phần trăm, không còn chuỗi JSON kỹ thuật.
+
+Đây là hotfix hiển thị, không thay đổi dữ liệu, PPC permission, commission fact hay
+Google Ads. Rollback bằng `ROLLBACK-AFI-OS-0.2.113.command`.
+
 ## Update 0.2.112 — Dot8 hồ sơ đủ nguồn và lời lãi thật
 
 1. Chạy `UPDATE-AFI-OS-0.2.112.command` một lần.

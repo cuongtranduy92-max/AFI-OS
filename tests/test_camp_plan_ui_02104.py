@@ -8,7 +8,7 @@ client = TestClient(app)
 def test_step_two_camp_builder_is_exposed_in_local_ui() -> None:
     page = client.get("/")
     assert page.status_code == 200
-    assert "DOT8 · v0.2.112" in page.text
+    assert "UI FIX · v0.2.113" in page.text
     assert 'id="campPlanWorkspace"' in page.text
     assert 'id="campPlanRefUrl"' in page.text
     assert 'id="campPlanAdsAccount"' in page.text
@@ -19,7 +19,7 @@ def test_step_two_camp_builder_is_exposed_in_local_ui() -> None:
     assert 'id="campPlanRelint"' in page.text
     assert 'id="campPlanDeploy"' in page.text
     assert 'id="campPlanStepThree"' in page.text
-    assert "/app.js?v=02112" in page.text
+    assert "/app.js?v=02113" in page.text
 
 
 def test_step_two_javascript_uses_pass_list_and_safe_deploy_flow() -> None:

@@ -319,9 +319,9 @@ def test_prohibited_campaign_is_included_and_financial_exposure_is_separate() ->
 def test_risk_exposure_ui_uses_warning_only_language() -> None:
     page = client.get("/")
     assert page.status_code == 200
-    assert "DOT8 · v0.2.112" in page.text
-    assert 'src="/app.js?v=02112"' in page.text
-    assert 'href="/styles.css?v=02112"' in page.text
+    assert "UI FIX · v0.2.113" in page.text
+    assert 'src="/app.js?v=02113"' in page.text
+    assert 'href="/styles.css?v=02113"' in page.text
     assert 'id="view-exposure"' in page.text
     assert "Mọi campaign vẫn được giữ lại" in page.text
     assert 'id="researchAttemptRows"' in page.text

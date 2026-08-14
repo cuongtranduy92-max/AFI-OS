@@ -1,4 +1,14 @@
-# TEST REPORT — AFI-OS 0.2.112
+# TEST REPORT — AFI-OS 0.2.113
+
+## 0.2.113 — Project-check country display hotfix
+
+- Full regression: 460 passed, 1 skipped (461 collected).
+- Regression verifies the formatter consumes either array or JSON text and maps the
+  country metric through Vietnamese labels before rendering.
+- JavaScript syntax, full Python regression, package checksum, update/rollback and live
+  browser verification are required before release.
+- No source value, confidence, PPC permission, commission fact or Google Ads setting is
+  mutated by this display-only change.
 
 ## 0.2.112 — Dot8 full project truth and true profit
 
