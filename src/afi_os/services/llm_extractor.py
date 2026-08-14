@@ -13,6 +13,31 @@ from dataclasses import dataclass, field
 
 MAX_PAGE_CHARS = 15_000
 PPC_UNDISCLOSED_VI = "Trang không nêu quy định PPC — cần hỏi support trước khi chạy."
+PPC_CHECKLIST_KEYS = (
+    "search_ads_allowed",
+    "brand_keyword_bidding",
+    "direct_linking",
+    "brand_in_ad_copy",
+    "brand_in_display_url",
+    "trademark_plus_coupon",
+    "own_landing_page_required",
+    "geo_restrictions",
+    "penalty_if_violated",
+)
+PPC_CHECKLIST_SCHEMA = """
+  "ppc_policy": {
+    "search_ads_allowed":        {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "brand_keyword_bidding":     {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "direct_linking":            {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "brand_in_ad_copy":          {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "brand_in_display_url":      {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "trademark_plus_coupon":     {"status": "ALLOWED|BANNED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "own_landing_page_required": {"status": "REQUIRED|NOT_REQUIRED|NOT_STATED", "quote": "...", "quote_vi": "...", "note_vi": "..."},
+    "geo_restrictions":          {"status": "YES|NO|NOT_STATED", "detail_vi": "...", "quote": "...", "quote_vi": "..."},
+    "penalty_if_violated":       {"detail_vi": "hậu quả nếu vi phạm", "quote": "...", "quote_vi": "..."},
+    "overall_verdict_vi": "Kết luận 2–3 câu: có nên chạy Google Ads cho dự án này không, cần tránh gì."
+  }
+"""
 
 SYSTEM_PROMPT = """Bạn là bộ trích xuất dữ kiện chương trình affiliate. Chỉ trả về JSON đúng schema.
 Luật sắt:
@@ -24,6 +49,9 @@ Luật sắt:
 - "quote" giữ NGUYÊN VĂN ngôn ngữ gốc, KHÔNG dịch, KHÔNG sửa.
 - Thêm "quote_vi": bản dịch tiếng Việt của quote, dịch sát nghĩa, giữ nguyên số/tên riêng.
 - Thêm "summary_vi": tóm tắt tiếng Việt dễ hiểu cho người không giỏi tiếng Anh.
+- Với mỗi mục trong ppc_policy: nếu văn bản KHÔNG nói rõ → status "NOT_STATED" và quote để rỗng.
+  TUYỆT ĐỐI KHÔNG suy diễn "không cấm nghĩa là được phép".
+- "note_vi": giải thích ngắn bằng tiếng Việt cho người không rành tiếng Anh, nói rõ điều này ảnh hưởng gì tới việc chạy Google Ads.
 - Trả về DUY NHẤT JSON, không giải thích."""
 
 USER_PROMPT_TEMPLATE = """Văn bản các trang của dự án "{domain}" (đã cắt gọn):
@@ -57,7 +85,7 @@ Trích xuất theo schema JSON sau (giá trị null nếu không chắc):
     "quote": "câu nguyên văn về quy định quảng cáo", "quote_vi": "bản dịch",
     "summary_vi": "tóm tắt tiếng Việt quy định quảng cáo"
   }},
-  "ppc_policy_vi": "TÓM TẮT TIẾNG VIỆT ĐẦY ĐỦ mọi ràng buộc PPC/Google Ads của dự án: được hay không được chạy quảng cáo tìm kiếm; có cấm đặt giá thầu từ khoá thương hiệu không; có cấm dẫn link trực tiếp (direct linking) không; có cấm dùng tên thương hiệu trong tiêu đề/đường dẫn hiển thị không; ràng buộc khác. Nếu trang không nói gì về PPC, ghi rõ: 'Trang không nêu quy định PPC — cần hỏi support trước khi chạy.'",
+{ppc_checklist_schema},
   "confidence": 0.0
 }}"""
 
@@ -79,13 +107,24 @@ class ExtractionResult:
     raw: dict | None = None
 
 
-def build_extraction_prompt(domain: str, pages: list[tuple[str, str]]) -> tuple[str, str]:
-    """pages: [(url, text)] → (system, user). Mỗi trang cắt MAX_PAGE_CHARS."""
+def _page_parts(page: tuple[str, ...]) -> tuple[str, str, str]:
+    url, text = page[0], page[1]
+    role = page[2] if len(page) > 2 else "other"
+    return url, text, role
+
+
+def build_extraction_prompt(domain: str, pages: list[tuple[str, ...]]) -> tuple[str, str]:
+    """pages: [(url, text, role)] → (system, user). Backward-compatible with pairs."""
     blocks = []
-    for url, text in pages:
+    for page in pages:
+        url, text, role = _page_parts(page)
         cleaned = re.sub(r"\s+", " ", text or "").strip()[:MAX_PAGE_CHARS]
-        blocks.append(f"### URL: {url}\n{cleaned}")
-    user = USER_PROMPT_TEMPLATE.format(domain=domain, pages_text="\n\n".join(blocks))
+        blocks.append(f"### URL: {url} [role: {role}]\n{cleaned}")
+    user = USER_PROMPT_TEMPLATE.format(
+        domain=domain,
+        pages_text="\n\n".join(blocks),
+        ppc_checklist_schema=PPC_CHECKLIST_SCHEMA.strip().rstrip(","),
+    )
     return SYSTEM_PROMPT, user
 
 
@@ -93,12 +132,26 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "")).strip().lower()
 
 
-def _quote_in_sources(quote: str, pages: list[tuple[str, str]]) -> bool:
+def _quote_in_sources(quote: str, pages: list[tuple[str, ...]]) -> bool:
     """Trích dẫn phải xuất hiện (chuẩn hoá khoảng trắng, bỏ hoa thường) trong ít nhất 1 trang."""
     q = _norm(quote)
     if len(q) < 15:          # trích dẫn quá ngắn = không đủ bằng chứng
         return False
-    return any(q in _norm(text) for _, text in pages)
+    return any(q in _norm(_page_parts(page)[1]) for page in pages)
+
+
+def _quote_source_url(quote: str, pages: list[tuple[str, ...]]) -> str | None:
+    q = _norm(quote)
+    if len(q) < 15:
+        return None
+    return next(
+        (
+            _page_parts(page)[0]
+            for page in pages
+            if q in _norm(_page_parts(page)[1])
+        ),
+        None,
+    )
 
 
 def _first_json(text: str) -> dict | None:
@@ -119,7 +172,7 @@ def _first_json(text: str) -> dict | None:
     return None
 
 
-def parse_and_validate(llm_text: str, pages: list[tuple[str, str]]) -> ExtractionResult:
+def parse_and_validate(llm_text: str, pages: list[tuple[str, ...]]) -> ExtractionResult:
     result = ExtractionResult()
     data = _first_json(llm_text)
     if data is None:
@@ -187,7 +240,53 @@ def parse_and_validate(llm_text: str, pages: list[tuple[str, str]]) -> Extractio
     if comm and comm.payload.get("rate_is_upper_bound"):
         result.rejected.append("COMMISSION: rate dạng 'up to' — giữ làm tham khảo, KHÔNG dùng payback")
 
-    # Đây là bản tóm tắt, không phải trích dẫn. Quote gốc của từng fact phía trên vẫn
+    ppc = data.get("ppc_policy")
+    if isinstance(ppc, dict):
+        allowed_statuses = {
+            "own_landing_page_required": {"REQUIRED", "NOT_REQUIRED", "NOT_STATED"},
+            "geo_restrictions": {"YES", "NO", "NOT_STATED"},
+        }
+        items: dict[str, dict] = {}
+        for key in PPC_CHECKLIST_KEYS:
+            raw_item = ppc.get(key) if isinstance(ppc.get(key), dict) else {}
+            if key == "penalty_if_violated":
+                detail = str(raw_item.get("detail_vi") or "").strip()
+                status = "STATED" if detail else "NOT_STATED"
+            else:
+                statuses = allowed_statuses.get(key, {"ALLOWED", "BANNED", "NOT_STATED"})
+                status = str(raw_item.get("status") or "NOT_STATED").upper()
+                if status not in statuses:
+                    status = "NOT_STATED"
+                detail = str(raw_item.get("detail_vi") or "").strip()
+            quote = str(raw_item.get("quote") or "").strip()
+            source_url = _quote_source_url(quote, pages) if status != "NOT_STATED" else None
+            if status != "NOT_STATED" and source_url is None:
+                result.rejected.append(
+                    f"PPC_POLICY.{key}: trích dẫn không khớp nguồn — hạ về NOT_STATED"
+                )
+                status, quote, detail = "NOT_STATED", "", ""
+            items[key] = {
+                "status": status,
+                "quote": quote if status != "NOT_STATED" else "",
+                "quote_vi": str(raw_item.get("quote_vi") or "").strip()
+                if status != "NOT_STATED" else "",
+                "note_vi": str(raw_item.get("note_vi") or detail).strip(),
+                "detail_vi": detail,
+                "source_url": source_url,
+            }
+        result.facts.append(
+            ExtractedFact(
+                "PPC_CHECKLIST",
+                {
+                    "items": items,
+                    "overall_verdict_vi": str(ppc.get("overall_verdict_vi") or "").strip(),
+                },
+                "",
+                round(base_conf * 0.9, 3),
+            )
+        )
+
+    # Đây là bản tóm tắt cũ, chỉ giữ tương thích với extraction đã cache/test cũ.
     # được kiểm chứng độc lập; bản dịch không bao giờ có thể cứu một quote bịa.
     terms_fact = next((fact for fact in result.facts if fact.scope == "TERMS"), None)
     ppc_vi = (
@@ -195,7 +294,7 @@ def parse_and_validate(llm_text: str, pages: list[tuple[str, str]]) -> Extractio
         if terms_fact is not None
         else PPC_UNDISCLOSED_VI
     )
-    if ppc_vi:
+    if ppc_vi and not isinstance(ppc, dict):
         result.facts.append(
             ExtractedFact(
                 "PPC_POLICY_VI",

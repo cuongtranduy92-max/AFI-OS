@@ -111,19 +111,23 @@ def main() -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    shutil.copy2(ROOT / "UPDATE-AFI-OS-0.2.111.command", OUTPUT)
-    shutil.copy2(ROOT / "scripts/update_02111_tool.py", OUTPUT)
-    shutil.copy2(ROOT / "docs/README-FIRST-0.2.111.txt", OUTPUT / "README-FIRST.txt")
+    release_code = VERSION.replace(".", "")
+    update_command = f"UPDATE-AFI-OS-{VERSION}.command"
+    update_tool = f"update_{release_code}_tool.py"
+    readme = f"docs/README-FIRST-{VERSION}.txt"
+    shutil.copy2(ROOT / update_command, OUTPUT)
+    shutil.copy2(ROOT / f"scripts/{update_tool}", OUTPUT)
+    shutil.copy2(ROOT / readme, OUTPUT / "README-FIRST.txt")
     checksum_paths = (
-        "UPDATE-AFI-OS-0.2.111.command",
+        update_command,
         "README-FIRST.txt",
         "payload-manifest.json",
-        "update_02111_tool.py",
+        update_tool,
     )
     checksum_text = "".join(
         f"{sha256(OUTPUT / name)}  {name}\n" for name in checksum_paths
     )
-    (OUTPUT / "AFI-OS-update-0.2.111.sha256").write_text(
+    (OUTPUT / f"AFI-OS-update-{VERSION}.sha256").write_text(
         checksum_text,
         encoding="utf-8",
     )

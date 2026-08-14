@@ -26,6 +26,7 @@ from afi_os.services.programs import (
     program_gate_status,
     resolved_permission_for_scope,
 )
+from afi_os.services.true_profit import parse_search_volume, search_volume_verdict
 
 CLICKS_PER_BUYER = Decimal("150")
 PAYBACK_MONTH_DAYS = Decimal("30")
@@ -375,6 +376,16 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     commercial_proposals: list[CommercialProposal] = (
         list(program.commercial_proposals) if program else []
     )
+    latest_llm_run = max(
+        list(program.llm_extraction_runs) if program else [],
+        key=lambda item: (_aware(item.checked_at), item.id),
+        default=None,
+    )
+    ppc_policy = (
+        latest_llm_run.result_json.get("ppc_policy")
+        if latest_llm_run is not None and isinstance(latest_llm_run.result_json, dict)
+        else None
+    )
     permissions = {
         scope: resolved_permission_for_scope(evidence, scope)
         for scope in (
@@ -565,7 +576,16 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
     )
 
     traffic = _number(fields["website_traffic_monthly"])
-    volume = _number(fields["primary_keyword_search_volume"])
+    volume_field = fields["primary_keyword_search_volume"]
+    search_volume = parse_search_volume(volume_field.value)
+    volume_verdict, volume_explanation = search_volume_verdict(search_volume)
+    volume_field.display_value = search_volume.display
+    volume_field.range_low = search_volume.low
+    volume_field.range_high = search_volume.high
+    volume_field.is_estimate = search_volume.is_estimate
+    volume_field.verdict = volume_verdict
+    if search_volume.is_estimate:
+        volume_field.note = volume_explanation
     payback_high = _number(fields["estimated_payback_days_high_bid"])
     advertiser_count = _number(fields["independent_advertisers"])
     commission_type = fields["accepted_commission_type"].value
@@ -581,10 +601,10 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
         _criterion(
             "keyword_volume",
             "Nhu cầu từ khóa chính",
-            fields["primary_keyword_search_volume"].value,
-            "> 2.000/tháng",
-            volume > 2000 if volume is not None else None,
-            "Global, English theo Keyword Planner.",
+            search_volume.display,
+            "≥ 2.000/tháng",
+            volume_verdict,
+            volume_explanation,
         ),
         _criterion(
             "payback",
@@ -633,12 +653,15 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
 
     def field_is_decision_ready(key: str) -> bool:
         field = fields[key]
-        return (
+        ready = (
             field.value is not None
             and field.collection_state == "AVAILABLE"
             and field.quality != DataQuality.UNKNOWN
             and field.confidence >= 0.5
         )
+        if key == "primary_keyword_search_volume":
+            return ready and field.verdict is not None
+        return ready
 
     blocking_fields = [FIELD_LABELS[key] for key in core_fields if not field_is_decision_ready(key)]
     commission_ready = field_is_decision_ready(
@@ -661,7 +684,11 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
         "primary_keyword_bid_low",
         "primary_keyword_bid_high",
     ):
-        if fields[key].value is None or fields[key].collection_state != "AVAILABLE":
+        if (
+            fields[key].value is None
+            or fields[key].collection_state != "AVAILABLE"
+            or (key == "primary_keyword_search_volume" and fields[key].verdict is None)
+        ):
             missing_by_group["Từ khóa & CPC"].append(FIELD_LABELS[key])
     for key in (
         "affiliate_login_url",
@@ -771,6 +798,7 @@ def build_project_step_one(project: Project) -> ProjectStepOneResponse:
             key=lambda entry: (_aware(entry.created_at), entry.id),
             reverse=True,
         ),
+        ppc_policy=ppc_policy,
         criteria=criteria,
         passed_criteria=passed,
         known_criteria=known,

@@ -42,7 +42,7 @@ from afi_os.services.project_sync import ensure_project_for_program
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures"
 WEB_COLLECTOR_VERSION = "official-web-v9"
 MAX_PAGE_BYTES = 1_000_000
-MAX_FETCHED_PAGES = 8
+MAX_FETCHED_PAGES = 12
 FETCH_TIMEOUT_SECONDS = 8
 CRAWL_TOTAL_TIMEOUT_SECONDS = 20
 RETRYABLE_ERROR_PREFIX = "Tạm thời · "
@@ -56,8 +56,28 @@ STANDARD_PATHS = (
     "/partners",
     "/partner-program",
     "/terms",
+    "/pricing",
+    "/plans",
+    "/price",
+    "/pricing-plans",
+    "/subscribe",
+    "/upgrade",
+    "/buy",
+    "/checkout",
 )
-LINK_HINTS = ("affiliate", "partner", "referral", "publisher", "ppc", "terms", "policy")
+LINK_HINTS = (
+    "affiliate",
+    "partner",
+    "referral",
+    "publisher",
+    "ppc",
+    "terms",
+    "policy",
+    "pricing",
+    "plans",
+    "price",
+    "subscription",
+)
 SOURCE_TEXT_HINTS = LINK_HINTS + (
     "paid search",
     "pay-per-click",
@@ -471,11 +491,39 @@ def _link_is_relevant(url: str) -> bool:
 
 
 def _page_is_relevant(page: dict) -> bool:
+    if page.get("role") in {"homepage", "pricing"}:
+        return True
     haystack = (
         f"{page.get('url', '')} {page.get('title', '')} "
         f"{page.get('text', '')[:12000]}"
     ).lower()
     return any(hint in haystack for hint in LINK_HINTS)
+
+
+def _page_role(url: str, *, homepage: bool = False) -> str:
+    """Classify pages for the LLM without turning the role into evidence."""
+
+    if homepage:
+        return "homepage"
+    value = url.lower()
+    if any(
+        hint in value
+        for hint in (
+            "pricing",
+            "/plans",
+            "/price",
+            "subscribe",
+            "upgrade",
+            "checkout",
+            "/buy",
+        )
+    ):
+        return "pricing"
+    if any(hint in value for hint in ("affiliate", "partner", "referral", "publisher")):
+        return "affiliate"
+    if any(hint in value for hint in ("terms", "policy", "ppc")):
+        return "terms"
+    return "other"
 
 
 def _source_snapshots(pages: list[dict]) -> list[dict]:
@@ -605,6 +653,7 @@ def discover_official_pages(
     domain: str,
     *,
     priority_urls: list[str] | tuple[str, ...] = (),
+    include_context_pages: bool = False,
 ) -> tuple[list[dict], list[str]]:
     """Fetch a small, same-domain HTTPS set; never crawl arbitrary links or private hosts."""
 
@@ -616,6 +665,7 @@ def discover_official_pages(
     root_url = f"https://{domain}/"
     try:
         root = _fetch_page(root_url, domain)
+        root["role"] = "homepage"
         pages.append(root)
     except (HTTPError, URLError, OSError, ValueError) as exc:
         root = None
@@ -667,7 +717,9 @@ def discover_official_pages(
         for future in as_completed(futures):
             candidate, candidate_kind = futures[future]
             try:
-                pages.append(future.result())
+                page = future.result()
+                page["role"] = _page_role(page["url"])
+                pages.append(page)
             except (HTTPError, URLError, OSError, ValueError) as exc:
                 if _is_expected_standard_probe_miss(candidate_kind, exc):
                     continue
@@ -683,7 +735,12 @@ def discover_official_pages(
         current = deduplicated.get(key)
         if current is None or len(page.get("text", "")) > len(current.get("text", "")):
             deduplicated[key] = normalized_page
-    relevant = [page for page in deduplicated.values() if _page_is_relevant(page)]
+    relevant = [
+        page
+        for page in deduplicated.values()
+        if _page_is_relevant(page)
+        and (include_context_pages or page.get("role") != "homepage")
+    ]
     return sorted(relevant, key=lambda page: page["url"]), errors[:MAX_FETCHED_PAGES]
 
 
@@ -1747,10 +1804,20 @@ def collect_domain_proposal(db: Session, domain: str, *, fetcher=None) -> dict:
     priority_urls = _stored_source_urls(db, existing_program)
     if fetcher is None:
         crawl_started = time.monotonic()
-        pages, errors = discover_official_pages(
-            domain,
-            priority_urls=priority_urls,
-        )
+        try:
+            pages, errors = discover_official_pages(
+                domain,
+                priority_urls=priority_urls,
+                include_context_pages=True,
+            )
+        except TypeError as exc:
+            # Compatibility for injected collectors using the pre-Dot8 signature.
+            if "include_context_pages" not in str(exc):
+                raise
+            pages, errors = discover_official_pages(
+                domain,
+                priority_urls=priority_urls,
+            )
         partner_signup_url = _external_partner_signup_url(existing_program)
         crawler_has_time = (
             time.monotonic() - crawl_started

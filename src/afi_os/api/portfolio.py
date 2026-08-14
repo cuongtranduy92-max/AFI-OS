@@ -491,6 +491,22 @@ def decide_project_step_one(
                 "blocking_fields": check.blocking_fields,
             },
         )
+    search_ads_banned = bool((check.ppc_policy or {}).get("search_ads_banned"))
+    if (
+        payload.decision == "PREPARE_STEP_2"
+        and search_ads_banned
+        and not payload.risk_acknowledged
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    "Điều khoản ghi cấm Search Ads. Hãy xác nhận anh hiểu rủi ro "
+                    "bị khóa affiliate hoặc quỵt hoa hồng trước khi tiếp tục."
+                ),
+                "risk_acknowledgement_required": True,
+            },
+        )
 
     before = {
         "stage": project.stage.value,
@@ -514,6 +530,7 @@ def decide_project_step_one(
             actor=payload.actor,
             payload_json={
                 "decision": payload.decision,
+                "risk_acknowledged": payload.risk_acknowledged,
                 "before": before,
                 "after": after,
                 "step_one_snapshot": check.model_dump(mode="json"),

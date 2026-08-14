@@ -1,5 +1,16 @@
 # TASKBOARD
 
+## 0.2.112 — Dot8 full
+
+- [x] Thu thập tối đa 12 trang chính thức với vai trò homepage/pricing/affiliate/terms.
+- [x] Bảng PPC chín mục có quote, nguồn, trạng thái `NOT_STATED` an toàn và xác nhận rủi ro.
+- [x] Hiện mạng lưới advertiser → domain → Project ngay trong hồ sơ dự án.
+- [x] Giữ nguyên range Keyword Planner và không kết luận giả khi range cắt ngưỡng 2.000.
+- [x] Cho nhập package thủ công có nguồn để tính hoàn vốn khi crawler chưa tìm thấy giá.
+- [x] Tính lời lãi thật từ tiền rút, chi tiêu, phí tài khoản và phí phần trăm.
+- [x] Giữ nguyên CSV/Watch Folder, dữ liệu 0.2.0+, backup/checksum/rollback.
+- [x] Không thêm Google Ads write; Terms/PPC chỉ cảnh báo và không loại Project.
+
 ## 0.2.111 — Advertiser discovery
 
 - [x] Tách advertiser provider và cắm SerpApi Transparency Center.

@@ -5,12 +5,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from afi_os.db import get_db
-from afi_os.models import CommercialProposal, Program
+from afi_os.enums import AuditAction
+from afi_os.models import AuditLog, CommercialProposal, Offer, Program
 from afi_os.schemas import (
     CommercialProposalReviewResponse,
     EvidenceReviewRequest,
+    ManualPackageCreate,
     ProjectCheckCommission,
     ProjectCheckEvidence,
+    ProjectStepOneResponse,
     ProjectTermsExtractionResponse,
 )
 from afi_os.services.commercial_review import review_commercial_proposal
@@ -20,6 +23,57 @@ from afi_os.services.project_check import build_project_step_one
 from afi_os.services.terms_research import collect_domain_proposal
 
 router = APIRouter(prefix="/api/projects", tags=["term-extraction"])
+
+
+@router.post("/{project_id}/manual-packages", response_model=ProjectStepOneResponse)
+def save_manual_package(
+    project_id: int,
+    payload: ManualPackageCreate,
+    db: Session = Depends(get_db),
+) -> ProjectStepOneResponse:
+    project = load_portfolio_project(db, project_id)
+    if project is None or project.program_id is None:
+        raise HTTPException(status_code=404, detail="Project/program not found")
+    external_id = f"manual:{payload.name.strip().lower()}"
+    offer = db.scalar(
+        select(Offer).where(
+            Offer.program_id == project.program_id,
+            Offer.external_id == external_id,
+        )
+    )
+    if offer is None:
+        offer = Offer(program_id=project.program_id, external_id=external_id)
+    offer.name = payload.name.strip()
+    offer.price = payload.price_usd
+    offer.currency = "USD"
+    offer.active = True
+    offer.source_url = payload.source_url
+    offer.notes = (
+        f"Operator-entered pricing by {payload.actor}; "
+        + ("source URL supplied." if payload.source_url else "official pricing page unavailable.")
+    )
+    db.add(offer)
+    db.flush()
+    db.add(
+        AuditLog(
+            entity_type="offer",
+            entity_id=str(offer.id),
+            action=AuditAction.UPDATE,
+            actor=payload.actor,
+            payload_json={
+                "name": offer.name,
+                "price_usd": str(offer.price),
+                "source_url": offer.source_url,
+                "manual": True,
+                "note": "Giá gói nhập tay vì trang pricing bị chặn hoặc không công khai.",
+            },
+        )
+    )
+    db.commit()
+    db.expire_all()
+    refreshed = load_portfolio_project(db, project_id)
+    assert refreshed is not None
+    return build_project_step_one(refreshed)
 
 
 def _commission(item) -> ProjectCheckCommission:  # type: ignore[no-untyped-def]
@@ -93,6 +147,7 @@ def extract_project_terms(
         commission_facts=[_commission(item) for item in result["commission_facts"]],
         terms_evidence=[_evidence(item) for item in result["terms_evidence"]],
         commercial_proposals=result["commercial_proposals"],
+        ppc_policy=result.get("ppc_policy"),
         rejected=result["rejected"],
     )
 

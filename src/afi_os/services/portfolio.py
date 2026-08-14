@@ -104,6 +104,7 @@ def portfolio_query():  # type: ignore[no-untyped-def]
         selectinload(Project.program).selectinload(Program.terms_evidence),
         selectinload(Project.program).selectinload(Program.commission_facts),
         selectinload(Project.program).selectinload(Program.terms_research_runs),
+        selectinload(Project.program).selectinload(Program.llm_extraction_runs),
         selectinload(Project.program).selectinload(Program.offers),
         selectinload(Project.program).selectinload(Program.commercial_proposals),
         selectinload(Project.program).selectinload(Program.network),

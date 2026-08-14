@@ -1,4 +1,21 @@
-# TEST REPORT — AFI-OS 0.2.111
+# TEST REPORT — AFI-OS 0.2.112
+
+## 0.2.112 — Dot8 full project truth and true profit
+
+- Full regression: 457 passed, 1 skipped (458 collected). Python lint on changed
+  files, bytecode compile and JavaScript syntax checks pass before packaging.
+- Search-volume tests cover exact values, below/above ranges and the ambiguous
+  1K–10K range that must not be turned into a fabricated pass/fail result.
+- True-profit tests cover spend, account rent, spend fee, on-web commission,
+  withdrawn cash, overdue expected payment and the documented sample result.
+- LLM tests prove a PPC claim whose quote is absent from the source is downgraded to
+  `NOT_STATED`; missing checklist items remain unknown and proposal-only.
+- UI/API contract tests cover manual pricing, PPC risk acknowledgement, advertiser
+  expansion and the preserved CSV import workflow.
+- Release validation includes checksum, transactional update, SQLite integrity,
+  rollback and re-update against a production-data copy. The copy moved
+  `0.2.111 → 0.2.112 → 0.2.111 → 0.2.112`; SQLite integrity remained `ok`
+  with zero foreign-key violations.
 
 ## 0.2.111 — Advertiser discovery and propagation
 

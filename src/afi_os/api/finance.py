@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -9,7 +10,16 @@ from sqlalchemy.orm import Session, joinedload
 
 from afi_os.db import get_db
 from afi_os.enums import ReconciliationStatus
-from afi_os.models import Commission, Conversion, FxRate, ReconciliationItem
+from afi_os.models import (
+    Campaign,
+    Click,
+    Commission,
+    Conversion,
+    FxRate,
+    Project,
+    ReconciliationItem,
+    Spend,
+)
 from afi_os.schemas import (
     CommissionImportCommitResponse,
     CommissionImportPreview,
@@ -27,6 +37,9 @@ from afi_os.schemas import (
     FxRateReviewResponse,
     ReconciliationResolveRequest,
     ReconciliationSummaryResponse,
+    TrueProfitExpectedPayment,
+    TrueProfitProjectRead,
+    TrueProfitSummaryResponse,
 )
 from afi_os.services.commission_import import analyze_import, commit_import
 from afi_os.services.currency import (
@@ -39,6 +52,12 @@ from afi_os.services.currency import (
 )
 from afi_os.services.finance import CommissionAmount, summarize_commissions
 from afi_os.services.reconciliation import reconciliation_summary, resolve_item
+from afi_os.services.true_profit import (
+    CommissionRow,
+    SpendRow,
+    portfolio_summary,
+    project_pnl,
+)
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
 
@@ -110,6 +129,197 @@ def finance_summary(db: Session = Depends(get_db)) -> FinanceSummaryResponse:
         currencies=result,
         total_transactions=len(commissions),
         total_unattributed=total_unattributed,
+    )
+
+
+def _usd_amount(item: Commission | Spend) -> Decimal | None:
+    if item.currency.upper() == "USD":
+        return Decimal(item.amount)
+    if item.normalized_currency and item.normalized_currency.upper() == "USD":
+        return Decimal(item.normalized_amount) if item.normalized_amount is not None else None
+    return None
+
+
+def _payout_days(project: Project) -> int | None:
+    snapshots = [
+        item
+        for item in project.metric_snapshots
+        if item.metric_key == "payout_timing_days" and item.numeric_value is not None
+    ]
+    if not snapshots:
+        return None
+    latest = max(snapshots, key=lambda item: (item.observed_at, item.id))
+    return max(0, int(latest.numeric_value))
+
+
+@router.get("/true-profit", response_model=TrueProfitSummaryResponse)
+def true_profit_summary(db: Session = Depends(get_db)) -> TrueProfitSummaryResponse:
+    """Cash-basis P&L: only PAID commission is money actually received."""
+    projects = db.scalars(
+        select(Project)
+        .options(joinedload(Project.metric_snapshots))
+        .order_by(Project.id)
+    ).unique().all()
+    project_by_id = {item.id: item for item in projects}
+    projects_by_program: defaultdict[int, list[Project]] = defaultdict(list)
+    for project in projects:
+        if project.program_id is not None:
+            projects_by_program[project.program_id].append(project)
+
+    commissions_by_project: defaultdict[int, list[CommissionRow]] = defaultdict(list)
+    spends_by_project: defaultdict[int, list[SpendRow]] = defaultdict(list)
+    excluded_non_usd = 0
+    unattributed = 0
+
+    commissions = db.scalars(
+        select(Commission)
+        .options(
+            joinedload(Commission.conversion)
+            .joinedload(Conversion.click)
+            .joinedload(Click.campaign)
+        )
+        .order_by(Commission.occurred_at, Commission.id)
+    ).unique().all()
+    for item in commissions:
+        state = item.state.value if hasattr(item.state, "value") else str(item.state)
+        if state not in {"PENDING", "APPROVED", "LOCKED", "PAID"}:
+            continue
+        amount = _usd_amount(item)
+        if amount is None:
+            excluded_non_usd += 1
+            continue
+        conversion = item.conversion
+        project_id = None
+        if conversion and conversion.click and conversion.click.campaign:
+            project_id = conversion.click.campaign.project_id
+        if project_id is None and conversion and conversion.program_id is not None:
+            candidates = projects_by_program.get(conversion.program_id, [])
+            # A shared Program is not enough to choose truthfully between projects.
+            project_id = candidates[0].id if len(candidates) == 1 else None
+        if project_id is None or project_id not in project_by_id:
+            unattributed += 1
+            continue
+        project = project_by_id[project_id]
+        commissions_by_project[project_id].append(
+            CommissionRow(
+                project_id=project_id,
+                amount_usd=amount,
+                state=state,
+                converted_on=item.occurred_at.date(),
+                clear_days=_payout_days(project),
+                paid_on=item.paid_at.date() if item.paid_at else None,
+            )
+        )
+
+    spends = db.scalars(
+        select(Spend)
+        .options(joinedload(Spend.campaign).joinedload(Campaign.ads_account))
+        .order_by(Spend.spend_date, Spend.id)
+    ).unique().all()
+    charged_accounts: set[tuple[int, int]] = set()
+    for item in spends:
+        project_id = item.campaign.project_id
+        if project_id is None or project_id not in project_by_id:
+            continue
+        amount = _usd_amount(item)
+        if amount is None:
+            excluded_non_usd += 1
+            continue
+        account = item.campaign.ads_account
+        account_key = (project_id, account.id)
+        rent = Decimal("0")
+        if account_key not in charged_accounts:
+            rent = Decimal(account.rent_cost or 0)
+            charged_accounts.add(account_key)
+        spends_by_project[project_id].append(
+            SpendRow(
+                project_id=project_id,
+                amount_usd=amount,
+                account_rent_usd=rent,
+                spend_fee_pct=Decimal(account.spend_fee_pct or 0),
+            )
+        )
+
+    # An account rent remains a cost even when the imported period has no spend row yet.
+    campaigns = db.scalars(
+        select(Campaign)
+        .options(joinedload(Campaign.ads_account))
+        .where(Campaign.project_id.is_not(None))
+    ).unique().all()
+    for campaign in campaigns:
+        if campaign.project_id not in project_by_id:
+            continue
+        account_key = (campaign.project_id, campaign.ads_account.id)
+        if account_key in charged_accounts:
+            continue
+        charged_accounts.add(account_key)
+        spends_by_project[campaign.project_id].append(
+            SpendRow(
+                project_id=campaign.project_id,
+                amount_usd=Decimal("0"),
+                account_rent_usd=Decimal(campaign.ads_account.rent_cost or 0),
+                spend_fee_pct=Decimal(campaign.ads_account.spend_fee_pct or 0),
+            )
+        )
+
+    relevant_ids = sorted(set(commissions_by_project) | set(spends_by_project))
+    pnls = [
+        project_pnl(
+            project_id,
+            commissions_by_project[project_id],
+            spends_by_project[project_id],
+            date.today(),
+        )
+        for project_id in relevant_ids
+    ]
+    summary = portfolio_summary(pnls)
+    alerts = list(summary.alerts)
+    if unattributed:
+        alerts.append(
+            f"{unattributed} hoa hồng chưa nối được với dự án; cần bổ sung program/subid."
+        )
+    if excluded_non_usd:
+        alerts.append(
+            f"{excluded_non_usd} dòng chưa có số USD nên chưa được đưa vào lời lãi thật."
+        )
+    rows = []
+    for pnl in pnls:
+        project = project_by_id[pnl.project_id]
+        rows.append(
+            TrueProfitProjectRead(
+                project_id=pnl.project_id,
+                project_name=project.brand_name,
+                domain=project.domain,
+                spend_usd=pnl.spend,
+                variable_cost_usd=pnl.variable_cost,
+                total_cost_usd=pnl.total_cost,
+                on_web_usd=pnl.on_web,
+                withdrawn_usd=pnl.withdrawn,
+                real_profit_usd=pnl.real_profit,
+                expected_payments=[
+                    TrueProfitExpectedPayment(expected_on=eta, amount_usd=amount)
+                    for eta, amount in pnl.expected_dates
+                ],
+                overdue_payments=[
+                    TrueProfitExpectedPayment(expected_on=eta, amount_usd=amount)
+                    for eta, amount in pnl.overdue
+                ],
+            )
+        )
+    rows.sort(key=lambda item: item.real_profit_usd, reverse=True)
+    return TrueProfitSummaryResponse(
+        total_spend_usd=summary.total_spend,
+        total_variable_cost_usd=summary.total_variable,
+        total_cost_usd=summary.total_spend + summary.total_variable,
+        total_on_web_usd=summary.total_on_web,
+        total_withdrawn_usd=summary.total_withdrawn,
+        real_profit_usd=summary.real_profit,
+        collection_rate=summary.collection_rate,
+        projects_paid=summary.projects_paid,
+        projects_with_earnings=summary.projects_with_earnings,
+        projects=rows,
+        alerts=alerts,
+        excluded_non_usd_rows=excluded_non_usd,
     )
 
 

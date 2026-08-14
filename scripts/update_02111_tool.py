@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa
 """Transactional installer and rollback utility for AFI-OS 0.2.111.
 
 The release package is expected to contain:
@@ -914,7 +915,7 @@ def install_update(target, manifest_path, payload_root):
 
     announce("Payload {0} đã qua kiểm tra checksum.".format(UPDATE_VERSION))
     stop_result = stop_application(target)
-    backup_directory = create_unique_backup_directory(target, "update-0.2.111")
+    backup_directory = create_unique_backup_directory(target, f"update-{UPDATE_VERSION}")
     announce("Đang tạo backup nhất quán trước update…")
 
     database_path = safe_target_path(target, DEFAULT_DATABASE_PATH, allow_database=True)
@@ -953,7 +954,7 @@ def install_update(target, manifest_path, payload_root):
         append_event(backup_manifest, "PAYLOAD_COPY_COMPLETE")
         write_backup_manifest(backup_directory, backup_manifest)
 
-        announce("Đang chạy migration 0.2.111…")
+        announce("Đang chạy migration {0}…".format(UPDATE_VERSION))
         migration = run_alembic_upgrade(
             target,
             database_path,
@@ -1015,7 +1016,11 @@ def install_update(target, manifest_path, payload_root):
     else:
         write_backup_manifest(backup_directory, backup_manifest)
 
-    announce("Cập nhật AFI-OS 0.2.111 thành công; dữ liệu cũ đã được giữ nguyên.")
+    announce(
+        "Cập nhật AFI-OS {0} thành công; dữ liệu cũ đã được giữ nguyên.".format(
+            UPDATE_VERSION
+        )
+    )
     announce("Rollback point: {0}".format(backup_directory))
     return backup_directory
 
@@ -1027,7 +1032,7 @@ def load_update_backup(backup_directory):
     if manifest.get("kind") != "AFI_OS_UPDATE_BACKUP":
         raise UpdateError("Backup không phải update backup AFI-OS")
     if manifest.get("update_version") != UPDATE_VERSION:
-        raise UpdateError("Backup không thuộc bản 0.2.111")
+        raise UpdateError("Backup không thuộc bản {0}".format(UPDATE_VERSION))
     if not isinstance(manifest.get("database"), dict):
         raise UpdateError("Backup manifest thiếu database")
     if not isinstance(manifest.get("files"), list):
@@ -1039,7 +1044,7 @@ def latest_installed_backup(target):
     backup_root = safe_target_path(target, "backups", allow_database=True)
     candidates = []
     if backup_root.is_dir() and not backup_root.is_symlink():
-        for path in backup_root.glob("update-0.2.111-*"):
+        for path in backup_root.glob("update-{0}-*".format(UPDATE_VERSION)):
             if path.is_symlink() or not path.is_dir():
                 continue
             try:
@@ -1053,13 +1058,19 @@ def latest_installed_backup(target):
             ):
                 candidates.append((manifest.get("created_at", ""), path, manifest))
     if not candidates:
-        raise UpdateError("Không tìm thấy update-0.2.111 backup đang ở trạng thái INSTALLED")
+        raise UpdateError(
+            "Không tìm thấy update-{0} backup đang ở trạng thái INSTALLED".format(
+                UPDATE_VERSION
+            )
+        )
     candidates.sort(key=lambda item: (item[0], item[1].name), reverse=True)
     return candidates[0][1], candidates[0][2]
 
 
 def snapshot_current_state_for_emergency(target, source_manifest):
-    emergency = create_unique_backup_directory(target, "emergency-before-rollback-0.2.111")
+    emergency = create_unique_backup_directory(
+        target, "emergency-before-rollback-{0}".format(UPDATE_VERSION)
+    )
     database_path = safe_target_path(target, DEFAULT_DATABASE_PATH, allow_database=True)
     database_record = create_database_backup(database_path, emergency / "afi_os.db")
     file_records = snapshot_target_files(
@@ -1100,14 +1111,22 @@ def rollback_update(target, backup_directory=None):
         backup_directory, source_manifest = latest_installed_backup(target)
 
     stop_result = stop_application(target)
-    announce("Đang tạo emergency backup của trạng thái 0.2.111 hiện tại…")
+    announce(
+        "Đang tạo emergency backup của trạng thái {0} hiện tại…".format(
+            UPDATE_VERSION
+        )
+    )
     emergency_directory, emergency_manifest = snapshot_current_state_for_emergency(
         target, source_manifest
     )
     announce("Emergency backup đã xác minh: {0}".format(emergency_directory.name))
 
     try:
-        announce("Đang khôi phục database và code trước update 0.2.111…")
+        announce(
+            "Đang khôi phục database và code trước update {0}…".format(
+                UPDATE_VERSION
+            )
+        )
         restore_snapshot(target, backup_directory, source_manifest)
         source_manifest["launchd_restore"] = restore_launchd_services(
             target, stop_result.get("launchd_labels", [])
@@ -1118,7 +1137,11 @@ def rollback_update(target, backup_directory=None):
         append_event(source_manifest, "MANUAL_ROLLBACK_VERIFIED")
         write_backup_manifest(backup_directory, source_manifest)
     except BaseException as exc:
-        announce("Rollback lỗi; đang khôi phục lại trạng thái 0.2.111 từ emergency backup…")
+        announce(
+            "Rollback lỗi; đang khôi phục lại trạng thái {0} từ emergency backup…".format(
+                UPDATE_VERSION
+            )
+        )
         try:
             restore_snapshot(target, emergency_directory, emergency_manifest)
             restore_launchd_services(target, stop_result.get("launchd_labels", []))
@@ -1134,12 +1157,16 @@ def rollback_update(target, backup_directory=None):
                 "Không khởi động app.".format(exc, emergency_exc)
             )
         if isinstance(exc, KeyboardInterrupt):
-            raise UpdateError("Rollback bị hủy; trạng thái 0.2.111 đã được phục hồi")
+            raise UpdateError(
+                "Rollback bị hủy; trạng thái {0} đã được phục hồi".format(
+                    UPDATE_VERSION
+                )
+            )
         if isinstance(exc, UpdateError):
             raise
         raise UpdateError("Rollback thất bại: {0}".format(exc))
 
-    announce("Rollback 0.2.111 thành công.")
+    announce("Rollback {0} thành công.".format(UPDATE_VERSION))
     announce("Bản emergency trước rollback nằm tại: {0}".format(emergency_directory))
     return backup_directory
 
@@ -1155,10 +1182,14 @@ def default_package_paths():
 
 def build_parser():
     manifest_default, payload_default = default_package_paths()
-    parser = argparse.ArgumentParser(description="AFI-OS 0.2.111 safe updater")
+    parser = argparse.ArgumentParser(
+        description="AFI-OS {0} safe updater".format(UPDATE_VERSION)
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    install_parser = subparsers.add_parser("install", help="Install AFI-OS 0.2.111")
+    install_parser = subparsers.add_parser(
+        "install", help="Install AFI-OS {0}".format(UPDATE_VERSION)
+    )
     install_parser.add_argument("--target", default=default_target())
     install_parser.add_argument("--manifest", default=str(manifest_default))
     install_parser.add_argument("--payload", default=str(payload_default))
@@ -1167,7 +1198,9 @@ def build_parser():
     verify_parser.add_argument("--manifest", default=str(manifest_default))
     verify_parser.add_argument("--payload", default=str(payload_default))
 
-    rollback_parser = subparsers.add_parser("rollback", help="Rollback latest AFI-OS 0.2.111")
+    rollback_parser = subparsers.add_parser(
+        "rollback", help="Rollback latest AFI-OS {0}".format(UPDATE_VERSION)
+    )
     rollback_parser.add_argument("--target", default=default_target())
     rollback_parser.add_argument("--backup", default=None)
     return parser

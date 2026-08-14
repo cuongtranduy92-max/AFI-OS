@@ -59,6 +59,7 @@ from afi_os.schemas import (
 )
 from afi_os.services.ad_intelligence import AdvertiserScoreInput, independent_advertiser_score
 from afi_os.services.advertiser_provider import (
+    EXPANSION_CACHE_KIND,
     AdvertiserProviderError,
     expand_advertisers,
     provider_status,
@@ -1122,15 +1123,57 @@ def project_network(
     project_id: int, db: Session = Depends(get_db)
 ) -> ProjectNetworkResponse:
     center = project_advertisers(project_id, db)
+    latest_expansion_by_key: dict[str, tuple[list[str], datetime]] = {}
+    captures = db.scalars(
+        select(RawCapture)
+        .where(RawCapture.parser_version == EXPANSION_CACHE_KIND)
+        .order_by(RawCapture.captured_at.desc(), RawCapture.id.desc())
+    ).all()
+    for capture in captures:
+        result = (capture.parsed_payload or {}).get("result") or {}
+        for item in result.get("advertisers") or []:
+            external_key = str(item.get("external_key") or "").strip()
+            if not external_key or external_key in latest_expansion_by_key:
+                continue
+            domains = sorted(set(item.get("domains") or []))
+            latest_expansion_by_key[external_key] = (domains, _utc(capture.captured_at))
+
     expanded: list[ProjectNetworkAdvertiser] = []
     for link in center.advertisers:
+        advertiser = db.get(Advertiser, link.advertiser_id)
         related = advertiser_projects(link.advertiser_id, db)
+        expansion_domains: list[str] = []
+        expansion_checked_at: datetime | None = None
+        if advertiser is not None and advertiser.external_key:
+            cached = latest_expansion_by_key.get(advertiser.external_key)
+            if cached is not None:
+                expansion_domains, expansion_checked_at = cached
+        project_ids = {
+            project.domain: project.id
+            for project in db.scalars(
+                select(Project).where(Project.domain.in_(expansion_domains))
+            ).all()
+        } if expansion_domains else {}
         expanded.append(
             ProjectNetworkAdvertiser(
                 **link.model_dump(),
+                external_key=advertiser.external_key if advertiser else None,
                 projects=related.projects,
+                expansion_domains=expansion_domains,
+                expansion_project_ids=project_ids,
+                expansion_state="AVAILABLE" if expansion_checked_at else "NOT_COLLECTED",
+                expansion_checked_at=expansion_checked_at,
             )
         )
+    expanded.sort(
+        key=lambda item: (
+            item.is_goldmine,
+            item.domain_count,
+            item.related_project_count,
+            item.advertiser_name.casefold(),
+        ),
+        reverse=True,
+    )
     return ProjectNetworkResponse(
         project_id=center.project_id,
         domain=center.domain,

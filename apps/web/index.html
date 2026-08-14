@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AFI-OS · Vận hành affiliate</title>
-  <link rel="stylesheet" href="/styles.css?v=02111">
+  <link rel="stylesheet" href="/styles.css?v=02112">
 </head>
 <body>
   <div class="app-shell">
@@ -66,7 +66,7 @@
           <p id="viewSubtitle">Tìm một dự án, mở hồ sơ rồi tự bung mạng lưới dự án ↔ nhà quảng cáo.</p>
         </div>
         <div class="top-actions">
-          <span class="badge badge-demo">NHÀ QUẢNG CÁO TỰ ĐỘNG · v0.2.111</span>
+          <span class="badge badge-demo">DOT8 · v0.2.112</span>
           <button id="refreshAll" class="button secondary">Làm mới</button>
         </div>
       </header>
@@ -745,7 +745,15 @@
       </section>
 
       <section id="view-finance" class="view">
-        <div id="financeCards" class="metrics-grid"></div>
+        <div id="financeCards" class="metrics-grid true-profit-grid"></div>
+        <div id="trueProfitAlerts" class="true-profit-alerts"></div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Lời lãi thật theo dự án</h2><p>Chỉ commission PAID là tiền thực rút. Tiền đang treo trên dashboard không được tính là lợi nhuận.</p></div><span class="badge">CHỈ TIN TIỀN VỀ TÚI</span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Dự án</th><th>Chi quảng cáo</th><th>Phí tài khoản + % spend</th><th>Tổng chi</th><th>Tiền trên web</th><th>Tiền thực rút</th><th>Lời lãi thật</th><th>Dự kiến / quá hạn</th></tr></thead>
+            <tbody id="trueProfitRows"><tr><td colspan="8" class="empty">Chưa có dữ liệu tiền và chi phí.</td></tr></tbody>
+          </table></div>
+        </article>
         <div class="grid two uneven">
           <article class="panel">
             <div class="panel-head"><div><h2>Đồng tiền báo cáo</h2><p>Giữ nguyên số gốc và quy đổi sang một đồng tiền chung để tính dòng tiền.</p></div><span class="badge">FX LEDGER</span></div>
@@ -852,6 +860,6 @@
     </div>
     <div id="truthDrawerBody" class="truth-drawer-body"><div class="empty">Chọn một số liệu hoặc dự án.</div></div>
   </aside>
-  <script src="/app.js?v=02111"></script>
+  <script src="/app.js?v=02112"></script>
 </body>
 </html>

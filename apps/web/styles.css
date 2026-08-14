@@ -285,6 +285,16 @@ tr:last-child td { border-bottom: 0; }
 .step-one-field-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .step-one-field-head > span { color: var(--muted); font-size: 9px; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
 .step-one-field > strong { overflow-wrap: anywhere; font-size: 16px; line-height: 1.25; }
+.estimate-badge { display: inline-flex; margin-left: 6px; padding: 2px 6px; border-radius: 999px; background: #fff2bf; color: #795700; font-size: 9px; font-weight: 800; vertical-align: middle; }
+.true-profit-grid .metric:nth-child(3) { border: 2px solid var(--accent); background: #eaf9f3; transform: translateY(-2px); }
+.true-profit-grid .metric:nth-child(3) strong { font-size: clamp(24px, 3vw, 38px); }
+.true-profit-alerts { display: grid; gap: 8px; margin: 12px 0; }
+.profit-positive { color: #08724f; }
+.profit-negative, .profit-overdue { color: #b42318; }
+.profit-overdue { margin-top: 5px; font-size: 10px; font-weight: 800; }
+.manual-package-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 12px; padding: 12px; border: 1px dashed #d4b24f; border-radius: 12px; background: #fffaf0; }
+.manual-package-form .notice, .manual-package-form .form-message { grid-column: 1 / -1; }
+.manual-package-form label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .step-one-field > small { color: var(--muted); font-size: 8px; line-height: 1.45; overflow-wrap: anywhere; }
 .step-one-field > small a { color: var(--accent); }
 .step-one-field > p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
@@ -388,6 +398,26 @@ tr:last-child td { border-bottom: 0; }
 .advertiser-branch { overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
 .advertiser-branch-head { padding: 11px 12px; }
 .advertiser-branch-head strong { font-size: 13px; }
+.advertiser-known-domains, .advertiser-expansion-empty { margin: 0 12px 10px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); display: grid; gap: 7px; }
+.advertiser-known-domains > div:first-child { display: flex; justify-content: space-between; gap: 8px; }
+.advertiser-known-domains small, .advertiser-expansion-empty span { color: var(--muted); }
+.advertiser-domain-link { border: 0; padding: 4px 0; background: transparent; color: var(--accent); text-align: left; font-weight: 750; cursor: pointer; }
+.advertiser-domain-new { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); opacity: .82; }
+.advertiser-domain-more summary { cursor: pointer; color: var(--accent); font-weight: 750; margin-bottom: 6px; }
+.advertiser-domain-more[open] { display: grid; gap: 6px; }
+.ppc-checklist { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; background: var(--surface); }
+.ppc-checklist > header, .ppc-checklist > footer { padding: 12px; background: var(--surface-soft); display: flex; justify-content: space-between; gap: 10px; }
+.ppc-checklist > header > div { display: grid; gap: 3px; }
+.ppc-checklist > footer { display: grid; }
+.ppc-check-row { padding: 10px 12px; border-top: 1px solid var(--line); }
+.ppc-check-row > div { display: grid; grid-template-columns: minmax(190px, 1fr) auto; gap: 10px; }
+.ppc-check-row.success > div > span { color: var(--success); }
+.ppc-check-row.warning > div > span, .ppc-ask-support { color: var(--warning); }
+.ppc-check-row.danger > div > span { color: var(--danger); }
+.ppc-check-row p, .ppc-check-row details { margin: 6px 0 0; }
+.ppc-check-row summary { color: var(--accent); cursor: pointer; }
+.original-policy-quote { color: var(--muted); font-style: italic; }
+.step-one-risk-ack { margin-top: 10px; padding: 10px; border: 1px solid var(--danger); border-radius: 9px; background: var(--danger-soft); display: flex; gap: 8px; align-items: flex-start; }
 .relationship-count { min-width: 76px; text-align: right; }
 .relationship-count strong { display: block; color: var(--accent); font-size: 20px; }
 .relationship-source { padding: 7px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font-size: 9px; }

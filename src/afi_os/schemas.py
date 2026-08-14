@@ -387,6 +387,11 @@ class ProjectCheckValue(BaseModel):
     observed_at: datetime | None = None
     confidence: float = Field(default=0.0, ge=0, le=1)
     note: str | None = None
+    display_value: str | None = None
+    range_low: int | None = None
+    range_high: int | None = None
+    is_estimate: bool = False
+    verdict: bool | None = None
 
 
 class ProjectCheckEvidence(BaseModel):
@@ -449,6 +454,7 @@ class ProjectTermsExtractionResponse(BaseModel):
     commission_facts: list[ProjectCheckCommission] = Field(default_factory=list)
     terms_evidence: list[ProjectCheckEvidence] = Field(default_factory=list)
     commercial_proposals: list[CommercialProposalRead] = Field(default_factory=list)
+    ppc_policy: dict[str, Any] | None = None
     rejected: list[str] = Field(default_factory=list)
     permissions_changed: bool = False
     campaign_state_changed: bool = False
@@ -485,6 +491,7 @@ class ProjectStepOneResponse(BaseModel):
     terms_evidence: list[ProjectCheckEvidence] = Field(default_factory=list)
     commission_facts: list[ProjectCheckCommission] = Field(default_factory=list)
     commercial_proposals: list[CommercialProposalRead] = Field(default_factory=list)
+    ppc_policy: dict[str, Any] | None = None
     criteria: list[ProjectCheckCriterion] = Field(default_factory=list)
     passed_criteria: int = Field(ge=0)
     known_criteria: int = Field(ge=0)
@@ -504,6 +511,20 @@ class CommercialProposalReviewResponse(BaseModel):
     permissions_changed: bool = False
     campaign_state_changed: bool = False
     google_ads_write: bool = False
+
+
+class ManualPackageCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    price_usd: Decimal = Field(gt=0)
+    source_url: str | None = Field(default=None, max_length=1000)
+    actor: str = Field(default="Tran", min_length=1, max_length=120)
+
+    @field_validator("source_url")
+    @classmethod
+    def normalize_optional_source_url(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        return validate_source_url(value)
 
 
 class ProjectCheckSourceResult(BaseModel):
@@ -562,6 +583,11 @@ class AppraisalTraffic(BaseModel):
 class AppraisalKeyword(BaseModel):
     term: str | None = None
     search_volume: int | float | None = None
+    search_volume_low: int | None = None
+    search_volume_high: int | None = None
+    search_volume_display: str | None = None
+    search_volume_is_estimate: bool = False
+    search_volume_verdict: bool | None = None
     bid_low_vnd: int | float | None = None
     bid_high_vnd: int | float | None = None
     source: str | None = None
@@ -666,6 +692,7 @@ class AppraisalBatchResponse(BaseModel):
 class ProjectStepOneDecisionRequest(BaseModel):
     decision: Literal["PREPARE_STEP_2", "KEEP_RESEARCHING"]
     actor: str = Field(default="local-user", min_length=1, max_length=120)
+    risk_acknowledged: bool = False
 
     @field_validator("actor")
     @classmethod
@@ -1333,7 +1360,12 @@ class AdvertiserProjectsResponse(BaseModel):
 
 
 class ProjectNetworkAdvertiser(ProjectAdvertiserLink):
+    external_key: str | None = None
     projects: list[AdvertiserProjectLink] = Field(default_factory=list)
+    expansion_domains: list[str] = Field(default_factory=list)
+    expansion_project_ids: dict[str, int] = Field(default_factory=dict)
+    expansion_state: Literal["AVAILABLE", "NOT_COLLECTED"] = "NOT_COLLECTED"
+    expansion_checked_at: datetime | None = None
 
 
 class ProjectNetworkResponse(BaseModel):
@@ -1783,6 +1815,41 @@ class FinanceSummaryResponse(BaseModel):
     currencies: list[FinanceCurrencySummary]
     total_transactions: int
     total_unattributed: int
+
+
+class TrueProfitExpectedPayment(BaseModel):
+    expected_on: date
+    amount_usd: Decimal
+
+
+class TrueProfitProjectRead(BaseModel):
+    project_id: int
+    project_name: str
+    domain: str
+    spend_usd: Decimal
+    variable_cost_usd: Decimal
+    total_cost_usd: Decimal
+    on_web_usd: Decimal
+    withdrawn_usd: Decimal
+    real_profit_usd: Decimal
+    expected_payments: list[TrueProfitExpectedPayment] = Field(default_factory=list)
+    overdue_payments: list[TrueProfitExpectedPayment] = Field(default_factory=list)
+
+
+class TrueProfitSummaryResponse(BaseModel):
+    currency: str = "USD"
+    total_spend_usd: Decimal
+    total_variable_cost_usd: Decimal
+    total_cost_usd: Decimal
+    total_on_web_usd: Decimal
+    total_withdrawn_usd: Decimal
+    real_profit_usd: Decimal
+    collection_rate: float | None = None
+    projects_paid: int
+    projects_with_earnings: int
+    projects: list[TrueProfitProjectRead] = Field(default_factory=list)
+    alerts: list[str] = Field(default_factory=list)
+    excluded_non_usd_rows: int = 0
 
 
 class CommissionRead(BaseModel):

@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Update 0.2.112 — Dot8 hồ sơ đủ nguồn và lời lãi thật
+
+1. Chạy `UPDATE-AFI-OS-0.2.112.command` một lần.
+2. Vào **Bước 1**, nhập domain; chờ traffic, keyword, Terms và advertiser hiện dần.
+3. Mở chi tiết để xem nguồn homepage/pricing/affiliate/Terms và bảng PPC chín mục.
+4. Nếu Search Ads bị cấm nhưng vẫn lưu sang Bước 2, tích xác nhận đã hiểu rủi ro.
+5. Nếu thiếu giá gói, nhập gói thủ công kèm URL pricing; hoàn vốn được tính nhưng
+   dữ liệu vẫn mang nhãn cần đối chiếu cho tới khi có nguồn đủ mạnh.
+6. Vào **Trang 4 · Tài chính & đối soát** để xem tiền trên web, tiền thực rút,
+   tổng chi phí và lời lãi thật. Import CSV/Watch Folder cũ vẫn hoạt động.
+
+Không có Google Ads write. Không tự mở PPC permission, không tự dừng campaign và
+không loại Project. Rollback bằng `ROLLBACK-AFI-OS-0.2.112.command`.
+
 ## Update 0.2.111 — Nhà quảng cáo và lan tỏa dự án
 
 1. Chạy `UPDATE-AFI-OS-0.2.111.command` một lần.

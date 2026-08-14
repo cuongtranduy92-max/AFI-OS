@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.2.112 — Dot8 full project truth and true profit
+
+- Crawl a bounded set of up to 12 official homepage, pricing, affiliate and Terms
+  pages, preserving page role, source URL, quote and checked time.
+- Extract a nine-item PPC checklist as proposal-only evidence; unsupported claims
+  become `NOT_STATED` and never open a permission automatically.
+- Show advertiser expansion inline in each Project, including known Projects, queued
+  domains and `MỎ VÀNG` indicators without launching automatic recursive scans.
+- Preserve exact Google Keyword Planner ranges and block a pass/fail decision when a
+  range straddles the 2,000-search threshold.
+- Add manual package pricing with source lineage so payback can be calculated while
+  missing official pricing remains visible.
+- Add Page 4 true-profit accounting for paid cash, on-web commission, ad spend,
+  account rent and spend fees while retaining the existing CSV workflow.
+- Require an explicit risk acknowledgement before saving a Search-Ads-prohibited
+  Project to Step 2; Projects and campaigns remain warning-only and Google Ads read-only.
+
 ## 0.2.111 — Advertiser discovery and project propagation
 
 - Connect SerpApi Google Ads Transparency Center through macOS Keychain only.

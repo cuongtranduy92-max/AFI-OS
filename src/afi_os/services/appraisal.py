@@ -232,7 +232,11 @@ def score_appraisal(
     commission_type = resp_commission.type or ""
 
     traffic_ok = traffic is not None and traffic > traffic_min
+    search_known = search_volume is not None
     search_ok = search_volume is not None and search_volume > search_min
+    if resp_keyword.search_volume_is_estimate:
+        search_known = resp_keyword.search_volume_verdict is not None
+        search_ok = resp_keyword.search_volume_verdict is True
     payback_known = bool(paybacks)
     payback_ok = payback_known and min(paybacks) <= payback_max
     recurring = commission_type.startswith("recurring")
@@ -252,9 +256,17 @@ def score_appraisal(
         flags.append(
             AppraisalFlag(level="warning", msg=f"Traffic {int(traffic):,} < 20.000.")
         )
-    if search_volume is None:
+    if not search_known:
         flags.append(
-            AppraisalFlag(level="pending", msg="Chưa có lượt tìm kiếm từ khoá chính.")
+            AppraisalFlag(
+                level="pending",
+                msg=(
+                    f"Khoảng search {resp_keyword.search_volume_display or 'ước lượng'} "
+                    "chưa đủ để kết luận; cần kiểm tra tay."
+                    if resp_keyword.search_volume_is_estimate
+                    else "Chưa có lượt tìm kiếm từ khoá chính."
+                ),
+            )
         )
     elif not search_ok:
         flags.append(
@@ -283,7 +295,7 @@ def score_appraisal(
 
     core: list[bool | None] = [
         traffic_ok if traffic is not None else None,
-        search_ok if search_volume is not None else None,
+        search_ok if search_known else None,
         payback_ok if payback_known else None,
     ]
     if any(item is False for item in core):
@@ -381,14 +393,24 @@ def build_appraisal_contract(
         source=traffic_source,
         source_status=traffic_state,
     )
+    volume_field = fields.get("primary_keyword_search_volume")
     keyword = AppraisalKeyword(
         term=_text(fields.get("primary_keyword")),
-        search_volume=_number(fields.get("primary_keyword_search_volume")),
+        search_volume=(
+            float(volume_field.range_low)
+            if volume_field and volume_field.range_low is not None
+            else _number(volume_field)
+        ),
+        search_volume_low=volume_field.range_low if volume_field else None,
+        search_volume_high=volume_field.range_high if volume_field else None,
+        search_volume_display=volume_field.display_value if volume_field else None,
+        search_volume_is_estimate=volume_field.is_estimate if volume_field else False,
+        search_volume_verdict=volume_field.verdict if volume_field else None,
         bid_low_vnd=_number(fields.get("primary_keyword_bid_low")),
         bid_high_vnd=_number(fields.get("primary_keyword_bid_high")),
         source=(
-            fields["primary_keyword_search_volume"].source_name
-            if _value(fields.get("primary_keyword_search_volume")) is not None
+            volume_field.source_name
+            if _value(volume_field) is not None
             else None
         ),
     )

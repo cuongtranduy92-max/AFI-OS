@@ -1,3 +1,3 @@
 """AFI-OS production replatform package."""
 
-__version__ = "0.2.111"
+__version__ = "0.2.112"

@@ -47,7 +47,7 @@ from afi_os.services.terms_research import (
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 LLM_COLLECTOR = "ANTHROPIC_LLM"
-EXTRACTION_SCHEMA_VERSION = "terms-vi-v2"
+EXTRACTION_SCHEMA_VERSION = "terms-vi-v3-pricing"
 
 
 class LLMExtractionError(RuntimeError):
@@ -61,8 +61,8 @@ def _normalized(value: str) -> str:
     return re.sub(r"\s+", " ", value or "").strip().lower()
 
 
-def _bounded_pages(pages: list[dict]) -> list[tuple[str, str]]:
-    output: list[tuple[str, str]] = []
+def _bounded_pages(pages: list[dict]) -> list[tuple[str, str, str]]:
+    output: list[tuple[str, str, str]] = []
     for page in pages:
         url = page.get("url")
         text = page.get("text")
@@ -70,17 +70,19 @@ def _bounded_pages(pages: list[dict]) -> list[tuple[str, str]]:
             continue
         cleaned = re.sub(r"\s+", " ", text).strip()[:MAX_PAGE_CHARS]
         if cleaned:
-            output.append((url, cleaned))
+            output.append((url, cleaned, str(page.get("role") or "other")))
     return output
 
 
-def _content_hash(domain: str, model: str, pages: list[tuple[str, str]]) -> str:
+def _content_hash(domain: str, model: str, pages: list[tuple[str, str, str]]) -> str:
     digest = hashlib.sha256()
     digest.update(f"{domain}\0{model}\0{EXTRACTION_SCHEMA_VERSION}\0".encode())
-    for url, text in pages:
+    for url, text, role in pages:
         digest.update(url.encode())
         digest.update(b"\0")
         digest.update(text.encode())
+        digest.update(b"\0")
+        digest.update(role.encode())
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -396,6 +398,11 @@ def _cached_payload(db: Session, run: LLMExtractionRun) -> dict:
                 select(CommercialProposal).where(CommercialProposal.id.in_(proposal_ids))
             ).all()
         ) if proposal_ids else [],
+        "ppc_policy": (
+            run.result_json.get("ppc_policy")
+            if isinstance(run.result_json, dict)
+            else None
+        ),
         "rejected": list(run.rejected_json),
     }
 
@@ -450,6 +457,7 @@ def extract_terms_from_pages(
     commission_specs: list[dict] = []
     terms_specs: list[dict] = []
     commercial_specs: list[dict] = []
+    ppc_policy: dict | None = None
     rejected = list(result.rejected)
     for fact in result.facts:
         if fact.scope == "COMMISSION":
@@ -481,8 +489,7 @@ def extract_terms_from_pages(
                     ),
                     pages[0],
                 )
-                # Tóm tắt này chỉ là proposal hiển thị. Nó không map vào bất kỳ
-                # permission canonical nào và không có nút chấp nhận mở quyền.
+                # Legacy summary: display-only, never opens a canonical permission.
                 terms_specs.append(
                     {
                         "source_url": bounded[0][0],
@@ -496,6 +503,32 @@ def extract_terms_from_pages(
                         "decision": PermissionStatus.NOT_CHECKED,
                     }
                 )
+        elif fact.scope == "PPC_CHECKLIST":
+            items = fact.payload.get("items")
+            if isinstance(items, dict):
+                unclear_count = sum(
+                    1
+                    for item in items.values()
+                    if isinstance(item, dict) and item.get("status") == "NOT_STATED"
+                )
+                ppc_policy = {
+                    "items": items,
+                    "overall_verdict_vi": fact.payload.get("overall_verdict_vi") or "",
+                    "unclear_count": unclear_count,
+                    "search_ads_banned": (
+                        (items.get("search_ads_allowed") or {}).get("status") == "BANNED"
+                    ),
+                    "source_urls": sorted(
+                        {
+                            item.get("source_url")
+                            for item in items.values()
+                            if isinstance(item, dict) and item.get("source_url")
+                        }
+                    ),
+                    "confidence": fact.confidence,
+                    "proposal_only": True,
+                    "permissions_changed": False,
+                }
 
     facts, _, _, _ = _import_commission_specs(db, program, commission_specs, checked_at)
     evidence, _, _, _ = _import_permission_specs(db, program, terms_specs, checked_at)
@@ -536,7 +569,7 @@ def extract_terms_from_pages(
         domain=project.domain,
         content_hash=content_hash,
         model_name=model,
-        source_urls=[url for url, _ in bounded],
+        source_urls=[url for url, _, _ in bounded],
         result_json={},
         rejected_json=rejected,
         checked_at=checked_at,
@@ -547,6 +580,7 @@ def extract_terms_from_pages(
         "commission_fact_ids": [item.id for item in facts],
         "evidence_ids": [item.id for item in evidence],
         "commercial_proposal_ids": [item.id for item in commercial],
+        "ppc_policy": ppc_policy,
     }
     db.add(
         AuditLog(
@@ -563,6 +597,7 @@ def extract_terms_from_pages(
                 "commission_fact_ids": [item.id for item in facts],
                 "evidence_ids": [item.id for item in evidence],
                 "commercial_proposal_ids": [item.id for item in commercial],
+                "ppc_policy": ppc_policy,
                 "rejected": rejected,
                 "permissions_changed": False,
                 "campaign_state_changed": False,
@@ -574,12 +609,13 @@ def extract_terms_from_pages(
     )
     db.commit()
     return {
-        "status": "PROPOSAL_READY" if facts or evidence or commercial else "NO_FACTS",
+        "status": "PROPOSAL_READY" if facts or evidence or commercial or ppc_policy else "NO_FACTS",
         "cached": False,
         "model": model,
         "source_urls": list(run.source_urls),
         "commission_facts": facts,
         "terms_evidence": evidence,
         "commercial_proposals": commercial,
+        "ppc_policy": ppc_policy,
         "rejected": rejected,
     }
